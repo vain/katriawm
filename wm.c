@@ -21,9 +21,12 @@ enum DecorationLocation
 
 struct Client
 {
+    Window win;
+
     /* Inner size of the actual client */
     int x, y, w, h;
-    Window win;
+
+    struct Monitor *mon;
 
     Window decwin[DecLAST];
     GC decwin_gc[DecLAST];
@@ -74,6 +77,7 @@ static void handle_maprequest(XEvent *e);
 static void handle_motionnotify(XEvent *e);
 static void handle_unmapnotify(XEvent *e);
 static void manage(Window win, XWindowAttributes *wa);
+static void manage_fit_on_monitor(struct Client *c);
 static void manage_raisefocus(struct Client *c);
 static void manage_setsize(struct Client *c);
 static void run(void);
@@ -406,15 +410,13 @@ manage(Window win, XWindowAttributes *wa)
 
     c = calloc(1, sizeof (struct Client));
 
+    c->win = win;
+    c->mon = selmon;
+
     c->x = wa->x;
     c->y = wa->y;
     c->w = wa->width;
     c->h = wa->height;
-
-    /* Adjust client if outside of the screen. */
-    /* TODO we must scan monitors do implement this */
-
-    c->win = win;
 
     XSetWindowBorderWidth(dpy, c->win, 0);
 
@@ -440,12 +442,33 @@ manage(Window win, XWindowAttributes *wa)
     XMapWindow(dpy, c->win);
 
     decorations_create(c);
+    manage_fit_on_monitor(c);
     manage_setsize(c);
 
     client_save(c);
 
     fprintf(stderr, __NAME__": Managing window %lu (%p) at %dx%d+%d+%d\n",
             c->win, (void *)c, c->w, c->h, c->x, c->y);
+}
+
+void
+manage_fit_on_monitor(struct Client *c)
+{
+    if (c->mon == NULL)
+    {
+        fprintf(stderr, __NAME__": No monitor assigned to %lu (%p)\n",
+                c->win, (void *)c);
+        return;
+    }
+
+    if (c->x - dgeo.left_width < c->mon->wx)
+        c->x = c->mon->wx + dgeo.left_width;
+    if (c->y - dgeo.top_height < c->mon->wy)
+        c->y = c->mon->wy + dgeo.top_height;
+    if (c->x + c->w + dgeo.right_width >= c->mon->wx + c->mon->ww)
+        c->x = c->mon->wx + c->mon->ww - c->w - dgeo.right_width;
+    if (c->y + c->h + dgeo.bottom_height >= c->mon->wy + c->mon->wh)
+        c->y = c->mon->wy + c->mon->wh - c->h - dgeo.bottom_height;
 }
 
 void

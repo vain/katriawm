@@ -31,6 +31,7 @@ static void client_save(struct Client *c);
 static void handle_button(XEvent *e);
 static void handle_configurerequest(XEvent *e);
 static void handle_destroynotify(XEvent *e);
+static void handle_enternotify(XEvent *e);
 static void handle_maprequest(XEvent *e);
 static void handle_motionnotify(XEvent *e);
 static void handle_unmapnotify(XEvent *e);
@@ -48,11 +49,11 @@ static void (*handler[LASTEvent]) (XEvent *) = {
     [ButtonRelease] = handle_button,
     [ConfigureRequest] = handle_configurerequest,
     [DestroyNotify] = handle_destroynotify,
+    [EnterNotify] = handle_enternotify,
     [MapRequest] = handle_maprequest,
     [MotionNotify] = handle_motionnotify,
     [UnmapNotify] = handle_unmapnotify,
 #if 0
-    [EnterNotify] = handle_enternotify,
     [Expose] = handle_expose,
 #endif
 };
@@ -152,6 +153,18 @@ handle_destroynotify(XEvent *e)
 
     if ((c = client_get_for_window(ev->window)))
         unmanage(c);
+}
+
+void
+handle_enternotify(XEvent *e)
+{
+    XCrossingEvent *ev = &e->xcrossing;
+
+    /* Taken from dwm */
+    if ((ev->mode != NotifyNormal || ev->detail == NotifyInferior) && ev->window != root)
+        return;
+
+    XSetInputFocus(dpy, ev->window, RevertToPointerRoot, CurrentTime);
 }
 
 void

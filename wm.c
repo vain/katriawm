@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <X11/Xlib.h>
 #include <X11/Xproto.h>
+#include <X11/extensions/Xrandr.h>
 
 enum DecorationLocation
 {
@@ -37,8 +38,20 @@ struct DecorationGeometry
     int bottom_height;
 } dgeo;
 
+struct Monitor
+{
+    /* Actual monitor size */
+    int mx, my, mw, mh;
+
+    /* Logical size, i.e. where we can place windows */
+    int wx, wy, ww, wh;
+
+    struct Monitor *next;
+};
+
 static struct Client *clients = NULL;
 static struct Client *mdc = NULL;
+static struct Monitor *monitors = NULL, *selmon = NULL;
 static int mdx, mdy, ocx, ocy, ocw, och;
 static Display *dpy;
 static Window root;
@@ -497,12 +510,37 @@ run(void)
 void
 setup(void)
 {
+    XRRCrtcInfo *ci;
+    XRRScreenResources *sr;
+    struct Monitor *m;
+    int c;
+
     dpy = XOpenDisplay(NULL);
     root = DefaultRootWindow(dpy);
     screen = DefaultScreen(dpy);
     xerrorxlib = XSetErrorHandler(xerror);
 
-    /* TODO scan monitors */
+    sr = XRRGetScreenResources(dpy, root);
+    for (c = 0; c < sr->ncrtc; c++)
+    {
+        ci = XRRGetCrtcInfo(dpy, sr, sr->crtcs[c]);
+        if (ci == NULL || ci->noutput == 0 || ci->mode == None)
+            continue;
+
+        /* TODO Ignore mirrors. */
+
+        m = malloc(sizeof (struct Monitor));
+        if (selmon == NULL)
+            selmon = m;
+        m->wx = m->mx = ci->x;
+        m->wy = m->my = ci->y;
+        m->ww = m->mw = ci->width;
+        m->wh = m->mh = ci->height;
+        m->next = monitors;
+        monitors = m;
+        fprintf(stderr, __NAME__": monitor: %d %d %d %d\n",
+                ci->x, ci->y, ci->width, ci->height);
+    }
 
     /* TODO derive from font size and/or pixmap size */
     dgeo.top_height = 16; dgeo.left_width = 2; dgeo.right_width = 2;

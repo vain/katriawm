@@ -9,13 +9,33 @@
 #include <X11/Xlib.h>
 #include <X11/Xproto.h>
 
+enum DecorationLocation
+{
+    DecTopLeft = 0,    DecTop = 1,    DecTopRight = 2,
+    DecLeft = 3,       DecRight = 4,
+    DecBottomLeft = 5, DecBottom = 6, DecBottomRight = 7,
+
+    DecLAST = 8
+};
+
 struct Client
 {
-    int x, y, w, h;      /* Visible, "outer" size */
+    /* Inner size of the actual client */
+    int x, y, w, h;
     Window win;
+
+    Window decwin[DecLAST];
+    GC decwin_gc[DecLAST];
 
     struct Client *next;
 };
+
+struct DecorationGeometry
+{
+    int top_height;
+    int left_width, right_width;
+    int bottom_height;
+} dgeo;
 
 static struct Client *clients = NULL;
 static struct Client *mdc = NULL;
@@ -26,16 +46,22 @@ static int running = 1;
 static int screen;
 static int (*xerrorxlib)(Display *, XErrorEvent *);
 
+static struct Client *client_get_for_decoration(Window win,
+                                                enum DecorationLocation *which);
 static struct Client *client_get_for_window(Window win);
 static void client_save(struct Client *c);
+static void decorations_create(struct Client *c);
+static void decorations_destroy(struct Client *c);
 static void handle_button(XEvent *e);
 static void handle_configurerequest(XEvent *e);
 static void handle_destroynotify(XEvent *e);
 static void handle_enternotify(XEvent *e);
+static void handle_expose(XEvent *e);
 static void handle_maprequest(XEvent *e);
 static void handle_motionnotify(XEvent *e);
 static void handle_unmapnotify(XEvent *e);
 static void manage(Window win, XWindowAttributes *wa);
+static void manage_raisefocus(struct Client *c);
 static void manage_setsize(struct Client *c);
 static void run(void);
 static void scan(void);
@@ -50,15 +76,35 @@ static void (*handler[LASTEvent]) (XEvent *) = {
     [ConfigureRequest] = handle_configurerequest,
     [DestroyNotify] = handle_destroynotify,
     [EnterNotify] = handle_enternotify,
+    [Expose] = handle_expose,
     [MapRequest] = handle_maprequest,
     [MotionNotify] = handle_motionnotify,
     [UnmapNotify] = handle_unmapnotify,
-#if 0
-    [Expose] = handle_expose,
-#endif
 };
 
 #include "config.h"
+
+struct Client *
+client_get_for_decoration(Window win, enum DecorationLocation *which)
+{
+    struct Client *c;
+    size_t i;
+
+    for (c = clients; c; c = c->next)
+    {
+        for (i = DecTopLeft; i <= DecBottomRight; i++)
+        {
+            if (c->decwin[i] == win)
+            {
+                *which = i;
+                return c;
+            }
+        }
+    }
+
+    *which = DecLAST;
+    return NULL;
+}
 
 struct Client *
 client_get_for_window(Window win)
@@ -77,6 +123,45 @@ client_save(struct Client *c)
 {
     c->next = clients;
     clients = c;
+}
+
+void
+decorations_create(struct Client *c)
+{
+    size_t i;
+    XSetWindowAttributes wa = {
+        .override_redirect = True,
+        .background_pixmap = ParentRelative,
+        .event_mask = ExposureMask,
+    };
+
+    for (i = DecTopLeft; i <= DecBottomRight; i++)
+    {
+        c->decwin[i] = XCreateWindow(
+                dpy, root, 0, 0, 10, 10, 0,
+                DefaultDepth(dpy, screen),
+                CopyFromParent, DefaultVisual(dpy, screen),
+                CWOverrideRedirect|CWBackPixmap|CWEventMask,
+                &wa
+        );
+        XMapRaised(dpy, c->decwin[i]);
+        c->decwin_gc[i] = XCreateGC(dpy, root, 0, NULL);
+        XSetLineAttributes(dpy, c->decwin_gc[i], 1, LineSolid, CapButt,
+                           JoinMiter);
+    }
+}
+
+void
+decorations_destroy(struct Client *c)
+{
+    size_t i;
+
+    for (i = DecTopLeft; i <= DecBottomRight; i++)
+    {
+        XFreeGC(dpy, c->decwin_gc[i]);
+        XUnmapWindow(dpy, c->decwin[i]);
+        XDestroyWindow(dpy, c->decwin[i]);
+    }
 }
 
 void
@@ -101,8 +186,7 @@ handle_button(XEvent *e)
             ocw = c->w;
             och = c->h;
 
-            XRaiseWindow(dpy, c->win);
-            XSetInputFocus(dpy, c->win, RevertToPointerRoot, CurrentTime);
+            manage_raisefocus(c);
         }
     }
 }
@@ -165,6 +249,81 @@ handle_enternotify(XEvent *e)
         return;
 
     XSetInputFocus(dpy, ev->window, RevertToPointerRoot, CurrentTime);
+}
+
+void
+handle_expose(XEvent *e)
+{
+    XExposeEvent *ev = &e->xexpose;
+    struct Client *c = NULL;
+    enum DecorationLocation which = DecLAST;
+    long unsigned int democolor;
+
+    if ((c = client_get_for_decoration(ev->window, &which)) == NULL)
+        return;
+
+    democolor = 0xFF000000 |
+                ((which & 1) * 0xFF) |
+                (((which & 2) >> 1) * 0xFF00) |
+                (((which & 4) >> 2) * 0xFF0000);
+
+    switch (which)
+    {
+        case DecTopLeft:
+            XSetForeground(dpy, c->decwin_gc[which], democolor);
+            XFillRectangle(dpy, c->decwin[which], c->decwin_gc[which],
+                           0, 0,
+                           dgeo.left_width, dgeo.top_height);
+            break;
+        case DecTop:
+            XSetForeground(dpy, c->decwin_gc[which], democolor);
+            XFillRectangle(dpy, c->decwin[which], c->decwin_gc[which],
+                           0, 0,
+                           c->w, dgeo.top_height);
+            break;
+        case DecTopRight:
+            XSetForeground(dpy, c->decwin_gc[which], democolor);
+            XFillRectangle(dpy, c->decwin[which], c->decwin_gc[which],
+                           0, 0,
+                           dgeo.right_width, dgeo.top_height);
+            break;
+
+        case DecLeft:
+            XSetForeground(dpy, c->decwin_gc[which], democolor);
+            XFillRectangle(dpy, c->decwin[which], c->decwin_gc[which],
+                           0, 0,
+                           dgeo.left_width, c->h);
+            break;
+        case DecRight:
+            XSetForeground(dpy, c->decwin_gc[which], democolor);
+            XFillRectangle(dpy, c->decwin[which], c->decwin_gc[which],
+                           0, 0,
+                           dgeo.right_width, c->h);
+            break;
+
+        case DecBottomLeft:
+            XSetForeground(dpy, c->decwin_gc[which], democolor);
+            XFillRectangle(dpy, c->decwin[which], c->decwin_gc[which],
+                           0, 0,
+                           dgeo.left_width, dgeo.bottom_height);
+            break;
+        case DecBottom:
+            XSetForeground(dpy, c->decwin_gc[which], democolor);
+            XFillRectangle(dpy, c->decwin[which], c->decwin_gc[which],
+                           0, 0,
+                           c->w, dgeo.bottom_height);
+            break;
+        case DecBottomRight:
+            XSetForeground(dpy, c->decwin_gc[which], democolor);
+            XFillRectangle(dpy, c->decwin[which], c->decwin_gc[which],
+                           0, 0,
+                           dgeo.right_width, dgeo.bottom_height);
+            break;
+
+        case DecLAST:
+            /* ignore */
+            break;
+    }
 }
 
 void
@@ -238,6 +397,10 @@ manage(Window win, XWindowAttributes *wa)
     c->y = wa->y;
     c->w = wa->width;
     c->h = wa->height;
+
+    /* Adjust client if outside of the screen. */
+    /* TODO we must scan monitors do implement this */
+
     c->win = win;
 
     XSetWindowBorderWidth(dpy, c->win, 0);
@@ -263,6 +426,9 @@ manage(Window win, XWindowAttributes *wa)
 
     XMapWindow(dpy, c->win);
 
+    decorations_create(c);
+    manage_setsize(c);
+
     client_save(c);
 
     fprintf(stderr, __NAME__": Managing window %lu (%p) at %dx%d+%d+%d\n",
@@ -270,8 +436,47 @@ manage(Window win, XWindowAttributes *wa)
 }
 
 void
+manage_raisefocus(struct Client *c)
+{
+    size_t i;
+
+    XRaiseWindow(dpy, c->win);
+    XSetInputFocus(dpy, c->win, RevertToPointerRoot, CurrentTime);
+
+    for (i = DecTopLeft; i <= DecBottomRight; i++)
+        XRaiseWindow(dpy, c->decwin[i]);
+}
+
+void
 manage_setsize(struct Client *c)
 {
+    XMoveResizeWindow(dpy, c->decwin[DecTopLeft],
+                      c->x - dgeo.left_width, c->y - dgeo.top_height,
+                      dgeo.left_width, dgeo.top_height);
+    XMoveResizeWindow(dpy, c->decwin[DecTop],
+                      c->x, c->y - dgeo.top_height,
+                      c->w, dgeo.top_height);
+    XMoveResizeWindow(dpy, c->decwin[DecTopRight],
+                      c->x + c->w, c->y - dgeo.top_height,
+                      dgeo.right_width, dgeo.top_height);
+
+    XMoveResizeWindow(dpy, c->decwin[DecLeft],
+                      c->x - dgeo.left_width, c->y,
+                      dgeo.left_width, c->h);
+    XMoveResizeWindow(dpy, c->decwin[DecRight],
+                      c->x + c->w, c->y,
+                      dgeo.right_width, c->h);
+
+    XMoveResizeWindow(dpy, c->decwin[DecBottomLeft],
+                      c->x - dgeo.left_width, c->y + c->h,
+                      dgeo.left_width, dgeo.bottom_height);
+    XMoveResizeWindow(dpy, c->decwin[DecBottom],
+                      c->x, c->y + c->h,
+                      c->w, dgeo.bottom_height);
+    XMoveResizeWindow(dpy, c->decwin[DecBottomRight],
+                      c->x + c->w, c->y + c->h,
+                      dgeo.right_width, dgeo.bottom_height);
+
     XMoveResizeWindow(dpy, c->win, c->x, c->y, c->w, c->h);
 }
 
@@ -298,6 +503,10 @@ setup(void)
     xerrorxlib = XSetErrorHandler(xerror);
 
     /* TODO scan monitors */
+
+    /* TODO derive from font size and/or pixmap size */
+    dgeo.top_height = 16; dgeo.left_width = 2; dgeo.right_width = 2;
+    dgeo.bottom_height = 2;
 
     XSelectInput(dpy, root, 0
                  /* Manage creation and destruction of windows */
@@ -351,6 +560,8 @@ unmanage(struct Client *c)
 
     for (tc = &clients; *tc && *tc != c; tc = &(*tc)->next);
     *tc = c->next;
+
+    decorations_destroy(c);
 
     fprintf(stderr, __NAME__": No longer managing window %lu (%p)\n",
             c->win, (void *)c);

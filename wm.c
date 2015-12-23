@@ -404,7 +404,7 @@ manage(Window win, XWindowAttributes *wa)
         return;
     }
 
-    c = calloc(1, sizeof(struct Client));
+    c = calloc(1, sizeof (struct Client));
 
     c->x = wa->x;
     c->y = wa->y;

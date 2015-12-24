@@ -638,8 +638,6 @@ manage(Window win, XWindowAttributes *wa)
                               | EnterWindowMask
                               );
 
-    XMapWindow(dpy, c->win);
-
     decorations_create(c);
     manage_fit_on_monitor(c);
     manage_setsize(c);
@@ -649,6 +647,8 @@ manage(Window win, XWindowAttributes *wa)
 
     fprintf(stderr, __NAME__": Managing window %lu (%p) at %dx%d+%d+%d\n",
             c->win, (void *)c, c->w, c->h, c->x, c->y);
+
+    XMapWindow(dpy, c->win);
 }
 
 void

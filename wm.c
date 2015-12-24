@@ -4,6 +4,7 @@
  * http://seasonofcode.com/posts/how-x-window-managers-work-and-how-to-write-one-part-i.html
  */
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <X11/extensions/Xrandr.h>
@@ -22,6 +23,24 @@ enum DecorationLocation
     DecLAST = 8
 };
 
+struct DecorationGeometry
+{
+    int top_height;
+    int left_width, right_width;
+    int bottom_height;
+};
+
+enum DecTint
+{
+    DecTintNormal = 0,
+    DecTintSelect = 1,
+    DecTintUrgent = 2,
+
+    DecTintLAST = 3
+};
+
+#include "pixmaps.h"
+
 struct Client
 {
     Window win;
@@ -36,13 +55,6 @@ struct Client
 
     struct Client *next;
 };
-
-struct DecorationGeometry
-{
-    int top_height;
-    int left_width, right_width;
-    int bottom_height;
-} dgeo;
 
 struct Monitor
 {
@@ -60,6 +72,7 @@ static struct Client *mouse_dc = NULL;
 static struct Monitor *monitors = NULL, *selmon = NULL;
 static int mouse_dx, mouse_dy, mouse_ocx, mouse_ocy, mouse_ocw, mouse_och;
 static Display *dpy;
+static XImage *dec_ximg[3];
 static Window root, command_window;
 static int running = 1;
 static int screen;
@@ -71,6 +84,9 @@ static struct Client *client_get_for_window(Window win);
 static void client_save(struct Client *c);
 static void decorations_create(struct Client *c);
 static void decorations_destroy(struct Client *c);
+static void decorations_load(void);
+static char *decorations_tint(unsigned long color);
+static XImage *decorations_to_ximg(char *data);
 static void handle_clientmessage(XEvent *e);
 static void handle_configurerequest(XEvent *e);
 static void handle_destroynotify(XEvent *e);
@@ -189,6 +205,69 @@ decorations_destroy(struct Client *c)
 }
 
 void
+decorations_load(void)
+{
+    char *tinted[DecTintLAST];
+    size_t i;
+
+    for (i = DecTintNormal; i <= DecTintUrgent; i++)
+    {
+        tinted[i] = decorations_tint(dec_tints[i]);
+        dec_ximg[i] = decorations_to_ximg(tinted[i]);
+    }
+}
+
+char *
+decorations_tint(unsigned long color)
+{
+    unsigned int r, g, b, tr, tg, tb;
+    unsigned int *out;
+    size_t i;
+
+    out = (unsigned int *)malloc(sizeof dec_img);
+    assert(out != NULL);
+
+    tr = (0x00FF0000 & color) >> 16;
+    tg = (0x0000FF00 & color) >> 8;
+    tb = (0x000000FF & color);
+
+    for (i = 0; i < sizeof dec_img / sizeof dec_img[0]; i++)
+    {
+        /* r = original_r * (tint / 256) */
+
+        r = (0x00FF0000 & dec_img[i]) >> 16;
+        g = (0x0000FF00 & dec_img[i]) >> 8;
+        b = (0x000000FF & dec_img[i]);
+
+        r *= tr;
+        g *= tg;
+        b *= tb;
+
+        r /= 256;
+        g /= 256;
+        b /= 256;
+
+        r = r > 255 ? 255 : r;
+        g = g > 255 ? 255 : g;
+        b = b > 255 ? 255 : b;
+
+        out[i] = 0xFF000000 | (r << 16) | (g << 8) | b;
+    }
+
+    return (char *)out;
+}
+
+XImage *
+decorations_to_ximg(char *data)
+{
+    return XCreateImage(dpy, DefaultVisual(dpy, screen), 24, ZPixmap, 0,
+                        data,
+                        dgeo.left_width + 1 + dgeo.right_width,
+                        dgeo.top_height + 1 + dgeo.bottom_height,
+                        32, 0);
+}
+
+void
 handle_clientmessage(XEvent *e)
 {
     XClientMessageEvent *cme = &e->xclient;
@@ -278,67 +357,62 @@ handle_expose(XEvent *e)
     XExposeEvent *ev = &e->xexpose;
     struct Client *c = NULL;
     enum DecorationLocation which = DecLAST;
-    long unsigned int democolor;
+    enum DecTint tint = DecTintSelect;
+    int x, y;
 
     if ((c = client_get_for_decoration(ev->window, &which)) == NULL)
         return;
 
-    democolor = 0xFF000000 |
-                ((which & 1) * 0xFF) |
-                (((which & 2) >> 1) * 0xFF00) |
-                (((which & 4) >> 2) * 0xFF0000);
+    /* TODO optimize for speed, using tiling */
 
     switch (which)
     {
         case DecTopLeft:
-            XSetForeground(dpy, c->decwin_gc[which], democolor);
-            XFillRectangle(dpy, c->decwin[which], c->decwin_gc[which],
-                           0, 0,
-                           dgeo.left_width, dgeo.top_height);
+            XPutImage(dpy, c->decwin[which], c->decwin_gc[which],
+                      dec_ximg[tint], 0, 0, 0, 0,
+                      dgeo.left_width, dgeo.top_height);
             break;
         case DecTop:
-            XSetForeground(dpy, c->decwin_gc[which], democolor);
-            XFillRectangle(dpy, c->decwin[which], c->decwin_gc[which],
-                           0, 0,
-                           c->w, dgeo.top_height);
+            for (x = 0; x < c->w; x++)
+                XPutImage(dpy, c->decwin[which], c->decwin_gc[which],
+                          dec_ximg[tint], dgeo.left_width, 0, x, 0,
+                          1, dgeo.top_height);
             break;
         case DecTopRight:
-            XSetForeground(dpy, c->decwin_gc[which], democolor);
-            XFillRectangle(dpy, c->decwin[which], c->decwin_gc[which],
-                           0, 0,
-                           dgeo.right_width, dgeo.top_height);
+            XPutImage(dpy, c->decwin[which], c->decwin_gc[which],
+                      dec_ximg[tint], dgeo.left_width + 1, 0, 0, 0,
+                      dgeo.right_width, dgeo.top_height);
             break;
 
         case DecLeft:
-            XSetForeground(dpy, c->decwin_gc[which], democolor);
-            XFillRectangle(dpy, c->decwin[which], c->decwin_gc[which],
-                           0, 0,
-                           dgeo.left_width, c->h);
+            for (y = 0; y < c->h; y++)
+                XPutImage(dpy, c->decwin[which], c->decwin_gc[which],
+                          dec_ximg[tint], 0, dgeo.top_height, 0, y,
+                          dgeo.left_width, 1);
             break;
         case DecRight:
-            XSetForeground(dpy, c->decwin_gc[which], democolor);
-            XFillRectangle(dpy, c->decwin[which], c->decwin_gc[which],
-                           0, 0,
-                           dgeo.right_width, c->h);
+            for (y = 0; y < c->h; y++)
+                XPutImage(dpy, c->decwin[which], c->decwin_gc[which],
+                          dec_ximg[tint], dgeo.left_width + 1, dgeo.top_height,
+                          0, y,
+                          dgeo.right_width, 1);
             break;
 
         case DecBottomLeft:
-            XSetForeground(dpy, c->decwin_gc[which], democolor);
-            XFillRectangle(dpy, c->decwin[which], c->decwin_gc[which],
-                           0, 0,
-                           dgeo.left_width, dgeo.bottom_height);
+            XPutImage(dpy, c->decwin[which], c->decwin_gc[which],
+                      dec_ximg[tint], 0, dgeo.top_height + 1, 0, 0,
+                      dgeo.left_width, dgeo.top_height);
             break;
         case DecBottom:
-            XSetForeground(dpy, c->decwin_gc[which], democolor);
-            XFillRectangle(dpy, c->decwin[which], c->decwin_gc[which],
-                           0, 0,
-                           c->w, dgeo.bottom_height);
+            for (x = 0; x < c->w; x++)
+                XPutImage(dpy, c->decwin[which], c->decwin_gc[which],
+                          dec_ximg[tint], dgeo.left_width, dgeo.top_height + 1,
+                          x, 0, 1, dgeo.top_height);
             break;
         case DecBottomRight:
-            XSetForeground(dpy, c->decwin_gc[which], democolor);
-            XFillRectangle(dpy, c->decwin[which], c->decwin_gc[which],
-                           0, 0,
-                           dgeo.right_width, dgeo.bottom_height);
+            XPutImage(dpy, c->decwin[which], c->decwin_gc[which],
+                      dec_ximg[tint], dgeo.left_width + 1, dgeo.top_height + 1,
+                      0, 0, dgeo.right_width, dgeo.top_height);
             break;
 
         case DecLAST:
@@ -638,9 +712,7 @@ setup(void)
                 ci->x, ci->y, ci->width, ci->height);
     }
 
-    /* TODO derive from font size and/or pixmap size */
-    dgeo.top_height = 16; dgeo.left_width = 2; dgeo.right_width = 2;
-    dgeo.bottom_height = 2;
+    decorations_load();
 
     XSelectInput(dpy, root, 0
                  /* Manage creation and destruction of windows */

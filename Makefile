@@ -7,7 +7,7 @@ __NAME_CAPITALIZED__ = `echo $(__NAME__) | sed 's/^./\U&\E/'`
 
 all: $(__NAME__) $(__NAME__)c
 
-$(__NAME__): wm.c ipc.h
+$(__NAME__): wm.c ipc.h pixmaps.h
 	$(CC) $(CFLAGS) $(LDFLAGS) \
 		-D__NAME__=\"$(__NAME__)\" \
 		-D__NAME_UPPERCASE__=\"$(__NAME_UPPERCASE__)\" \

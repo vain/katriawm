@@ -686,6 +686,11 @@ manage_raisefocus(struct Client *c)
 void
 manage_setsize(struct Client *c)
 {
+    if (c->w <= 0)
+        c->w = 1;
+    if (c->h <= 0)
+        c->h = 1;
+
     XMoveResizeWindow(dpy, c->decwin[DecWinTop],
                       c->x - dgeo.left_width, c->y - dgeo.top_height,
                       dgeo.left_width + c->w + dgeo.right_width,

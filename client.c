@@ -133,6 +133,19 @@ main(int argc, char **argv)
             arg = 1;
         }
     }
+    if (strncmp(argv[1], "nav_workspace", strlen("nav_workspace")) == 0 && argc >= 3)
+    {
+        if (strncmp(argv[2], "prev", strlen("prev")) == 0)
+        {
+            cmd = IPCNavWorkspace;
+            arg = -1;
+        }
+        if (strncmp(argv[2], "next", strlen("next")) == 0)
+        {
+            cmd = IPCNavWorkspace;
+            arg = 1;
+        }
+    }
 
     if (cmd != IPCLast)
     {

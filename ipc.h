@@ -8,6 +8,7 @@ enum IPCCommand
     IPCMouseMove,
     IPCMouseResize,
     IPCNavMonitor,
+    IPCNavWorkspace,
 
     IPCLast,
 };

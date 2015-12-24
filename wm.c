@@ -63,7 +63,11 @@ struct Client
     /* Inner size of the actual client */
     int x, y, w, h;
 
+    int visible_x;
+    char hidden;
+
     struct Monitor *mon;
+    int workspace;
 
     Window decwin[DecWinLAST];
 
@@ -73,6 +77,7 @@ struct Client
 struct Monitor
 {
     int index;
+    int active_workspace;
 
     /* Actual monitor size */
     int mx, my, mw, mh;
@@ -91,6 +96,7 @@ static Display *dpy;
 static XImage *dec_ximg[DecTintLAST];
 static Window root, command_window;
 static int monitors_num = 0;
+static int max_workspaces = 100;
 static int running = 1;
 static int screen;
 static int (*xerrorxlib)(Display *, XErrorEvent *);
@@ -118,9 +124,11 @@ static void handle_unmapnotify(XEvent *e);
 static void ipc_mouse_move(char arg);
 static void ipc_mouse_resize(char arg);
 static void ipc_nav_monitor(char arg);
+static void ipc_nav_workspace(char arg);
 static void ipc_noop(char arg);
 static void manage(Window win, XWindowAttributes *wa);
 static void manage_fit_on_monitor(struct Client *c);
+static void manage_showhide(struct Client *c, char hide);
 static void manage_raisefocus(struct Client *c);
 static void manage_setsize(struct Client *c);
 static void run(void);
@@ -134,6 +142,7 @@ static void (*ipc_handler[IPCLast]) (char arg) = {
     [IPCMouseMove] = ipc_mouse_move,
     [IPCMouseResize] = ipc_mouse_resize,
     [IPCNavMonitor] = ipc_nav_monitor,
+    [IPCNavWorkspace] = ipc_nav_workspace,
     [IPCNoop] = ipc_noop,
 };
 
@@ -632,6 +641,28 @@ ipc_nav_monitor(char arg)
 }
 
 void
+ipc_nav_workspace(char arg)
+{
+    int i;
+    struct Client *c;
+
+    i = selmon->active_workspace;
+    i += arg;
+    i = i < 0 ? 0 : i;
+    i = i >= max_workspaces ? max_workspaces - 1 : i;
+
+    for (c = clients; c; c = c->next)
+        if (c->mon == selmon)
+            manage_showhide(c, 1);
+
+    for (c = clients; c; c = c->next)
+        if (c->mon == selmon && c->workspace == i)
+            manage_showhide(c, 0);
+
+    selmon->active_workspace = i;
+}
+
+void
 ipc_noop(char arg)
 {
     fprintf(stderr, __NAME__": ipc: Noop (arg %d)\n", arg);
@@ -653,6 +684,7 @@ manage(Window win, XWindowAttributes *wa)
 
     c->win = win;
     c->mon = selmon;
+    c->workspace = selmon->active_workspace;
 
     c->x = wa->x;
     c->y = wa->y;
@@ -709,6 +741,27 @@ manage_raisefocus(struct Client *c)
 
     for (i = DecWinTop; i <= DecWinBottom; i++)
         XRaiseWindow(dpy, c->decwin[i]);
+}
+
+void
+manage_showhide(struct Client *c, char hide)
+{
+    if (hide && !c->hidden)
+    {
+        c->visible_x = c->x;
+        c->x = -2 * c->w;
+        c->hidden = 1;
+
+        manage_setsize(c);
+    }
+
+    if (!hide)
+    {
+        c->x = c->visible_x;
+        c->hidden = 0;
+
+        manage_setsize(c);
+    }
 }
 
 void
@@ -809,6 +862,7 @@ setup(void)
         m->ww = m->mw = ci->width;
         m->wh = m->mh = ci->height;
         m->index = monitors_num++;
+        m->active_workspace = 0;
         m->next = monitors;
         monitors = m;
         fprintf(stderr, __NAME__": monitor: %d %d %d %d\n",

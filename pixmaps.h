@@ -24,6 +24,8 @@ static struct SubImage dec_coords[] = {
     { .x = 31, .y = 31, .w = 28, .h = 28 },  /* DecBottomRight */
 };
 
+static unsigned int dec_img_w = 59;
+static unsigned int dec_img_h = 59;
 static unsigned int dec_img[] = {
 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 
 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 

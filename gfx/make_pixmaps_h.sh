@@ -6,8 +6,14 @@
 img=$1
 metadata="$img".h
 
+size=$(identify "$img" | awk '{ print $3 }')
+size_w=${size%x*}
+size_h=${size#*x}
+
 cat "$metadata"
 echo
+echo "static unsigned int dec_img_w = $size_w;"
+echo "static unsigned int dec_img_h = $size_h;"
 echo 'static unsigned int dec_img[] = {'
 
 convert -quiet -compress lossless -depth 8 "$img" ppm:- |

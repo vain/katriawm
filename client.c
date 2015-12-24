@@ -122,8 +122,15 @@ main(int argc, char **argv)
     }
 
     if (cmd != IPCLast)
+    {
         if (!send_command(cmd, arg))
             exit(EXIT_FAILURE);
+    }
+    else
+    {
+        fprintf(stderr, __NAME__"c: Unknown command\n");
+            exit(EXIT_FAILURE);
+    }
 
     exit(EXIT_SUCCESS);
 }

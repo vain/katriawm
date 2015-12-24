@@ -6,7 +6,7 @@
 
 #include "ipc.h"
 
-Atom
+static Atom
 getatomprop(Display *dpy, Window w, char *name, Atom type) {
     /* Props to dwm */
 
@@ -26,15 +26,17 @@ getatomprop(Display *dpy, Window w, char *name, Atom type) {
     return atom;
 }
 
-int
-main(int argc, char **argv)
+static int
+send_command(enum IPCCommand cmd, char arg)
 {
     Atom cwa;
     Display *dpy;
     Window root, command_window;
     XEvent ev;
 
-    dpy = XOpenDisplay(NULL);
+    if (!(dpy = XOpenDisplay(NULL)))
+        return 0;
+
     root = DefaultRootWindow(dpy);
 
     cwa = (Window)getatomprop(
@@ -43,7 +45,7 @@ main(int argc, char **argv)
     if (cwa == None)
     {
         fprintf(stderr, __NAME__"c: Cannot find command window\n");
-        exit(EXIT_FAILURE);
+        return 0;
     }
     command_window = (Window)cwa;
 
@@ -55,11 +57,73 @@ main(int argc, char **argv)
     );
 
     ev.xclient.format = 8;
-    ev.xclient.data.b[0] = IPCNoop;
-    ev.xclient.data.b[1] = 42;
+    ev.xclient.data.b[0] = cmd;
+    ev.xclient.data.b[1] = arg;
 
+    fprintf(stderr, __NAME__"c: Sending cmd %d, arg %d\n", cmd, arg);
     XSendEvent(dpy, command_window, False, NoEventMask, &ev);
     XSync(dpy, False);
+
+    return 1;
+}
+
+int
+main(int argc, char **argv)
+{
+    enum IPCCommand cmd = IPCLast;
+    char arg;
+
+    if (argc < 2)
+    {
+        fprintf(stderr, "Expected arguments\n");
+        exit(EXIT_FAILURE);
+    }
+
+    if (strncmp(argv[1], "noop", strlen("noop")) == 0)
+    {
+        cmd = IPCNoop;
+        arg = 42;
+    }
+    if (strncmp(argv[1], "mouse_move", strlen("mouse_move")) == 0 && argc >= 3)
+    {
+        if (strncmp(argv[2], "down", strlen("down")) == 0)
+        {
+            cmd = IPCMouseMove;
+            arg = 0;
+        }
+        if (strncmp(argv[2], "motion", strlen("motion")) == 0)
+        {
+            cmd = IPCMouseMove;
+            arg = 1;
+        }
+        if (strncmp(argv[2], "up", strlen("up")) == 0)
+        {
+            cmd = IPCMouseMove;
+            arg = 2;
+        }
+    }
+    if (strncmp(argv[1], "mouse_resize", strlen("mouse_resize")) == 0 && argc >= 3)
+    {
+        if (strncmp(argv[2], "down", strlen("down")) == 0)
+        {
+            cmd = IPCMouseResize;
+            arg = 0;
+        }
+        if (strncmp(argv[2], "motion", strlen("motion")) == 0)
+        {
+            cmd = IPCMouseResize;
+            arg = 1;
+        }
+        if (strncmp(argv[2], "up", strlen("up")) == 0)
+        {
+            cmd = IPCMouseResize;
+            arg = 2;
+        }
+    }
+
+    if (cmd != IPCLast)
+        if (!send_command(cmd, arg))
+            exit(EXIT_FAILURE);
 
     exit(EXIT_SUCCESS);
 }

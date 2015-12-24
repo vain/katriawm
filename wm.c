@@ -56,7 +56,9 @@ struct Monitor
 };
 
 static struct Client *clients = NULL;
+static struct Client *mouse_dc = NULL;
 static struct Monitor *monitors = NULL, *selmon = NULL;
+static int mouse_dx, mouse_dy, mouse_ocx, mouse_ocy, mouse_ocw, mouse_och;
 static Display *dpy;
 static Window root, command_window;
 static int running = 1;
@@ -76,6 +78,9 @@ static void handle_enternotify(XEvent *e);
 static void handle_expose(XEvent *e);
 static void handle_maprequest(XEvent *e);
 static void handle_unmapnotify(XEvent *e);
+static void ipc_mouse_move(char arg);
+static void ipc_mouse_resize(char arg);
+static void ipc_noop(char arg);
 static void manage(Window win, XWindowAttributes *wa);
 static void manage_fit_on_monitor(struct Client *c);
 static void manage_raisefocus(struct Client *c);
@@ -87,7 +92,13 @@ static void shutdown(void);
 static void unmanage(struct Client *c);
 static int xerror(Display *dpy, XErrorEvent *ee);
 
-static void (*handler[LASTEvent]) (XEvent *) = {
+static void (*ipc_handler[IPCLast]) (char arg) = {
+    [IPCMouseMove] = ipc_mouse_move,
+    [IPCMouseResize] = ipc_mouse_resize,
+    [IPCNoop] = ipc_noop,
+};
+
+static void (*x11_handler[LASTEvent]) (XEvent *) = {
     [ClientMessage] = handle_clientmessage,
     [ConfigureRequest] = handle_configurerequest,
     [DestroyNotify] = handle_destroynotify,
@@ -196,12 +207,9 @@ handle_clientmessage(XEvent *e)
 
     cmd = (enum IPCCommand)cme->data.b[0];
     arg = (char)cme->data.b[1];
-    switch (cmd)
-    {
-        case IPCNoop:
-            fprintf(stderr, __NAME__": ipc: Noop (arg %d)\n", arg);
-            break;
-    }
+
+    if (ipc_handler[cmd])
+        ipc_handler[cmd](arg);
 }
 
 void
@@ -364,6 +372,112 @@ handle_unmapnotify(XEvent *e)
 }
 
 void
+ipc_mouse_move(char arg)
+{
+    int x, y, di, dx, dy;
+    unsigned int dui;
+    Window child, dummy;
+    struct Client *c;
+
+	XQueryPointer(dpy, root, &dummy, &child, &x, &y, &di, &di, &dui);
+
+    if (arg == 0)
+    {
+        fprintf(stderr, __NAME__": Mouse move: down at %d, %d over %lu\n",
+                x, y, child);
+
+        mouse_dc = NULL;
+
+        if ((c = client_get_for_window(child)))
+        {
+            mouse_dc = c;
+            mouse_dx = x;
+            mouse_dy = y;
+            mouse_ocx = c->x;
+            mouse_ocy = c->y;
+            mouse_ocw = c->w;
+            mouse_och = c->h;
+
+            manage_raisefocus(c);
+        }
+    }
+    else if (arg == 1)
+    {
+        fprintf(stderr, __NAME__": Mouse move: motion to %d, %d\n", x, y);
+
+        if (mouse_dc)
+        {
+            dx = x - mouse_dx;
+            dy = y - mouse_dy;
+
+            mouse_dc->x = mouse_ocx + dx;
+            mouse_dc->y = mouse_ocy + dy;
+
+            manage_setsize(mouse_dc);
+        }
+    }
+    else if (arg == 2)
+        mouse_dc = NULL;
+}
+
+void
+ipc_mouse_resize(char arg)
+{
+    /* TODO lots of code duplication from ipc_mouse_move() */
+
+    int x, y, di, dx, dy;
+    unsigned int dui;
+    Window child, dummy;
+    struct Client *c;
+
+	XQueryPointer(dpy, root, &dummy, &child, &x, &y, &di, &di, &dui);
+
+    if (arg == 0)
+    {
+        fprintf(stderr, __NAME__": Mouse resize: down at %d, %d over %lu\n",
+                x, y, child);
+
+        mouse_dc = NULL;
+
+        if ((c = client_get_for_window(child)))
+        {
+            mouse_dc = c;
+            mouse_dx = x;
+            mouse_dy = y;
+            mouse_ocx = c->x;
+            mouse_ocy = c->y;
+            mouse_ocw = c->w;
+            mouse_och = c->h;
+
+            manage_raisefocus(c);
+        }
+    }
+    else if (arg == 1)
+    {
+        fprintf(stderr, __NAME__": Mouse resize: motion to %d, %d\n", x, y);
+
+        if (mouse_dc)
+        {
+            dx = x - mouse_dx;
+            dy = y - mouse_dy;
+
+            mouse_dc->w = mouse_ocw + dx;
+            mouse_dc->h = mouse_och + dy;
+
+            manage_setsize(mouse_dc);
+        }
+    }
+    else if (arg == 2)
+        mouse_dc = NULL;
+}
+
+void
+ipc_noop(char arg)
+{
+    fprintf(stderr, __NAME__": ipc: Noop (arg %d)\n", arg);
+}
+
+void
 manage(Window win, XWindowAttributes *wa)
 {
     struct Client *c;
@@ -478,8 +592,8 @@ run(void)
     {
         XNextEvent(dpy, &ev);
         fprintf(stderr, __NAME__": Event %d\n", ev.type);
-        if (handler[ev.type])
-            handler[ev.type](&ev);
+        if (x11_handler[ev.type])
+            x11_handler[ev.type](&ev);
     }
 }
 

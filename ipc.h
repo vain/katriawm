@@ -4,6 +4,11 @@
 enum IPCCommand
 {
     IPCNoop = 0,
+
+    IPCMouseMove,
+    IPCMouseResize,
+
+    IPCLast,
 };
 
 #endif /* _WM_IPC_H */

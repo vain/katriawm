@@ -511,6 +511,7 @@ manage(Window win, XWindowAttributes *wa)
     decorations_create(c);
     manage_fit_on_monitor(c);
     manage_setsize(c);
+    manage_raisefocus(c);
 
     client_save(c);
 

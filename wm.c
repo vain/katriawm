@@ -53,9 +53,7 @@ struct Monitor
 };
 
 static struct Client *clients = NULL;
-static struct Client *mdc = NULL;
 static struct Monitor *monitors = NULL, *selmon = NULL;
-static int mdx, mdy, ocx, ocy, ocw, och;
 static Display *dpy;
 static Window root;
 static int running = 1;
@@ -68,13 +66,11 @@ static struct Client *client_get_for_window(Window win);
 static void client_save(struct Client *c);
 static void decorations_create(struct Client *c);
 static void decorations_destroy(struct Client *c);
-static void handle_button(XEvent *e);
 static void handle_configurerequest(XEvent *e);
 static void handle_destroynotify(XEvent *e);
 static void handle_enternotify(XEvent *e);
 static void handle_expose(XEvent *e);
 static void handle_maprequest(XEvent *e);
-static void handle_motionnotify(XEvent *e);
 static void handle_unmapnotify(XEvent *e);
 static void manage(Window win, XWindowAttributes *wa);
 static void manage_fit_on_monitor(struct Client *c);
@@ -88,18 +84,13 @@ static void unmanage(struct Client *c);
 static int xerror(Display *dpy, XErrorEvent *ee);
 
 static void (*handler[LASTEvent]) (XEvent *) = {
-    [ButtonPress] = handle_button,
-    [ButtonRelease] = handle_button,
     [ConfigureRequest] = handle_configurerequest,
     [DestroyNotify] = handle_destroynotify,
     [EnterNotify] = handle_enternotify,
     [Expose] = handle_expose,
     [MapRequest] = handle_maprequest,
-    [MotionNotify] = handle_motionnotify,
     [UnmapNotify] = handle_unmapnotify,
 };
-
-#include "config.h"
 
 struct Client *
 client_get_for_decoration(Window win, enum DecorationLocation *which)
@@ -178,33 +169,6 @@ decorations_destroy(struct Client *c)
         XFreeGC(dpy, c->decwin_gc[i]);
         XUnmapWindow(dpy, c->decwin[i]);
         XDestroyWindow(dpy, c->decwin[i]);
-    }
-}
-
-void
-handle_button(XEvent *e)
-{
-    XButtonEvent *ev = &e->xbutton;
-    struct Client *c;
-
-    /* Reset to NULL on ButtonRelease and on clicks that don't belong to
-     * a known client. */
-    mdc = NULL;
-
-    if (e->type == ButtonPress && ev->state & MODMASK)
-    {
-        if ((c = client_get_for_window(ev->window)))
-        {
-            mdc = c;
-            mdx = ev->x_root;
-            mdy = ev->y_root;
-            ocx = c->x;
-            ocy = c->y;
-            ocw = c->w;
-            och = c->h;
-
-            manage_raisefocus(c);
-        }
     }
 }
 
@@ -358,35 +322,6 @@ handle_maprequest(XEvent *e)
 }
 
 void
-handle_motionnotify(XEvent *e)
-{
-    XMotionEvent *ev = &e->xmotion;
-    XEvent dummy;
-    int dx, dy;
-
-    while (XCheckTypedWindowEvent(dpy, ev->window, MotionNotify, &dummy));
-
-    if (mdc == NULL)
-        return;
-
-    dx = ev->x_root - mdx;
-    dy = ev->y_root - mdy;
-
-    if (ev->state & Button1Mask)
-    {
-        mdc->x = ocx + dx;
-        mdc->y = ocy + dy;
-    }
-    else if (ev->state & Button3Mask)
-    {
-        mdc->w = ocw + dx;
-        mdc->h = och + dy;
-    }
-
-    manage_setsize(mdc);
-}
-
-void
 handle_unmapnotify(XEvent *e)
 {
     XUnmapEvent *ev = &e->xunmap;
@@ -421,23 +356,9 @@ manage(Window win, XWindowAttributes *wa)
     XSetWindowBorderWidth(dpy, c->win, 0);
 
     XSelectInput(dpy, c->win, 0
-#if 0
-                              /* Moving, resizing, raising */
-                              /* Only works on the window border ...? */
-                              | ButtonPressMask | ButtonReleaseMask
-                              | ButtonMotionMask
-#endif
                               /* Focus */
                               | EnterWindowMask
                               );
-
-    /* TODO Mod2Mask is a static hackaround numlockmask (probably) */
-    XGrabButton(dpy, Button1, MODMASK | Mod2Mask, c->win, False,
-                ButtonPressMask | ButtonReleaseMask | ButtonMotionMask,
-                GrabModeAsync, GrabModeAsync, None, None);
-    XGrabButton(dpy, Button3, MODMASK | Mod2Mask, c->win, False,
-                ButtonPressMask | ButtonReleaseMask | ButtonMotionMask,
-                GrabModeAsync, GrabModeAsync, None, None);
 
     XMapWindow(dpy, c->win);
 

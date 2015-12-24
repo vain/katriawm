@@ -30,6 +30,11 @@ struct DecorationGeometry
     int bottom_height;
 };
 
+struct SubImage
+{
+    int x, y, w, h;
+};
+
 enum DecTint
 {
     DecTintNormal = 0,

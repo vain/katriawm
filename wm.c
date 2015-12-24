@@ -6,9 +6,12 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <X11/extensions/Xrandr.h>
+#include <X11/Xatom.h>
 #include <X11/Xlib.h>
 #include <X11/Xproto.h>
-#include <X11/extensions/Xrandr.h>
+
+#include "ipc.h"
 
 enum DecorationLocation
 {
@@ -55,7 +58,7 @@ struct Monitor
 static struct Client *clients = NULL;
 static struct Monitor *monitors = NULL, *selmon = NULL;
 static Display *dpy;
-static Window root;
+static Window root, command_window;
 static int running = 1;
 static int screen;
 static int (*xerrorxlib)(Display *, XErrorEvent *);
@@ -66,6 +69,7 @@ static struct Client *client_get_for_window(Window win);
 static void client_save(struct Client *c);
 static void decorations_create(struct Client *c);
 static void decorations_destroy(struct Client *c);
+static void handle_clientmessage(XEvent *e);
 static void handle_configurerequest(XEvent *e);
 static void handle_destroynotify(XEvent *e);
 static void handle_enternotify(XEvent *e);
@@ -84,6 +88,7 @@ static void unmanage(struct Client *c);
 static int xerror(Display *dpy, XErrorEvent *ee);
 
 static void (*handler[LASTEvent]) (XEvent *) = {
+    [ClientMessage] = handle_clientmessage,
     [ConfigureRequest] = handle_configurerequest,
     [DestroyNotify] = handle_destroynotify,
     [EnterNotify] = handle_enternotify,
@@ -169,6 +174,33 @@ decorations_destroy(struct Client *c)
         XFreeGC(dpy, c->decwin_gc[i]);
         XUnmapWindow(dpy, c->decwin[i]);
         XDestroyWindow(dpy, c->decwin[i]);
+    }
+}
+
+void
+handle_clientmessage(XEvent *e)
+{
+    XClientMessageEvent *cme = &e->xclient;
+    static Atom t = None;
+    enum IPCCommand cmd;
+    char arg;
+
+    if (t == None)
+        t = XInternAtom(dpy, "_"__NAME_UPPERCASE__"_CLIENT_COMMAND", False);
+
+    if (cme->message_type != t)
+    {
+        fprintf(stderr, __NAME__": Received client message with unknown type");
+        return;
+    }
+
+    cmd = (enum IPCCommand)cme->data.b[0];
+    arg = (char)cme->data.b[1];
+    switch (cmd)
+    {
+        case IPCNoop:
+            fprintf(stderr, __NAME__": ipc: Noop (arg %d)\n", arg);
+            break;
     }
 }
 
@@ -458,6 +490,11 @@ setup(void)
     XRRScreenResources *sr;
     struct Monitor *m;
     int c;
+    XSetWindowAttributes wa = {
+        .override_redirect = True,
+        .background_pixmap = ParentRelative,
+        .event_mask = ExposureMask,
+    };
 
     dpy = XOpenDisplay(NULL);
     root = DefaultRootWindow(dpy);
@@ -494,6 +531,21 @@ setup(void)
                  /* Manage creation and destruction of windows */
                  | SubstructureRedirectMask | SubstructureNotifyMask
                  );
+
+    /* Setup invisible window for the client to send messages to */
+    command_window = XCreateWindow(
+            dpy, root, 0, 0, 10, 10, 0,
+            DefaultDepth(dpy, screen),
+            CopyFromParent, DefaultVisual(dpy, screen),
+            CWOverrideRedirect|CWBackPixmap|CWEventMask,
+            &wa
+    );
+    XChangeProperty(
+            dpy, root, XInternAtom(
+                    dpy, "_"__NAME_UPPERCASE__"_COMMAND_WINDOW", False
+            ),
+            XA_WINDOW, 32, PropModeReplace, (unsigned char *)&command_window, 1
+    );
 }
 
 void

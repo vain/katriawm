@@ -72,6 +72,8 @@ struct Client
 
 struct Monitor
 {
+    int index;
+
     /* Actual monitor size */
     int mx, my, mw, mh;
 
@@ -88,6 +90,7 @@ static int mouse_dx, mouse_dy, mouse_ocx, mouse_ocy, mouse_ocw, mouse_och;
 static Display *dpy;
 static XImage *dec_ximg[DecTintLAST];
 static Window root, command_window;
+static int monitors_num = 0;
 static int running = 1;
 static int screen;
 static int (*xerrorxlib)(Display *, XErrorEvent *);
@@ -114,6 +117,7 @@ static void handle_maprequest(XEvent *e);
 static void handle_unmapnotify(XEvent *e);
 static void ipc_mouse_move(char arg);
 static void ipc_mouse_resize(char arg);
+static void ipc_nav_monitor(char arg);
 static void ipc_noop(char arg);
 static void manage(Window win, XWindowAttributes *wa);
 static void manage_fit_on_monitor(struct Client *c);
@@ -129,6 +133,7 @@ static int xerror(Display *dpy, XErrorEvent *ee);
 static void (*ipc_handler[IPCLast]) (char arg) = {
     [IPCMouseMove] = ipc_mouse_move,
     [IPCMouseResize] = ipc_mouse_resize,
+    [IPCNavMonitor] = ipc_nav_monitor,
     [IPCNoop] = ipc_noop,
 };
 
@@ -604,6 +609,29 @@ ipc_mouse_resize(char arg)
 }
 
 void
+ipc_nav_monitor(char arg)
+{
+    int i;
+    struct Monitor *m;
+
+    i = selmon->index;
+    i += arg;
+    i = i < 0 ? 0 : i;
+    i = i >= monitors_num ? monitors_num - 1 : i;
+
+    for (m = monitors; m; m = m->next)
+    {
+        if (m->index == i)
+        {
+            selmon = m;
+            return;
+        }
+    }
+
+    /* TODO focus client */
+}
+
+void
 ipc_noop(char arg)
 {
     fprintf(stderr, __NAME__": ipc: Noop (arg %d)\n", arg);
@@ -780,6 +808,7 @@ setup(void)
         m->wy = m->my = ci->y;
         m->ww = m->mw = ci->width;
         m->wh = m->mh = ci->height;
+        m->index = monitors_num++;
         m->next = monitors;
         monitors = m;
         fprintf(stderr, __NAME__": monitor: %d %d %d %d\n",

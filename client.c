@@ -120,6 +120,19 @@ main(int argc, char **argv)
             arg = 2;
         }
     }
+    if (strncmp(argv[1], "nav_monitor", strlen("nav_monitor")) == 0 && argc >= 3)
+    {
+        if (strncmp(argv[2], "left", strlen("left")) == 0)
+        {
+            cmd = IPCNavMonitor;
+            arg = -1;
+        }
+        if (strncmp(argv[2], "right", strlen("right")) == 0)
+        {
+            cmd = IPCNavMonitor;
+            arg = 1;
+        }
+    }
 
     if (cmd != IPCLast)
     {

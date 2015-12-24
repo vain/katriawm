@@ -24,4 +24,4 @@ $(__NAME__)c: client.c ipc.h
 		-lX11
 
 clean:
-	rm -f $(__NAME__)
+	rm -f $(__NAME__) $(__NAME__)c

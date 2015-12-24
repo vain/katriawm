@@ -729,7 +729,9 @@ setup(void)
     XRRCrtcInfo *ci;
     XRRScreenResources *sr;
     struct Monitor *m;
-    int c;
+    int c, cinner;
+    int minx, minindex;
+    char *chosen = NULL;
     XSetWindowAttributes wa = {
         .override_redirect = True,
         .background_pixmap = ParentRelative,
@@ -741,12 +743,33 @@ setup(void)
     screen = DefaultScreen(dpy);
     xerrorxlib = XSetErrorHandler(xerror);
 
+    /* TODO handle monitor setup changes during runtime */
+
     sr = XRRGetScreenResources(dpy, root);
+    assert(sr->ncrtc > 0);
+    chosen = calloc(sr->ncrtc, sizeof (char));
     for (c = 0; c < sr->ncrtc; c++)
     {
-        ci = XRRGetCrtcInfo(dpy, sr, sr->crtcs[c]);
-        if (ci == NULL || ci->noutput == 0 || ci->mode == None)
+        /* Always sort monitors by their X offset. */
+        minx = -1;
+        minindex = -1;
+        for (cinner = 0; cinner < sr->ncrtc; cinner++)
+        {
+            ci = XRRGetCrtcInfo(dpy, sr, sr->crtcs[cinner]);
+            if (ci == NULL || ci->noutput == 0 || ci->mode == None)
+                continue;
+
+            if (chosen[cinner] == 0 && (minx == -1 || ci->x < minx))
+            {
+                minx = ci->x;
+                minindex = cinner;
+            }
+        }
+        if (minindex == -1)
             continue;
+
+        ci = XRRGetCrtcInfo(dpy, sr, sr->crtcs[minindex]);
+        chosen[minindex] = 1;
 
         /* TODO Ignore mirrors. */
 
@@ -762,6 +785,7 @@ setup(void)
         fprintf(stderr, __NAME__": monitor: %d %d %d %d\n",
                 ci->x, ci->y, ci->width, ci->height);
     }
+    free(chosen);
 
     decorations_load();
 

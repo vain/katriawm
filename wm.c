@@ -420,7 +420,8 @@ handle_clientmessage(XEvent *e)
     if (cme->message_type != t)
     {
         fprintf(stderr,
-                __NAME_WM__": Received client message with unknown type");
+                __NAME_WM__": Received client message with unknown type: %lu\n",
+                cme->message_type);
         return;
     }
 

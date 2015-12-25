@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <X11/cursorfont.h>
 #include <X11/extensions/Xrandr.h>
 #include <X11/Xatom.h>
@@ -100,6 +101,7 @@ static XImage *dec_ximg[DecTintLAST];
 static Window root, command_window;
 static int monitors_num = 0;
 static int running = 1;
+static int restart = 0;
 static int screen;
 static int (*xerrorxlib)(Display *, XErrorEvent *);
 
@@ -129,6 +131,8 @@ static void ipc_nav_monitor(char arg);
 static void ipc_nav_workspace(char arg);
 static void ipc_nav_workspace_adj(char arg);
 static void ipc_noop(char arg);
+static void ipc_restart(char arg);
+static void ipc_quit(char arg);
 static void manage(Window win, XWindowAttributes *wa);
 static void manage_fit_on_monitor(struct Client *c);
 static void manage_goto_workspace(int i);
@@ -148,6 +152,8 @@ static void (*ipc_handler[IPCLast]) (char arg) = {
     [IPCNavMonitor] = ipc_nav_monitor,
     [IPCNavWorkspace] = ipc_nav_workspace,
     [IPCNavWorkspaceAdj] = ipc_nav_workspace_adj,
+    [IPCRestart] = ipc_restart,
+    [IPCQuit] = ipc_quit,
     [IPCNoop] = ipc_noop,
 };
 
@@ -674,6 +680,27 @@ ipc_noop(char arg)
 }
 
 void
+ipc_restart(char arg)
+{
+    (void)arg;
+
+    restart = 1;
+    running = 0;
+
+    DPRINTF(__NAME_WM__": Quitting for restart\n");
+}
+
+void
+ipc_quit(char arg)
+{
+    (void)arg;
+
+    running = 0;
+
+    DPRINTF(__NAME_WM__": Quitting\n");
+}
+
+void
 manage(Window win, XWindowAttributes *wa)
 {
     struct Client *c;
@@ -1016,12 +1043,17 @@ xerror(Display *dpy, XErrorEvent *ee)
 }
 
 int
-main()
+main(int argc, char **argv)
 {
+    (void)argc;
+
     setup();
     scan();
     run();
     shutdown();
+
+    if (restart)
+        execvp(argv[0], argv);
 
     exit(EXIT_SUCCESS);
 }

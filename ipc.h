@@ -13,6 +13,8 @@ enum IPCCommand
     IPCNavMonitor,
     IPCNavWorkspace,
     IPCNavWorkspaceAdj,
+    IPCRestart,
+    IPCQuit,
 
     IPCLast,
 };

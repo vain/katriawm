@@ -148,6 +148,10 @@ main(int argc, char **argv)
                 cmd = IPCNavWorkspace;
         }
     }
+    if (strncmp(argv[1], "restart", strlen("restart")) == 0)
+        cmd = IPCRestart;
+    if (strncmp(argv[1], "quit", strlen("quit")) == 0)
+        cmd = IPCQuit;
 
     if (cmd != IPCLast)
     {

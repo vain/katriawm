@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <X11/cursorfont.h>
 #include <X11/extensions/Xrandr.h>
 #include <X11/Xatom.h>
 #include <X11/Xlib.h>
@@ -93,6 +94,7 @@ static struct Client *clients = NULL;
 static struct Client *mouse_dc = NULL;
 static struct Monitor *monitors = NULL, *selmon = NULL;
 static int mouse_dx, mouse_dy, mouse_ocx, mouse_ocy, mouse_ocw, mouse_och;
+static Cursor cursor_normal;
 static Display *dpy;
 static XImage *dec_ximg[DecTintLAST];
 static Window root, command_window;
@@ -900,6 +902,10 @@ setup(void)
                  | SubstructureRedirectMask | SubstructureNotifyMask
                  );
 
+    /* Set default cursor on root window */
+    cursor_normal = XCreateFontCursor(dpy, XC_left_ptr);
+    XDefineCursor(dpy, root, cursor_normal);
+
     /* Setup invisible window for the client to send messages to */
     command_window = XCreateWindow(
             dpy, root, 0, 0, 10, 10, 0,
@@ -949,6 +955,9 @@ scan(void)
 void
 shutdown(void)
 {
+    /* TODO clean up everything you set up */
+
+    XFreeCursor(dpy, cursor_normal);
     XCloseDisplay(dpy);
 }
 

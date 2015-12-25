@@ -246,6 +246,7 @@ decorations_draw_for_client(struct Client *c, enum DecTint tint,
     w = dgeo.left_width + c->w + dgeo.right_width;
     h = dgeo.top_height + c->h + dgeo.bottom_height;
 
+    /* These have to be cleaned up by the caller: */
     *gc = XCreateGC(dpy, root, 0, NULL);
     *pm = XCreatePixmap(dpy, root, w, h, DefaultDepth(dpy, screen));
 
@@ -955,9 +956,21 @@ scan(void)
 void
 shutdown(void)
 {
-    /* TODO clean up everything you set up */
+    size_t i;
+
+    while (clients != NULL)
+        unmanage(clients);
+
+    for (i = DecTintNormal; i <= DecTintUrgent; i++)
+        XDestroyImage(dec_ximg[i]);
+
+    XUnmapWindow(dpy, command_window);
+    XDestroyWindow(dpy, command_window);
 
     XFreeCursor(dpy, cursor_normal);
+
+    XDeleteProperty(dpy, root, XInternAtom(dpy, IPC_ATOM_WINDOW, False));
+
     XCloseDisplay(dpy);
 }
 

@@ -6,9 +6,7 @@
 
 enum IPCCommand
 {
-    IPCNoop = 0,
-
-    IPCMouseMove,
+    IPCMouseMove = 0,
     IPCMouseResize,
     IPCNavMonitor,
     IPCNavWorkspace,

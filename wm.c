@@ -130,7 +130,6 @@ static void ipc_mouse_resize(char arg);
 static void ipc_nav_monitor(char arg);
 static void ipc_nav_workspace(char arg);
 static void ipc_nav_workspace_adj(char arg);
-static void ipc_noop(char arg);
 static void ipc_restart(char arg);
 static void ipc_quit(char arg);
 static void manage(Window win, XWindowAttributes *wa);
@@ -154,7 +153,6 @@ static void (*ipc_handler[IPCLast]) (char arg) = {
     [IPCNavWorkspaceAdj] = ipc_nav_workspace_adj,
     [IPCRestart] = ipc_restart,
     [IPCQuit] = ipc_quit,
-    [IPCNoop] = ipc_noop,
 };
 
 static void (*x11_handler[LASTEvent]) (XEvent *) = {
@@ -670,13 +668,6 @@ ipc_nav_workspace_adj(char arg)
     i = selmon->active_workspace;
     i += arg;
     manage_goto_workspace(i);
-}
-
-void
-ipc_noop(char arg)
-{
-    (void)arg;
-    DPRINTF(__NAME_WM__": ipc: Noop (arg %d)\n", arg);
 }
 
 void

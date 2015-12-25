@@ -68,7 +68,7 @@ int
 main(int argc, char **argv)
 {
     enum IPCCommand cmd = IPCLast;
-    char arg;
+    char arg = 0;
 
     if (argc < 2)
     {
@@ -76,11 +76,6 @@ main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
-    if (strncmp(argv[1], "noop", strlen("noop")) == 0)
-    {
-        cmd = IPCNoop;
-        arg = 42;
-    }
     if (strncmp(argv[1], "mouse_move", strlen("mouse_move")) == 0 && argc >= 3)
     {
         if (strncmp(argv[2], "down", strlen("down")) == 0)

@@ -96,7 +96,7 @@ struct Monitor
     struct Monitor *next;
 };
 
-static struct Client *clients = NULL;
+static struct Client *clients = NULL, *selc = NULL;
 static struct Client *mouse_dc = NULL;
 static struct Monitor *monitors = NULL, *selmon = NULL;
 static int mouse_dx, mouse_dy, mouse_ocx, mouse_ocy, mouse_ocw, mouse_och;
@@ -120,6 +120,7 @@ static void decorations_create(struct Client *c);
 static void decorations_destroy(struct Client *c);
 static void decorations_draw_for_client(struct Client *c, enum DecTint tint,
                                         Pixmap *pm, GC *gc);
+static void decorations_focus_update(struct Client *c);
 static void decorations_load(void);
 static char *decorations_tint(unsigned long color);
 static XImage *decorations_to_ximg(char *data);
@@ -328,6 +329,24 @@ decorations_draw_for_client(struct Client *c, enum DecTint tint,
 }
 
 void
+decorations_focus_update(struct Client *new_selc)
+{
+    size_t i;
+
+    /* Cause expose event for previously selected client, then select
+     * new client, then do the same for it */
+
+    if (selc)
+        for (i = DecWinTop; i <= DecWinBottom; i++)
+            XClearArea(dpy, selc->decwin[i], 0, 0, 1, 1, True);
+
+    selc = new_selc;
+
+    for (i = DecWinTop; i <= DecWinBottom; i++)
+        XClearArea(dpy, selc->decwin[i], 0, 0, 1, 1, True);
+}
+
+void
 decorations_load(void)
 {
     char *tinted[DecTintLAST];
@@ -468,6 +487,7 @@ handle_destroynotify(XEvent *e)
 void
 handle_enternotify(XEvent *e)
 {
+    struct Client *c;
     XCrossingEvent *ev = &e->xcrossing;
 
     /* Taken from dwm */
@@ -475,6 +495,9 @@ handle_enternotify(XEvent *e)
         return;
 
     XSetInputFocus(dpy, ev->window, RevertToPointerRoot, CurrentTime);
+
+    if ((c = client_get_for_window(ev->window)))
+        decorations_focus_update(c);
 }
 
 void
@@ -483,12 +506,15 @@ handle_expose(XEvent *e)
     XExposeEvent *ev = &e->xexpose;
     struct Client *c = NULL;
     enum DecorationWindowLocation which = DecWinLAST;
-    enum DecTint tint = DecTintSelect;
+    enum DecTint tint = DecTintNormal;
     GC gc;
     Pixmap dec_pm;
 
     if ((c = client_get_for_decoration(ev->window, &which)) == NULL)
         return;
+
+    if (c == selc)
+        tint = DecTintSelect;
 
     decorations_draw_for_client(c, tint, &dec_pm, &gc);
 
@@ -927,6 +953,8 @@ manage_raisefocus(struct Client *c)
 
     for (i = DecWinTop; i <= DecWinBottom; i++)
         XRaiseWindow(dpy, c->decwin[i]);
+
+    decorations_focus_update(c);
 }
 
 void

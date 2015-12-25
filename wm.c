@@ -368,11 +368,12 @@ handle_clientmessage(XEvent *e)
     char arg;
 
     if (t == None)
-        t = XInternAtom(dpy, "_"__NAME_UPPERCASE__"_CLIENT_COMMAND", False);
+        t = XInternAtom(dpy, IPC_ATOM_COMMAND, False);
 
     if (cme->message_type != t)
     {
-        fprintf(stderr, __NAME__": Received client message with unknown type");
+        fprintf(stderr,
+                __NAME_WM__": Received client message with unknown type");
         return;
     }
 
@@ -529,7 +530,7 @@ ipc_mouse_move(char arg)
 
     if (arg == 0)
     {
-        fprintf(stderr, __NAME__": Mouse move: down at %d, %d over %lu\n",
+        fprintf(stderr, __NAME_WM__": Mouse move: down at %d, %d over %lu\n",
                 x, y, child);
 
         mouse_dc = NULL;
@@ -549,7 +550,7 @@ ipc_mouse_move(char arg)
     }
     else if (arg == 1)
     {
-        fprintf(stderr, __NAME__": Mouse move: motion to %d, %d\n", x, y);
+        fprintf(stderr, __NAME_WM__": Mouse move: motion to %d, %d\n", x, y);
 
         if (mouse_dc)
         {
@@ -580,7 +581,7 @@ ipc_mouse_resize(char arg)
 
     if (arg == 0)
     {
-        fprintf(stderr, __NAME__": Mouse resize: down at %d, %d over %lu\n",
+        fprintf(stderr, __NAME_WM__": Mouse resize: down at %d, %d over %lu\n",
                 x, y, child);
 
         mouse_dc = NULL;
@@ -600,7 +601,7 @@ ipc_mouse_resize(char arg)
     }
     else if (arg == 1)
     {
-        fprintf(stderr, __NAME__": Mouse resize: motion to %d, %d\n", x, y);
+        fprintf(stderr, __NAME_WM__": Mouse resize: motion to %d, %d\n", x, y);
 
         if (mouse_dc)
         {
@@ -665,7 +666,7 @@ ipc_nav_workspace(char arg)
 void
 ipc_noop(char arg)
 {
-    fprintf(stderr, __NAME__": ipc: Noop (arg %d)\n", arg);
+    fprintf(stderr, __NAME_WM__": ipc: Noop (arg %d)\n", arg);
 }
 
 void
@@ -675,7 +676,7 @@ manage(Window win, XWindowAttributes *wa)
 
     if (client_get_for_window(win))
     {
-        fprintf(stderr, __NAME__": Window %lu is already known, won't map\n",
+        fprintf(stderr, __NAME_WM__": Window %lu is already known, won't map\n",
                 win);
         return;
     }
@@ -705,7 +706,7 @@ manage(Window win, XWindowAttributes *wa)
 
     client_save(c);
 
-    fprintf(stderr, __NAME__": Managing window %lu (%p) at %dx%d+%d+%d\n",
+    fprintf(stderr, __NAME_WM__": Managing window %lu (%p) at %dx%d+%d+%d\n",
             c->win, (void *)c, c->w, c->h, c->x, c->y);
 
     XMapWindow(dpy, c->win);
@@ -716,7 +717,7 @@ manage_fit_on_monitor(struct Client *c)
 {
     if (c->mon == NULL)
     {
-        fprintf(stderr, __NAME__": No monitor assigned to %lu (%p)\n",
+        fprintf(stderr, __NAME_WM__": No monitor assigned to %lu (%p)\n",
                 c->win, (void *)c);
         return;
     }
@@ -798,7 +799,7 @@ run(void)
     while (running)
     {
         XNextEvent(dpy, &ev);
-        fprintf(stderr, __NAME__": Event %d\n", ev.type);
+        fprintf(stderr, __NAME_WM__": Event %d\n", ev.type);
         if (x11_handler[ev.type])
             x11_handler[ev.type](&ev);
     }
@@ -865,7 +866,7 @@ setup(void)
         m->active_workspace = 0;
         m->next = monitors;
         monitors = m;
-        fprintf(stderr, __NAME__": monitor: %d %d %d %d\n",
+        fprintf(stderr, __NAME_WM__": monitor: %d %d %d %d\n",
                 ci->x, ci->y, ci->width, ci->height);
     }
     free(chosen);
@@ -885,12 +886,9 @@ setup(void)
             CWOverrideRedirect|CWBackPixmap|CWEventMask,
             &wa
     );
-    XChangeProperty(
-            dpy, root, XInternAtom(
-                    dpy, "_"__NAME_UPPERCASE__"_COMMAND_WINDOW", False
-            ),
-            XA_WINDOW, 32, PropModeReplace, (unsigned char *)&command_window, 1
-    );
+    XChangeProperty(dpy, root, XInternAtom(dpy, IPC_ATOM_WINDOW, False),
+                    XA_WINDOW, 32, PropModeReplace,
+                    (unsigned char *)&command_window, 1);
 }
 
 void
@@ -912,7 +910,7 @@ scan(void)
 
     if (XQueryTree(dpy, root, &d1, &d2, &wins, &num))
     {
-        fprintf(stderr, __NAME__": scan() saw %d windows\n", num);
+        fprintf(stderr, __NAME_WM__": scan() saw %d windows\n", num);
 
         for (i = 0; i < num; i++)
         {
@@ -942,7 +940,7 @@ unmanage(struct Client *c)
 
     decorations_destroy(c);
 
-    fprintf(stderr, __NAME__": No longer managing window %lu (%p)\n",
+    fprintf(stderr, __NAME_WM__": No longer managing window %lu (%p)\n",
             c->win, (void *)c);
 
     free(c);
@@ -967,7 +965,8 @@ xerror(Display *dpy, XErrorEvent *ee)
     || (ee->request_code == X_GrabKey && ee->error_code == BadAccess)
     || (ee->request_code == X_CopyArea && ee->error_code == BadDrawable))
         return 0;
-    fprintf(stderr, __NAME__": Fatal error: request code=%d, error code=%d\n",
+    fprintf(stderr,
+            __NAME_WM__": Fatal error: request code=%d, error code=%d\n",
             ee->request_code, ee->error_code);
     return xerrorxlib(dpy, ee); /* may call exit */
 }

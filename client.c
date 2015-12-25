@@ -39,12 +39,10 @@ send_command(enum IPCCommand cmd, char arg)
 
     root = DefaultRootWindow(dpy);
 
-    cwa = (Window)getatomprop(
-            dpy, root, "_"__NAME_UPPERCASE__"_COMMAND_WINDOW", XA_WINDOW
-    );
+    cwa = (Window)getatomprop(dpy, root, IPC_ATOM_WINDOW, XA_WINDOW);
     if (cwa == None)
     {
-        fprintf(stderr, __NAME__"c: Cannot find command window\n");
+        fprintf(stderr, __NAME_C__": Cannot find command window\n");
         return 0;
     }
     command_window = (Window)cwa;
@@ -52,15 +50,13 @@ send_command(enum IPCCommand cmd, char arg)
     memset(&ev, 0, sizeof ev);
     ev.xclient.type = ClientMessage;
     ev.xclient.window = root;
-    ev.xclient.message_type = XInternAtom(
-            dpy, "_"__NAME_UPPERCASE__"_CLIENT_COMMAND", False
-    );
+    ev.xclient.message_type = XInternAtom(dpy, IPC_ATOM_COMMAND, False);
 
     ev.xclient.format = 8;
     ev.xclient.data.b[0] = cmd;
     ev.xclient.data.b[1] = arg;
 
-    fprintf(stderr, __NAME__"c: Sending cmd %d, arg %d\n", cmd, arg);
+    fprintf(stderr, __NAME_C__": Sending cmd %d, arg %d\n", cmd, arg);
     XSendEvent(dpy, command_window, False, NoEventMask, &ev);
     XSync(dpy, False);
 
@@ -154,7 +150,7 @@ main(int argc, char **argv)
     }
     else
     {
-        fprintf(stderr, __NAME__"c: Unknown command\n");
+        fprintf(stderr, __NAME_C__": Unknown command\n");
             exit(EXIT_FAILURE);
     }
 

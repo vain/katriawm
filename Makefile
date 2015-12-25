@@ -1,7 +1,7 @@
 CFLAGS += -Wall -Wextra -O3
 
-__NAME__ = wm
-__NAME_WM__ = $(__NAME__)
+__NAME__ = katria
+__NAME_WM__ = $(__NAME__)wm
 __NAME_C__ = $(__NAME__)c
 
 __NAME_UPPERCASE__ = `echo $(__NAME__) | sed 's/.*/\U&/'`

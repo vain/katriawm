@@ -6,8 +6,8 @@ static struct DecorationGeometry dgeo = {
 };
 
 static unsigned int dec_tints[] = {
-    0x333333,  /* DecTintNormal */
-    0x8cff00,  /* DecTintSelect */
+    0x6a3f3f,  /* DecTintNormal */
+    0xffcb38,  /* DecTintSelect */
     0xff0000,  /* DecTintUrgent */
 };
 

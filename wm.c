@@ -125,9 +125,11 @@ static void ipc_mouse_move(char arg);
 static void ipc_mouse_resize(char arg);
 static void ipc_nav_monitor(char arg);
 static void ipc_nav_workspace(char arg);
+static void ipc_nav_workspace_adj(char arg);
 static void ipc_noop(char arg);
 static void manage(Window win, XWindowAttributes *wa);
 static void manage_fit_on_monitor(struct Client *c);
+static void manage_goto_workspace(int i);
 static void manage_showhide(struct Client *c, char hide);
 static void manage_raisefocus(struct Client *c);
 static void manage_setsize(struct Client *c);
@@ -143,6 +145,7 @@ static void (*ipc_handler[IPCLast]) (char arg) = {
     [IPCMouseResize] = ipc_mouse_resize,
     [IPCNavMonitor] = ipc_nav_monitor,
     [IPCNavWorkspace] = ipc_nav_workspace,
+    [IPCNavWorkspaceAdj] = ipc_nav_workspace_adj,
     [IPCNoop] = ipc_noop,
 };
 
@@ -645,22 +648,19 @@ void
 ipc_nav_workspace(char arg)
 {
     int i;
-    struct Client *c;
+
+    i = arg;
+    manage_goto_workspace(i);
+}
+
+void
+ipc_nav_workspace_adj(char arg)
+{
+    int i;
 
     i = selmon->active_workspace;
     i += arg;
-    i = i < 0 ? 0 : i;
-    i = i >= max_workspaces ? max_workspaces - 1 : i;
-
-    for (c = clients; c; c = c->next)
-        if (c->mon == selmon)
-            manage_showhide(c, 1);
-
-    for (c = clients; c; c = c->next)
-        if (c->mon == selmon && c->workspace == i)
-            manage_showhide(c, 0);
-
-    selmon->active_workspace = i;
+    manage_goto_workspace(i);
 }
 
 void
@@ -730,6 +730,25 @@ manage_fit_on_monitor(struct Client *c)
         c->x = c->mon->wx + c->mon->ww - c->w - dgeo.right_width;
     if (c->y + c->h + dgeo.bottom_height >= c->mon->wy + c->mon->wh)
         c->y = c->mon->wy + c->mon->wh - c->h - dgeo.bottom_height;
+}
+
+void
+manage_goto_workspace(int i)
+{
+    struct Client *c;
+
+    i = i < 0 ? 0 : i;
+    i = i >= max_workspaces ? max_workspaces - 1 : i;
+
+    for (c = clients; c; c = c->next)
+        if (c->mon == selmon)
+            manage_showhide(c, 1);
+
+    for (c = clients; c; c = c->next)
+        if (c->mon == selmon && c->workspace == i)
+            manage_showhide(c, 0);
+
+    selmon->active_workspace = i;
 }
 
 void

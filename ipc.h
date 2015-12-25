@@ -12,6 +12,7 @@ enum IPCCommand
     IPCMouseResize,
     IPCNavMonitor,
     IPCNavWorkspace,
+    IPCNavWorkspaceAdj,
 
     IPCLast,
 };

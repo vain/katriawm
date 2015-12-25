@@ -133,13 +133,18 @@ main(int argc, char **argv)
     {
         if (strncmp(argv[2], "prev", strlen("prev")) == 0)
         {
-            cmd = IPCNavWorkspace;
+            cmd = IPCNavWorkspaceAdj;
             arg = -1;
         }
-        if (strncmp(argv[2], "next", strlen("next")) == 0)
+        else if (strncmp(argv[2], "next", strlen("next")) == 0)
         {
-            cmd = IPCNavWorkspace;
+            cmd = IPCNavWorkspaceAdj;
             arg = 1;
+        }
+        else
+        {
+            if ((arg = atoi(argv[2])) > 0)
+                cmd = IPCNavWorkspace;
         }
     }
 

@@ -76,6 +76,24 @@ main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
+    if (strncmp(argv[1], "layout", strlen("layout")) == 0 && argc >= 3)
+    {
+        if (strncmp(argv[2], "tile", strlen("tile")) == 0)
+        {
+            cmd = IPCLayout;
+            arg = LATile;
+        }
+        if (strncmp(argv[2], "monocle", strlen("monocle")) == 0)
+        {
+            cmd = IPCLayout;
+            arg = LAMonocle;
+        }
+        if (strncmp(argv[2], "float", strlen("float")) == 0)
+        {
+            cmd = IPCLayout;
+            arg = LAFloat;
+        }
+    }
     if (strncmp(argv[1], "mouse_move", strlen("mouse_move")) == 0 && argc >= 3)
     {
         if (strncmp(argv[2], "down", strlen("down")) == 0)

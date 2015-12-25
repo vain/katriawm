@@ -130,6 +130,7 @@ static void handle_enternotify(XEvent *e);
 static void handle_expose(XEvent *e);
 static void handle_maprequest(XEvent *e);
 static void handle_unmapnotify(XEvent *e);
+static void ipc_layout(char arg);
 static void ipc_mouse_move(char arg);
 static void ipc_mouse_resize(char arg);
 static void ipc_nav_monitor(char arg);
@@ -155,6 +156,7 @@ static void unmanage(struct Client *c);
 static int xerror(Display *dpy, XErrorEvent *ee);
 
 static void (*ipc_handler[IPCLast]) (char arg) = {
+    [IPCLayout] = ipc_layout,
     [IPCMouseMove] = ipc_mouse_move,
     [IPCMouseResize] = ipc_mouse_resize,
     [IPCNavMonitor] = ipc_nav_monitor,
@@ -174,10 +176,10 @@ static void (*x11_handler[LASTEvent]) (XEvent *) = {
     [UnmapNotify] = handle_unmapnotify,
 };
 
-static void (*layouts[]) (struct Monitor *m) = {
-    layout_tile,
-    layout_monocle,
-    layout_float,
+static void (*layouts[LALast]) (struct Monitor *m) = {
+    [LATile] = layout_tile,
+    [LAMonocle] = layout_monocle,
+    [LAFloat] = layout_float,
 };
 
 struct Client *
@@ -551,6 +553,21 @@ handle_unmapnotify(XEvent *e)
         unmanage(c);
         manage_arrange(m);
     }
+}
+
+void
+ipc_layout(char arg)
+{
+    int i = arg;
+
+    if (layouts[i] == NULL)
+    {
+        fprintf(stderr, __NAME_WM__": Invalid layout requested: %d\n", i);
+        return;
+    }
+
+    selmon->layouts[selmon->active_workspace] = i;
+    manage_arrange(selmon);
 }
 
 void

@@ -6,7 +6,8 @@
 
 enum IPCCommand
 {
-    IPCMouseMove = 0,
+    IPCLayout = 0,
+    IPCMouseMove,
     IPCMouseResize,
     IPCNavMonitor,
     IPCNavWorkspace,
@@ -15,6 +16,15 @@ enum IPCCommand
     IPCQuit,
 
     IPCLast,
+};
+
+enum LayoutAlgorithm
+{
+    LATile = 0,
+    LAMonocle,
+    LAFloat,
+
+    LALast,
 };
 
 #endif /* _WM_IPC_H */

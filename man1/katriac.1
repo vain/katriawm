@@ -15,6 +15,11 @@ can instruct the WM to move windows, switch workspaces, and so on.
 \fBkatriac\fP expects exactly one command, likely to be followed by some
 arguments. The following commands are available:
 .TP
+\fBlayout\fP \fIalgorithm\fP
+Set the layout algorithm on the currently visible workspace on the
+currently selected monitor. \fIalgorithm\fP must be one of \fBtile\fP,
+\fBmonocle\fP, \fBfloat\fP.
+.TP
 \fBmouse_move\fP \fIevent\fP
 Move the window which is currently under the mouse pointer. \fIevent\fP
 must be one of \fBdown\fP, \fBmotion\fP, \fBup\fP. Note that

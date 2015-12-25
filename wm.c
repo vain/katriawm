@@ -134,10 +134,10 @@ static void ipc_layout(char arg);
 static void ipc_mouse_move(char arg);
 static void ipc_mouse_resize(char arg);
 static void ipc_nav_monitor(char arg);
-static void ipc_nav_workspace(char arg);
 static void ipc_nav_workspace_adj(char arg);
-static void ipc_restart(char arg);
+static void ipc_nav_workspace(char arg);
 static void ipc_quit(char arg);
+static void ipc_restart(char arg);
 static void layout_float(struct Monitor *m);
 static void layout_monocle(struct Monitor *m);
 static void layout_tile(struct Monitor *m);
@@ -160,10 +160,10 @@ static void (*ipc_handler[IPCLast]) (char arg) = {
     [IPCMouseMove] = ipc_mouse_move,
     [IPCMouseResize] = ipc_mouse_resize,
     [IPCNavMonitor] = ipc_nav_monitor,
-    [IPCNavWorkspace] = ipc_nav_workspace,
     [IPCNavWorkspaceAdj] = ipc_nav_workspace_adj,
-    [IPCRestart] = ipc_restart,
+    [IPCNavWorkspace] = ipc_nav_workspace,
     [IPCQuit] = ipc_quit,
+    [IPCRestart] = ipc_restart,
 };
 
 static void (*x11_handler[LASTEvent]) (XEvent *) = {
@@ -177,9 +177,10 @@ static void (*x11_handler[LASTEvent]) (XEvent *) = {
 };
 
 static void (*layouts[LALast]) (struct Monitor *m) = {
-    [LATile] = layout_tile,
-    [LAMonocle] = layout_monocle,
+    /* Index 0 is the default layout, see ipc.h */
     [LAFloat] = layout_float,
+    [LAMonocle] = layout_monocle,
+    [LATile] = layout_tile,
 };
 
 struct Client *
@@ -713,6 +714,16 @@ ipc_nav_workspace_adj(char arg)
 }
 
 void
+ipc_quit(char arg)
+{
+    (void)arg;
+
+    running = 0;
+
+    DPRINTF(__NAME_WM__": Quitting\n");
+}
+
+void
 ipc_restart(char arg)
 {
     (void)arg;
@@ -721,16 +732,6 @@ ipc_restart(char arg)
     running = 0;
 
     DPRINTF(__NAME_WM__": Quitting for restart\n");
-}
-
-void
-ipc_quit(char arg)
-{
-    (void)arg;
-
-    running = 0;
-
-    DPRINTF(__NAME_WM__": Quitting\n");
 }
 
 void

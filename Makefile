@@ -24,7 +24,18 @@ __NAME_DEFINES__ = \
 		-D__NAME_C_UPPERCASE__=\"$(__NAME_C_UPPERCASE__)\" \
 		-D__NAME_C_CAPITALIZED__=\"$(__NAME_C_CAPITALIZED__)\"
 
-.PHONY: all
+INSTALL = install
+INSTALL_PROGRAM = $(INSTALL)
+INSTALL_DATA = $(INSTALL) -m 644
+
+prefix = /usr/local
+exec_prefix = $(prefix)
+bindir = $(exec_prefix)/bin
+datarootdir = $(prefix)/share
+mandir = $(datarootdir)/man
+man1dir = $(mandir)/man1
+
+.PHONY: all clean install installdirs
 
 all: $(__NAME_WM__) $(__NAME_C__)
 
@@ -39,6 +50,14 @@ $(__NAME_C__): client.c ipc.h
 		$(__NAME_DEFINES__) \
 		-o $@ $< \
 		-lX11
+
+install: all installdirs
+	$(INSTALL_PROGRAM) $(__NAME_WM__) $(DESTDIR)$(bindir)/$(__NAME_WM__)
+	$(INSTALL_PROGRAM) $(__NAME_C__) $(DESTDIR)$(bindir)/$(__NAME_C__)
+	@#$(INSTALL_DATA) man1/$(__NAME__).1 $(DESTDIR)$(man1dir)/$(__NAME__).1
+
+installdirs:
+	mkdir -p $(DESTDIR)$(bindir) $(DESTDIR)$(man1dir)
 
 clean:
 	rm -f $(__NAME_WM__) $(__NAME_C__)

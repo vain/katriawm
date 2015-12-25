@@ -59,6 +59,9 @@ enum DecTint
 
 #include "pixmaps.h"
 
+#define WORKSPACE_MIN 1
+#define WORKSPACE_MAX 127
+
 struct Client
 {
     Window win;
@@ -81,6 +84,8 @@ struct Monitor
 {
     int index;
     int active_workspace;
+
+    int layouts[WORKSPACE_MAX + 1];
 
     /* Actual monitor size */
     int mx, my, mw, mh;
@@ -132,7 +137,11 @@ static void ipc_nav_workspace(char arg);
 static void ipc_nav_workspace_adj(char arg);
 static void ipc_restart(char arg);
 static void ipc_quit(char arg);
+static void layout_float(struct Monitor *m);
+static void layout_monocle(struct Monitor *m);
+static void layout_tile(struct Monitor *m);
 static void manage(Window win, XWindowAttributes *wa);
+static void manage_arrange(struct Monitor *m);
 static void manage_fit_on_monitor(struct Client *c);
 static void manage_goto_workspace(int i);
 static void manage_showhide(struct Client *c, char hide);
@@ -163,6 +172,12 @@ static void (*x11_handler[LASTEvent]) (XEvent *) = {
     [Expose] = handle_expose,
     [MapRequest] = handle_maprequest,
     [UnmapNotify] = handle_unmapnotify,
+};
+
+static void (*layouts[]) (struct Monitor *m) = {
+    layout_tile,
+    layout_monocle,
+    layout_float,
 };
 
 struct Client *
@@ -437,9 +452,14 @@ handle_destroynotify(XEvent *e)
 {
     XDestroyWindowEvent *ev = &e->xdestroywindow;
     struct Client *c;
+    struct Monitor *m;
 
     if ((c = client_get_for_window(ev->window)))
+    {
+        m = c->mon;
         unmanage(c);
+        manage_arrange(m);
+    }
 }
 
 void
@@ -523,9 +543,14 @@ handle_unmapnotify(XEvent *e)
 {
     XUnmapEvent *ev = &e->xunmap;
     struct Client *c;
+    struct Monitor *m;
 
     if ((c = client_get_for_window(ev->window)))
+    {
+        m = c->mon;
         unmanage(c);
+        manage_arrange(m);
+    }
 }
 
 void
@@ -692,6 +717,97 @@ ipc_quit(char arg)
 }
 
 void
+layout_float(struct Monitor *m)
+{
+    (void)m;
+}
+
+void
+layout_monocle(struct Monitor *m)
+{
+    /* XXX untested */
+
+    struct Client *c;
+
+    for (c = clients; c; c = c->next)
+    {
+        if (c->mon == m && c->workspace == m->active_workspace)
+        {
+            c->x = c->mon->wx + dgeo.left_width;
+            c->y = c->mon->wy + dgeo.top_height;
+            c->w = c->mon->ww - dgeo.left_width - dgeo.right_width;
+            c->h = c->mon->wh - dgeo.top_height - dgeo.bottom_height;
+            manage_setsize(c);
+        }
+    }
+}
+
+void
+layout_tile(struct Monitor *m)
+{
+    struct Client *c;
+    int i = 0;
+    int num_clients = 0, at_y = 0, slave_h, master_w;
+
+    /* Note: at_y, slave_h and master_w all the *visible* sizes
+     * including decorations */
+
+    for (c = clients; c; c = c->next)
+        if (c->mon == m && c->workspace == m->active_workspace)
+            num_clients++;
+
+    for (c = clients; c; c = c->next)
+    {
+        if (c->mon == m && c->workspace == m->active_workspace)
+        {
+            if (i == 0)
+            {
+                if (num_clients == 1)
+                {
+                    /* Only one client total, just maximize it */
+                    c->x = c->mon->wx + dgeo.left_width;
+                    c->y = c->mon->wy + dgeo.top_height;
+                    c->w = c->mon->ww - dgeo.left_width - dgeo.right_width;
+                    c->h = c->mon->wh - dgeo.top_height - dgeo.bottom_height;
+                }
+                else
+                {
+                    /* More than one client, place first client in
+                     * master column */
+                    master_w = c->mon->ww / 2;
+
+                    c->x = c->mon->wx + dgeo.left_width;
+                    c->y = c->mon->wy + dgeo.top_height;
+                    c->w = master_w - dgeo.left_width - dgeo.right_width;
+                    c->h = c->mon->wh - dgeo.top_height - dgeo.bottom_height;
+                }
+            }
+            else
+            {
+                /* Slave column, use remaining width and accumulate y
+                 * offset */
+                c->x = c->mon->wx + master_w + dgeo.left_width;
+                c->y = at_y + dgeo.top_height;
+                c->w = (c->mon->ww - master_w) - dgeo.left_width
+                       - dgeo.right_width;
+
+                if (i == num_clients - 1)
+                    slave_h = c->mon->wh - at_y;
+                else
+                    slave_h = c->mon->wh / (num_clients - 1);
+
+                c->h = slave_h - dgeo.top_height - dgeo.bottom_height;
+
+                at_y += slave_h;
+            }
+
+            manage_setsize(c);
+            i++;
+        }
+    }
+}
+
+void
 manage(Window win, XWindowAttributes *wa)
 {
     struct Client *c;
@@ -731,7 +847,15 @@ manage(Window win, XWindowAttributes *wa)
             c->win, (void *)c, c->w, c->h, c->x, c->y);
 
     XMapWindow(dpy, c->win);
+    manage_arrange(c->mon);
     manage_raisefocus(c);
+}
+
+void
+manage_arrange(struct Monitor *m)
+{
+    DPRINTF(__NAME_WM__": Arranging monitor %p\n", (void *)m);
+    layouts[m->layouts[m->active_workspace]](m);
 }
 
 void
@@ -759,8 +883,8 @@ manage_goto_workspace(int i)
 {
     struct Client *c;
 
-    i = i < 1 ? 1 : i;
-    i = i > 127 ? 127 : i;
+    i = i < WORKSPACE_MIN ? WORKSPACE_MIN : i;
+    i = i > WORKSPACE_MAX ? WORKSPACE_MAX : i;
 
     DPRINTF(__NAME_WM__": Changing to workspace %d\n", i);
 
@@ -815,6 +939,9 @@ manage_setsize(struct Client *c)
         c->w = 1;
     if (c->h <= 0)
         c->h = 1;
+
+    DPRINTF(__NAME_WM__": Moving client %p to %d, %d with size %d, %d\n",
+            (void *)c, c->x, c->y, c->w, c->h);
 
     XMoveResizeWindow(dpy, c->decwin[DecWinTop],
                       c->x - dgeo.left_width, c->y - dgeo.top_height,

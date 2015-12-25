@@ -724,7 +724,6 @@ manage(Window win, XWindowAttributes *wa)
     decorations_create(c);
     manage_fit_on_monitor(c);
     manage_setsize(c);
-    manage_raisefocus(c);
 
     client_save(c);
 
@@ -732,6 +731,7 @@ manage(Window win, XWindowAttributes *wa)
             c->win, (void *)c, c->w, c->h, c->x, c->y);
 
     XMapWindow(dpy, c->win);
+    manage_raisefocus(c);
 }
 
 void

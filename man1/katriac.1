@@ -1,0 +1,53 @@
+.TH katriac 1 "2015-12-25" "Katria Window Manager" "User Commands"
+.\" --------------------------------------------------------------------
+.SH NAME
+katriac \- Client for katriawm
+.\" --------------------------------------------------------------------
+.SH SYNOPSIS
+\fBkatriac\fP \fICOMMAND\fP [\fIARGUMENTS\fP]
+.\" --------------------------------------------------------------------
+.SH DESCRIPTION
+\fBkatriac\fP can be used to control \fBkatriawm\fP. For example, you
+can instruct the WM to move windows, switch workspaces, and so on.
+\fBkatriac\fP should be called from a hotkey daemon like \fBsxhkd\fP(1).
+.\" --------------------------------------------------------------------
+.SH OPTIONS
+\fBkatriac\fP expects exactly one command, likely to be followed by some
+arguments. The following commands are available:
+.TP
+\fBmouse_move\fP \fIevent\fP
+Move the window which is currently under the mouse pointer. \fIevent\fP
+must be one of \fBdown\fP, \fBmotion\fP, \fBup\fP. Note that
+\fBmouse_move down\fP can also be used to raise a window.
+.TP
+\fBmouse_resize\fP \fIevent\fP
+Resize the window which is currently under the mouse pointer. \fIevent\fP
+must be one of \fBdown\fP, \fBmotion\fP, \fBup\fP.
+.TP
+\fBnav_monitor\fP \fItarget\fP
+When multiple monitors are connected to your computer, you can use this
+command to select the active monitor. New windows will spawn on that
+monitor. \fItarget\fP must be one of \fBleft\fP, \fBright\fP, which will
+navigate to the montior left/right of the currently active monitor.
+.TP
+\fBnav_workspace\fP \fItarget\fP
+Each monitor can display exactly one workspace at a time. You can use
+this command to select the active workspace on the currently active
+monitor. \fItarget\fP must be one of \fBprev\fP, \fBnext\fP.
+.\" --------------------------------------------------------------------
+.SH ENVIRONMENT
+.TP
+.B DISPLAY
+Target display.
+.\" --------------------------------------------------------------------
+.SH LICENSE
+\fBkatriac\fP is released as \(lqPIZZA-WARE\(rq. See the accompanying
+\fILICENSE\fP file.
+.\" --------------------------------------------------------------------
+.SH HISTORY
+\fBkatriac\fP was originally written by Peter Hofmann. The project was
+started in December 2015.
+.\" --------------------------------------------------------------------
+.SH "SEE ALSO"
+.BR katriawm (1),
+.BR sxhkd (1).

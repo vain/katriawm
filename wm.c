@@ -529,7 +529,7 @@ ipc_mouse_move(char arg)
     Window child, dummy;
     struct Client *c;
 
-	XQueryPointer(dpy, root, &dummy, &child, &x, &y, &di, &di, &dui);
+    XQueryPointer(dpy, root, &dummy, &child, &x, &y, &di, &di, &dui);
 
     if (arg == 0)
     {
@@ -580,7 +580,7 @@ ipc_mouse_resize(char arg)
     Window child, dummy;
     struct Client *c;
 
-	XQueryPointer(dpy, root, &dummy, &child, &x, &y, &di, &di, &dui);
+    XQueryPointer(dpy, root, &dummy, &child, &x, &y, &di, &di, &dui);
 
     if (arg == 0)
     {

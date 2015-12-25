@@ -1,0 +1,66 @@
+                                ========
+                                katriawm
+                                ========
+
+
+A window manager which tries not to suck too much.
+
+
+Installation
+------------
+
+The following C libraries are required:
+
+    - libx11
+
+katriawm expects to be run on a POSIX-ish operating system.
+
+To build the program and install it to /usr/local:
+
+    $ make
+    # make install
+
+
+Running
+-------
+
+katriawm comprises two components: The actual window manager and a
+client to control the manager. First, you run the WM via your ~/.xinitrc
+or similar:
+
+    $ katriawm
+
+katriawm provides no means of specifying key bindings. I suggest using
+sxhkd:
+
+    https://github.com/baskerville/sxhkd
+
+Please configure sxhkd (or the tool of your choice) to launch the
+client. Here's an example:
+
+    super + {button1,!button1,@button1}
+        katriac mouse_move {down,motion,up}
+
+    super + {button3,!button3,@button3}
+        katriac mouse_resize {down,motion,up}
+
+    super + {h,l}
+        katriac nav_workspace {prev,next}
+
+    ...
+
+
+Background information
+----------------------
+
+Katria is a character from the game Skyrim. You encounter her in a
+little side quest. The name not only sounds nice, but also reflects some
+properties of this program.
+
+In the game, it's just a side quest. No big story, no massive impact.
+Similarly, katriawm is just a simple window manager. It does not try to
+introduce new concepts that will revolutionize the world.
+
+You help Katria find ancient ruins. Likewise, katriawm's default theme
+was inspired by the Motif Window Manager which was written in the
+early-1980s.

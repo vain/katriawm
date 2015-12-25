@@ -96,7 +96,6 @@ static Display *dpy;
 static XImage *dec_ximg[DecTintLAST];
 static Window root, command_window;
 static int monitors_num = 0;
-static int max_workspaces = 100;
 static int running = 1;
 static int screen;
 static int (*xerrorxlib)(Display *, XErrorEvent *);
@@ -737,8 +736,10 @@ manage_goto_workspace(int i)
 {
     struct Client *c;
 
-    i = i < 0 ? 0 : i;
-    i = i >= max_workspaces ? max_workspaces - 1 : i;
+    i = i < 1 ? 1 : i;
+    i = i > 127 ? 127 : i;
+
+    fprintf(stderr, __NAME_WM__": Changing to workspace %d\n", i);
 
     for (c = clients; c; c = c->next)
         if (c->mon == selmon)
@@ -882,7 +883,7 @@ setup(void)
         m->ww = m->mw = ci->width;
         m->wh = m->mh = ci->height;
         m->index = monitors_num++;
-        m->active_workspace = 0;
+        m->active_workspace = 1;
         m->next = monitors;
         monitors = m;
         fprintf(stderr, __NAME_WM__": monitor: %d %d %d %d\n",

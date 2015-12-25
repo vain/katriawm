@@ -1,5 +1,8 @@
 CFLAGS += -Wall -Wextra -O3
 
+# To enable debug output:
+#DEBUGFLAGS = -DDEBUG
+
 __NAME__ = katria
 __NAME_WM__ = $(__NAME__)wm
 __NAME_C__ = $(__NAME__)c
@@ -39,15 +42,15 @@ man1dir = $(mandir)/man1
 
 all: $(__NAME_WM__) $(__NAME_C__)
 
-$(__NAME_WM__): wm.c ipc.h pixmaps.h
+$(__NAME_WM__): wm.c ipc.h pixmaps.h util.h
 	$(CC) $(CFLAGS) $(LDFLAGS) \
-		$(__NAME_DEFINES__) \
+		$(__NAME_DEFINES__) $(DEBUGFLAGS) \
 		-o $@ $< \
 		-lX11 -lXrandr
 
-$(__NAME_C__): client.c ipc.h
+$(__NAME_C__): client.c ipc.h util.h
 	$(CC) $(CFLAGS) $(LDFLAGS) \
-		$(__NAME_DEFINES__) \
+		$(__NAME_DEFINES__) $(DEBUGFLAGS) \
 		-o $@ $< \
 		-lX11
 

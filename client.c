@@ -4,6 +4,7 @@
 #include <X11/Xatom.h>
 #include <X11/Xlib.h>
 
+#include "util.h"
 #include "ipc.h"
 
 static Atom
@@ -56,7 +57,7 @@ send_command(enum IPCCommand cmd, char arg)
     ev.xclient.data.b[0] = cmd;
     ev.xclient.data.b[1] = arg;
 
-    fprintf(stderr, __NAME_C__": Sending cmd %d, arg %d\n", cmd, arg);
+    DPRINTF(__NAME_C__": Sending cmd %d, arg %d\n", cmd, arg);
     XSendEvent(dpy, command_window, False, NoEventMask, &ev);
     XSync(dpy, False);
 

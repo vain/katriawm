@@ -12,6 +12,7 @@
 #include <X11/Xlib.h>
 #include <X11/Xproto.h>
 
+#include "util.h"
 #include "ipc.h"
 
 enum DecorationLocation
@@ -532,7 +533,7 @@ ipc_mouse_move(char arg)
 
     if (arg == 0)
     {
-        fprintf(stderr, __NAME_WM__": Mouse move: down at %d, %d over %lu\n",
+        DPRINTF(__NAME_WM__": Mouse move: down at %d, %d over %lu\n",
                 x, y, child);
 
         mouse_dc = NULL;
@@ -552,7 +553,7 @@ ipc_mouse_move(char arg)
     }
     else if (arg == 1)
     {
-        fprintf(stderr, __NAME_WM__": Mouse move: motion to %d, %d\n", x, y);
+        DPRINTF(__NAME_WM__": Mouse move: motion to %d, %d\n", x, y);
 
         if (mouse_dc)
         {
@@ -583,7 +584,7 @@ ipc_mouse_resize(char arg)
 
     if (arg == 0)
     {
-        fprintf(stderr, __NAME_WM__": Mouse resize: down at %d, %d over %lu\n",
+        DPRINTF( __NAME_WM__": Mouse resize: down at %d, %d over %lu\n",
                 x, y, child);
 
         mouse_dc = NULL;
@@ -603,7 +604,7 @@ ipc_mouse_resize(char arg)
     }
     else if (arg == 1)
     {
-        fprintf(stderr, __NAME_WM__": Mouse resize: motion to %d, %d\n", x, y);
+        DPRINTF(__NAME_WM__": Mouse resize: motion to %d, %d\n", x, y);
 
         if (mouse_dc)
         {
@@ -665,7 +666,8 @@ ipc_nav_workspace_adj(char arg)
 void
 ipc_noop(char arg)
 {
-    fprintf(stderr, __NAME_WM__": ipc: Noop (arg %d)\n", arg);
+    (void)arg;
+    DPRINTF(__NAME_WM__": ipc: Noop (arg %d)\n", arg);
 }
 
 void
@@ -705,7 +707,7 @@ manage(Window win, XWindowAttributes *wa)
 
     client_save(c);
 
-    fprintf(stderr, __NAME_WM__": Managing window %lu (%p) at %dx%d+%d+%d\n",
+    DPRINTF(__NAME_WM__": Managing window %lu (%p) at %dx%d+%d+%d\n",
             c->win, (void *)c, c->w, c->h, c->x, c->y);
 
     XMapWindow(dpy, c->win);
@@ -739,7 +741,7 @@ manage_goto_workspace(int i)
     i = i < 1 ? 1 : i;
     i = i > 127 ? 127 : i;
 
-    fprintf(stderr, __NAME_WM__": Changing to workspace %d\n", i);
+    DPRINTF(__NAME_WM__": Changing to workspace %d\n", i);
 
     for (c = clients; c; c = c->next)
         if (c->mon == selmon)
@@ -819,7 +821,7 @@ run(void)
     while (running)
     {
         XNextEvent(dpy, &ev);
-        fprintf(stderr, __NAME_WM__": Event %d\n", ev.type);
+        DPRINTF(__NAME_WM__": Event %d\n", ev.type);
         if (x11_handler[ev.type])
             x11_handler[ev.type](&ev);
     }
@@ -886,7 +888,7 @@ setup(void)
         m->active_workspace = 1;
         m->next = monitors;
         monitors = m;
-        fprintf(stderr, __NAME_WM__": monitor: %d %d %d %d\n",
+        DPRINTF(__NAME_WM__": monitor: %d %d %d %d\n",
                 ci->x, ci->y, ci->width, ci->height);
     }
     free(chosen);
@@ -930,7 +932,7 @@ scan(void)
 
     if (XQueryTree(dpy, root, &d1, &d2, &wins, &num))
     {
-        fprintf(stderr, __NAME_WM__": scan() saw %d windows\n", num);
+        DPRINTF(__NAME_WM__": scan() saw %d windows\n", num);
 
         for (i = 0; i < num; i++)
         {
@@ -960,7 +962,7 @@ unmanage(struct Client *c)
 
     decorations_destroy(c);
 
-    fprintf(stderr, __NAME_WM__": No longer managing window %lu (%p)\n",
+    DPRINTF(__NAME_WM__": No longer managing window %lu (%p)\n",
             c->win, (void *)c);
 
     free(c);

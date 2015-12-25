@@ -1,4 +1,4 @@
-CFLAGS += -Wall -Wextra -Wno-unused-parameter -O3
+CFLAGS += -Wall -Wextra -O3
 
 __NAME__ = wm
 __NAME_WM__ = $(__NAME__)

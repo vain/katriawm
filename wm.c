@@ -436,24 +436,28 @@ void
 handle_configurerequest(XEvent *e)
 {
     XConfigureRequestEvent *ev = &e->xconfigurerequest;
+    XConfigureEvent ce;
     XWindowChanges wc;
     struct Client *c = NULL;
 
     if ((c = client_get_for_window(ev->window)))
     {
-        /* This is a known client. Only respond to move/resize and
-         * update our local values. */
-        if (ev->value_mask & CWX)
-            c->x = ev->x;
-        if (ev->value_mask & CWY)
-            c->y = ev->y;
-        if (ev->value_mask & CWWidth)
-            c->w = ev->width;
-        if (ev->value_mask & CWHeight)
-            c->h = ev->height;
+        /* This is a known client. However, we do not allow the client
+         * to resize or move itself. Hence, we simply inform him about
+         * the last known configuration. */
 
-        if (ev->value_mask & (CWX | CWY | CWWidth | CWHeight))
-            manage_setsize(c);
+        ce.type = ConfigureNotify;
+        ce.display = dpy;
+        ce.event = c->win;
+        ce.window = c->win;
+        ce.x = c->x;
+        ce.y = c->y;
+        ce.width = c->w;
+        ce.height = c->h;
+        ce.border_width = 0;
+        ce.above = None;
+        ce.override_redirect = False;
+        XSendEvent(dpy, c->win, False, StructureNotifyMask, (XEvent *)&ce);
     }
     else
     {

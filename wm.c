@@ -909,7 +909,7 @@ manage_client_gone(struct Client *c)
 
     manage_focus_remove(c);
     if (selc)
-        manage_focus_set(selc);
+        manage_raisefocus(selc);
 }
 
 void

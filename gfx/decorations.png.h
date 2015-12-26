@@ -23,3 +23,20 @@ static struct SubImage dec_coords[] = {
     { .x = 29, .y = 52, .w = 1,  .h = 7  },  /* DecBottom */
     { .x = 31, .y = 31, .w = 28, .h = 28 },  /* DecBottomRight */
 };
+
+static char dec_has_title = 1;
+static struct TitleArea dec_title = {
+    .left_offset = 10,
+    .right_offset = 10,
+    .baseline_top_offset = 21,
+};
+
+static char *dec_fonts[] = {
+    "Sans:pixelsize=12:style=bold:antialias=false",  /* FontTitle */
+};
+
+static char *dec_font_colors[] = {
+    "#AFAFAF",  /* DecTintNormal */
+    "#000000",  /* DecTintSelect */
+    "#000000",  /* DecTintUrgent */
+};

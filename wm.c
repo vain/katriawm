@@ -11,6 +11,7 @@
 #include <X11/cursorfont.h>
 #include <X11/extensions/Xrandr.h>
 #include <X11/Xatom.h>
+#include <X11/Xft/Xft.h>
 #include <X11/Xlib.h>
 #include <X11/Xproto.h>
 
@@ -48,6 +49,11 @@ struct SubImage
     int x, y, w, h;
 };
 
+struct TitleArea
+{
+    int left_offset, right_offset, baseline_top_offset;
+};
+
 enum DecTint
 {
     DecTintNormal = 0,
@@ -55,6 +61,13 @@ enum DecTint
     DecTintUrgent = 2,
 
     DecTintLAST = 3,
+};
+
+enum Font
+{
+    FontTitle = 0,
+
+    FontLAST = 1,
 };
 
 #include "pixmaps.h"
@@ -103,6 +116,8 @@ static struct Monitor *monitors = NULL, *selmon = NULL;
 static int mouse_dx, mouse_dy, mouse_ocx, mouse_ocy, mouse_ocw, mouse_och;
 static Cursor cursor_normal;
 static Display *dpy;
+static XftColor font_color[DecTintLAST];
+static XftFont *font[FontLAST];
 static XImage *dec_ximg[DecTintLAST];
 static Window root, command_window;
 static int monitors_num = 0;
@@ -124,6 +139,8 @@ static void decorations_draw_for_client(struct Client *c,
 static void decorations_load(void);
 static char *decorations_tint(unsigned long color);
 static XImage *decorations_to_ximg(char *data);
+static void draw_text(Drawable d, XftFont *xfont, XftColor *col, int x, int y,
+                      int w, char *s);
 static void handle_clientmessage(XEvent *e);
 static void handle_configurerequest(XEvent *e);
 static void handle_destroynotify(XEvent *e);
@@ -275,6 +292,7 @@ decorations_draw_for_client(struct Client *c,
     enum DecTint tint = DecTintNormal;
     GC gc;
     Pixmap dec_pm;
+    char *titlestr = "proof of concept";
 
     if (c == selc)
         tint = DecTintSelect;
@@ -338,6 +356,15 @@ decorations_draw_for_client(struct Client *c,
               dec_coords[DecBottomRight].x, dec_coords[DecBottomRight].y,
               w - dec_coords[DecTopRight].w, h - dec_coords[DecBottomLeft].h,
               dec_coords[DecBottomRight].w, dec_coords[DecBottomRight].h);
+
+    if (dec_has_title)
+    {
+        x = dec_title.left_offset;
+        y = dec_title.baseline_top_offset;
+        w = (dgeo.left_width + c->w + dgeo.right_width) - dec_title.left_offset
+            - dec_title.right_offset;
+        draw_text(dec_pm, font[FontTitle], &font_color[tint], x, y, w, titlestr);
+    }
 
     if (which == DecWinTop || which == DecWinLAST)
         XCopyArea(dpy, dec_pm, c->decwin[DecWinTop], gc,
@@ -425,6 +452,36 @@ decorations_to_ximg(char *data)
 {
     return XCreateImage(dpy, DefaultVisual(dpy, screen), 24, ZPixmap, 0,
                         data, dec_img_w, dec_img_h, 32, 0);
+}
+
+void
+draw_text(Drawable d, XftFont *xfont, XftColor *col, int x, int y, int w, char *s)
+{
+    XftDraw *xd;
+    XGlyphInfo ext;
+    int len;
+
+    /* Just a quick sanity check */
+    if (strlen(s) > 4096)
+        return;
+
+    len = strlen(s);
+    for (;;)
+    {
+        XftTextExtentsUtf8(dpy, xfont, (XftChar8 *)s, len, &ext);
+        if (ext.xOff < w)
+            break;
+        else
+            len--;
+    }
+
+    if (len == 0)
+        return;
+
+    xd = XftDrawCreate(dpy, d, DefaultVisual(dpy, screen),
+                       DefaultColormap(dpy, screen));
+    XftDrawStringUtf8(xd, col, xfont, x, y, (XftChar8 *)s, len);
+    XftDrawDestroy(xd);
 }
 
 void
@@ -1216,6 +1273,7 @@ setup(void)
     int c, cinner;
     int minx, minindex;
     char *chosen = NULL;
+    size_t i;
     XSetWindowAttributes wa = {
         .override_redirect = True,
         .background_pixmap = ParentRelative,
@@ -1230,6 +1288,32 @@ setup(void)
     root = DefaultRootWindow(dpy);
     screen = DefaultScreen(dpy);
     xerrorxlib = XSetErrorHandler(xerror);
+
+    /* Initialize fonts and colors */
+    /* XXX Yes, looping is meaningless until we have a bar with a
+     * different font */
+    for (i = FontTitle; i <= FontTitle; i++)
+    {
+        font[i] = XftFontOpenName(dpy, screen, dec_fonts[i]);
+        if (!font[i])
+        {
+            fprintf(stderr, __NAME_WM__": Cannot open font '%s'\n", dec_fonts[i]);
+            exit(EXIT_FAILURE);
+        }
+        DPRINTF(__NAME_WM__": Loaded font '%s'\n", dec_fonts[i]);
+    }
+    for (i = DecTintNormal; i <= DecTintUrgent; i++)
+    {
+        if (!XftColorAllocName(dpy, DefaultVisual(dpy, screen),
+                               DefaultColormap(dpy, screen), dec_font_colors[i],
+                               &font_color[i]))
+        {
+            fprintf(stderr, __NAME_WM__": Cannot load color '%s'\n",
+                    dec_font_colors[i]);
+            exit(EXIT_FAILURE);
+        }
+        DPRINTF(__NAME_WM__": Loaded color '%s'\n", dec_font_colors[i]);
+    }
 
     /* TODO handle monitor setup changes during runtime */
 

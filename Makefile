@@ -46,7 +46,8 @@ $(__NAME_WM__): wm.c ipc.h pixmaps.h util.h
 	$(CC) $(CFLAGS) $(LDFLAGS) \
 		$(__NAME_DEFINES__) $(DEBUGFLAGS) \
 		-o $@ $< \
-		-lX11 -lXrandr
+		-I/usr/include/freetype2 \
+		-lX11 -lXrandr -lXft
 
 $(__NAME_C__): client.c ipc.h util.h
 	$(CC) $(CFLAGS) $(LDFLAGS) \

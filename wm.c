@@ -78,6 +78,7 @@ struct Client
     Window decwin[DecWinLAST];
 
     struct Client *next;
+    struct Client *focus_next;
 };
 
 struct Monitor
@@ -146,7 +147,9 @@ static void manage(Window win, XWindowAttributes *wa);
 static void manage_arrange(struct Monitor *m);
 static void manage_client_gone(struct Client *c);
 static void manage_fit_on_monitor(struct Client *c);
-static void manage_focus_update(struct Client *c);
+static void manage_focus_add(struct Client *c);
+static void manage_focus_remove(struct Client *c);
+static void manage_focus_set(struct Client *c);
 static void manage_goto_workspace(int i);
 static void manage_showhide(struct Client *c, char hide);
 static void manage_raisefocus(struct Client *c);
@@ -517,7 +520,7 @@ handle_enternotify(XEvent *e)
     XSetInputFocus(dpy, ev->window, RevertToPointerRoot, CurrentTime);
 
     if ((c = client_get_for_window(ev->window)))
-        manage_focus_update(c);
+        manage_focus_set(c);
 }
 
 void
@@ -710,6 +713,7 @@ void
 ipc_nav_monitor(char arg)
 {
     int i;
+    struct Client *c;
     struct Monitor *m;
 
     i = selmon->index;
@@ -722,11 +726,21 @@ ipc_nav_monitor(char arg)
         if (m->index == i)
         {
             selmon = m;
-            return;
+            break;
         }
     }
 
-    /* TODO focus client */
+    /* Empty focus list and then focus the very first client on this
+     * monitor/workspace */
+    selc = NULL;
+    for (c = clients; c; c = c->next)
+    {
+        if (c->mon == selmon && c->workspace == selmon->active_workspace)
+        {
+            manage_raisefocus(c);
+            break;
+        }
+    }
 }
 
 void
@@ -915,6 +929,10 @@ void
 manage_client_gone(struct Client *c)
 {
     manage_arrange(c->mon);
+
+    manage_focus_remove(c);
+    if (selc)
+        manage_focus_set(selc);
 }
 
 void
@@ -938,17 +956,43 @@ manage_fit_on_monitor(struct Client *c)
 }
 
 void
-manage_focus_update(struct Client *new_selc)
+manage_focus_add(struct Client *new_selc)
 {
-    struct Client *old_selc;
-
-    old_selc = selc;
+    new_selc->focus_next = selc;
     selc = new_selc;
+}
 
-    if (old_selc)
-        decorations_draw_for_client(old_selc, DecWinLAST);
+void
+manage_focus_remove(struct Client *new_selc)
+{
+    struct Client **tc;
 
-    decorations_draw_for_client(new_selc, DecWinLAST);
+    if (selc == NULL)
+        return;
+
+    for (tc = &selc; *tc && *tc != new_selc; tc = &(*tc)->focus_next);
+    *tc = new_selc->focus_next;
+}
+
+void
+manage_focus_set(struct Client *new_selc)
+{
+    struct Client *c;
+
+    /* Move newly selected client to head of focus list */
+    manage_focus_remove(new_selc);
+    manage_focus_add(new_selc);
+
+    DPRINTF(__NAME_WM__": Focus list: ");
+    for (c = selc; c; c = c->focus_next)
+        DPRINTF("%p ", (void *)c);
+    DPRINTF("\n");
+
+    /* Unfocus previous client, focus new client */
+    if (selc->focus_next)
+        decorations_draw_for_client(selc->focus_next, DecWinLAST);
+
+    decorations_draw_for_client(selc, DecWinLAST);
 }
 
 void
@@ -970,6 +1014,18 @@ manage_goto_workspace(int i)
             manage_showhide(c, 0);
 
     selmon->active_workspace = i;
+
+    /* Empty focus list and then focus the very first client on this
+     * monitor/workspace */
+    selc = NULL;
+    for (c = clients; c; c = c->next)
+    {
+        if (c->mon == selmon && c->workspace == selmon->active_workspace)
+        {
+            manage_raisefocus(c);
+            break;
+        }
+    }
 }
 
 void
@@ -983,7 +1039,7 @@ manage_raisefocus(struct Client *c)
     for (i = DecWinTop; i <= DecWinBottom; i++)
         XRaiseWindow(dpy, c->decwin[i]);
 
-    manage_focus_update(c);
+    manage_focus_set(c);
 }
 
 void

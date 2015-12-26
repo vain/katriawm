@@ -1199,6 +1199,8 @@ unmanage(struct Client *c)
 {
     struct Client **tc;
 
+    /* Remove client from "clients" list, props for this neat little
+     * loop go to dwm */
     for (tc = &clients; *tc && *tc != c; tc = &(*tc)->next);
     *tc = c->next;
 

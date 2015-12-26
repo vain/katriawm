@@ -15,42 +15,42 @@ can instruct the WM to move windows, switch workspaces, and so on.
 \fBkatriac\fP expects exactly one command, likely to be followed by some
 arguments. The following commands are available:
 .TP
-\fBlayout\fP \fIalgorithm\fP
+\fBclient_move_mouse\fP \fIevent\fP
+Move the window which is currently under the mouse pointer. \fIevent\fP
+must be one of \fBdown\fP, \fBmotion\fP, \fBup\fP. Note that
+\fBclient_move_mouse down\fP can also be used to raise a window.
+.TP
+\fBclient_resize_mouse\fP \fIevent\fP
+Resize the window which is currently under the mouse pointer. \fIevent\fP
+must be one of \fBdown\fP, \fBmotion\fP, \fBup\fP.
+.TP
+\fBclient_select\fP \fItarget\fP
+Focus another client on the current workspace. \fItarget\fP must be one
+of \fBprev\fP, \fBnext\fP.
+.TP
+\fBlayout_set\fP \fIalgorithm\fP
 Set the layout algorithm on the currently visible workspace on the
 currently selected monitor. \fIalgorithm\fP must be one of \fBtile\fP,
 \fBmonocle\fP, \fBfloat\fP.
 .TP
-\fBmouse_move\fP \fIevent\fP
-Move the window which is currently under the mouse pointer. \fIevent\fP
-must be one of \fBdown\fP, \fBmotion\fP, \fBup\fP. Note that
-\fBmouse_move down\fP can also be used to raise a window.
-.TP
-\fBmouse_resize\fP \fIevent\fP
-Resize the window which is currently under the mouse pointer. \fIevent\fP
-must be one of \fBdown\fP, \fBmotion\fP, \fBup\fP.
-.TP
-\fBnav_client\fP \fItarget\fP
-Focus another client on the current workspace. \fItarget\fP must be one
-of \fBprev\fP, \fBnext\fP.
-.TP
-\fBnav_monitor\fP \fItarget\fP
+\fBmonitor_select\fP \fItarget\fP
 When multiple monitors are connected to your computer, you can use this
 command to select the active monitor. New windows will spawn on that
 monitor. \fItarget\fP must be one of \fBleft\fP, \fBright\fP, which will
 navigate to the montior left/right of the currently active monitor.
 .TP
-\fBnav_workspace\fP \fItarget\fP
+\fBwm_restart\fP
+Causes \fBkatriawm\fP to restart.
+.TP
+\fBwm_quit\fP
+Causes \fBkatriawm\fP to quit.
+.TP
+\fBworkspace_select\fP \fItarget\fP
 Each monitor can display exactly one workspace at a time. You can use
 this command to select the active workspace on the currently active
 monitor. \fItarget\fP must be one of \fBprev\fP, \fBnext\fP, or an
 integer greater than 0 and less than 128 to denote one particular
 workspace.
-.TP
-\fBrestart\fP
-Causes \fBkatriawm\fP to restart.
-.TP
-\fBquit\fP
-Causes \fBkatriawm\fP to quit.
 .\" --------------------------------------------------------------------
 .SH ENVIRONMENT
 .TP

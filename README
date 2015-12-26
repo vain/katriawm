@@ -39,13 +39,13 @@ Please configure sxhkd (or the tool of your choice) to launch the
 client. Here's an example:
 
     super + {button1,!button1,@button1}
-        katriac mouse_move {down,motion,up}
+        katriac client_move_mouse {down,motion,up}
 
     super + {button3,!button3,@button3}
-        katriac mouse_resize {down,motion,up}
+        katriac client_resize_mouse {down,motion,up}
 
     super + {h,l}
-        katriac nav_workspace {prev,next}
+        katriac workspace_select {prev,next}
 
     ...
 

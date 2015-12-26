@@ -76,108 +76,108 @@ main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
-    if (strncmp(argv[1], "layout", strlen("layout")) == 0 && argc >= 3)
-    {
-        if (strncmp(argv[2], "float", strlen("float")) == 0)
-        {
-            cmd = IPCLayout;
-            arg = LAFloat;
-        }
-        if (strncmp(argv[2], "monocle", strlen("monocle")) == 0)
-        {
-            cmd = IPCLayout;
-            arg = LAMonocle;
-        }
-        if (strncmp(argv[2], "tile", strlen("tile")) == 0)
-        {
-            cmd = IPCLayout;
-            arg = LATile;
-        }
-    }
-    if (strncmp(argv[1], "mouse_move", strlen("mouse_move")) == 0 && argc >= 3)
+    if (strncmp(argv[1], "client_move_mouse", strlen("client_move_mouse")) == 0 && argc >= 3)
     {
         if (strncmp(argv[2], "down", strlen("down")) == 0)
         {
-            cmd = IPCMouseMove;
+            cmd = IPCClientMoveMouse;
             arg = 0;
         }
         if (strncmp(argv[2], "motion", strlen("motion")) == 0)
         {
-            cmd = IPCMouseMove;
+            cmd = IPCClientMoveMouse;
             arg = 1;
         }
         if (strncmp(argv[2], "up", strlen("up")) == 0)
         {
-            cmd = IPCMouseMove;
+            cmd = IPCClientMoveMouse;
             arg = 2;
         }
     }
-    if (strncmp(argv[1], "mouse_resize", strlen("mouse_resize")) == 0 && argc >= 3)
+    if (strncmp(argv[1], "client_resize_mouse", strlen("client_resize_mouse")) == 0 && argc >= 3)
     {
         if (strncmp(argv[2], "down", strlen("down")) == 0)
         {
-            cmd = IPCMouseResize;
+            cmd = IPCClientResizeMouse;
             arg = 0;
         }
         if (strncmp(argv[2], "motion", strlen("motion")) == 0)
         {
-            cmd = IPCMouseResize;
+            cmd = IPCClientResizeMouse;
             arg = 1;
         }
         if (strncmp(argv[2], "up", strlen("up")) == 0)
         {
-            cmd = IPCMouseResize;
+            cmd = IPCClientResizeMouse;
             arg = 2;
         }
     }
-    if (strncmp(argv[1], "nav_client", strlen("nav_client")) == 0 && argc >= 3)
+    if (strncmp(argv[1], "client_select", strlen("client_select")) == 0 && argc >= 3)
     {
         if (strncmp(argv[2], "prev", strlen("prev")) == 0)
         {
-            cmd = IPCNavClientAdj;
+            cmd = IPCClientSelectAdjacent;
             arg = -1;
         }
         if (strncmp(argv[2], "next", strlen("next")) == 0)
         {
-            cmd = IPCNavClientAdj;
+            cmd = IPCClientSelectAdjacent;
             arg = 1;
         }
     }
-    if (strncmp(argv[1], "nav_monitor", strlen("nav_monitor")) == 0 && argc >= 3)
+    if (strncmp(argv[1], "layout_set", strlen("layout_set")) == 0 && argc >= 3)
+    {
+        if (strncmp(argv[2], "float", strlen("float")) == 0)
+        {
+            cmd = IPCLayoutSet;
+            arg = LAFloat;
+        }
+        if (strncmp(argv[2], "monocle", strlen("monocle")) == 0)
+        {
+            cmd = IPCLayoutSet;
+            arg = LAMonocle;
+        }
+        if (strncmp(argv[2], "tile", strlen("tile")) == 0)
+        {
+            cmd = IPCLayoutSet;
+            arg = LATile;
+        }
+    }
+    if (strncmp(argv[1], "monitor_select", strlen("monitor_select")) == 0 && argc >= 3)
     {
         if (strncmp(argv[2], "left", strlen("left")) == 0)
         {
-            cmd = IPCNavMonitor;
+            cmd = IPCMonitorSelectAdjacent;
             arg = -1;
         }
         if (strncmp(argv[2], "right", strlen("right")) == 0)
         {
-            cmd = IPCNavMonitor;
+            cmd = IPCMonitorSelectAdjacent;
             arg = 1;
         }
     }
-    if (strncmp(argv[1], "nav_workspace", strlen("nav_workspace")) == 0 && argc >= 3)
+    if (strncmp(argv[1], "wm_restart", strlen("wm_restart")) == 0)
+        cmd = IPCWMRestart;
+    if (strncmp(argv[1], "wm_quit", strlen("wm_quit")) == 0)
+        cmd = IPCWMQuit;
+    if (strncmp(argv[1], "workspace_select", strlen("workspace_select")) == 0 && argc >= 3)
     {
         if (strncmp(argv[2], "prev", strlen("prev")) == 0)
         {
-            cmd = IPCNavWorkspaceAdj;
+            cmd = IPCWorkspaceSelectAdjacent;
             arg = -1;
         }
         else if (strncmp(argv[2], "next", strlen("next")) == 0)
         {
-            cmd = IPCNavWorkspaceAdj;
+            cmd = IPCWorkspaceSelectAdjacent;
             arg = 1;
         }
         else
         {
             if ((arg = atoi(argv[2])) > 0)
-                cmd = IPCNavWorkspace;
+                cmd = IPCWorkspaceSelect;
         }
     }
-    if (strncmp(argv[1], "restart", strlen("restart")) == 0)
-        cmd = IPCRestart;
-    if (strncmp(argv[1], "quit", strlen("quit")) == 0)
-        cmd = IPCQuit;
 
     if (cmd != IPCLast)
     {

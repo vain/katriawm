@@ -130,15 +130,15 @@ static void handle_destroynotify(XEvent *e);
 static void handle_expose(XEvent *e);
 static void handle_maprequest(XEvent *e);
 static void handle_unmapnotify(XEvent *e);
-static void ipc_layout(char arg);
-static void ipc_mouse_move(char arg);
-static void ipc_mouse_resize(char arg);
-static void ipc_nav_client_adj(char arg);
-static void ipc_nav_monitor(char arg);
-static void ipc_nav_workspace_adj(char arg);
-static void ipc_nav_workspace(char arg);
-static void ipc_quit(char arg);
-static void ipc_restart(char arg);
+static void ipc_client_move_mouse(char arg);
+static void ipc_client_resize_mouse(char arg);
+static void ipc_client_select_adjacent(char arg);
+static void ipc_layout_set(char arg);
+static void ipc_monitor_select_adjacent(char arg);
+static void ipc_wm_quit(char arg);
+static void ipc_wm_restart(char arg);
+static void ipc_workspace_select_adjacent(char arg);
+static void ipc_workspace_select(char arg);
 static void layout_float(struct Monitor *m);
 static void layout_monocle(struct Monitor *m);
 static void layout_tile(struct Monitor *m);
@@ -162,15 +162,15 @@ static void unmanage(struct Client *c);
 static int xerror(Display *dpy, XErrorEvent *ee);
 
 static void (*ipc_handler[IPCLast]) (char arg) = {
-    [IPCLayout] = ipc_layout,
-    [IPCMouseMove] = ipc_mouse_move,
-    [IPCMouseResize] = ipc_mouse_resize,
-    [IPCNavClientAdj] = ipc_nav_client_adj,
-    [IPCNavMonitor] = ipc_nav_monitor,
-    [IPCNavWorkspaceAdj] = ipc_nav_workspace_adj,
-    [IPCNavWorkspace] = ipc_nav_workspace,
-    [IPCQuit] = ipc_quit,
-    [IPCRestart] = ipc_restart,
+    [IPCClientMoveMouse] = ipc_client_move_mouse,
+    [IPCClientResizeMouse] = ipc_client_resize_mouse,
+    [IPCClientSelectAdjacent] = ipc_client_select_adjacent,
+    [IPCLayoutSet] = ipc_layout_set,
+    [IPCMonitorSelectAdjacent] = ipc_monitor_select_adjacent,
+    [IPCWMQuit] = ipc_wm_quit,
+    [IPCWMRestart] = ipc_wm_restart,
+    [IPCWorkspaceSelectAdjacent] = ipc_workspace_select_adjacent,
+    [IPCWorkspaceSelect] = ipc_workspace_select,
 };
 
 static void (*x11_handler[LASTEvent]) (XEvent *) = {
@@ -546,22 +546,7 @@ handle_unmapnotify(XEvent *e)
 }
 
 void
-ipc_layout(char arg)
-{
-    int i = arg;
-
-    if (layouts[i] == NULL)
-    {
-        fprintf(stderr, __NAME_WM__": Invalid layout requested: %d\n", i);
-        return;
-    }
-
-    selmon->layouts[selmon->active_workspace] = i;
-    manage_arrange(selmon);
-}
-
-void
-ipc_mouse_move(char arg)
+ipc_client_move_mouse(char arg)
 {
     int x, y, di, dx, dy;
     unsigned int dui;
@@ -610,9 +595,9 @@ ipc_mouse_move(char arg)
 }
 
 void
-ipc_mouse_resize(char arg)
+ipc_client_resize_mouse(char arg)
 {
-    /* TODO lots of code duplication from ipc_mouse_move() */
+    /* TODO lots of code duplication from ipc_client_move_mouse() */
 
     int x, y, di, dx, dy;
     unsigned int dui;
@@ -661,7 +646,7 @@ ipc_mouse_resize(char arg)
 }
 
 void
-ipc_nav_client_adj(char arg)
+ipc_client_select_adjacent(char arg)
 {
     struct Client *c, *prev = NULL;
     char use_next = 0;
@@ -692,7 +677,22 @@ ipc_nav_client_adj(char arg)
 }
 
 void
-ipc_nav_monitor(char arg)
+ipc_layout_set(char arg)
+{
+    int i = arg;
+
+    if (layouts[i] == NULL)
+    {
+        fprintf(stderr, __NAME_WM__": Invalid layout requested: %d\n", i);
+        return;
+    }
+
+    selmon->layouts[selmon->active_workspace] = i;
+    manage_arrange(selmon);
+}
+
+void
+ipc_monitor_select_adjacent(char arg)
 {
     int i;
     struct Monitor *m;
@@ -716,26 +716,7 @@ ipc_nav_monitor(char arg)
 }
 
 void
-ipc_nav_workspace(char arg)
-{
-    int i;
-
-    i = arg;
-    manage_goto_workspace(i);
-}
-
-void
-ipc_nav_workspace_adj(char arg)
-{
-    int i;
-
-    i = selmon->active_workspace;
-    i += arg;
-    manage_goto_workspace(i);
-}
-
-void
-ipc_quit(char arg)
+ipc_wm_quit(char arg)
 {
     (void)arg;
 
@@ -745,7 +726,7 @@ ipc_quit(char arg)
 }
 
 void
-ipc_restart(char arg)
+ipc_wm_restart(char arg)
 {
     (void)arg;
 
@@ -753,6 +734,25 @@ ipc_restart(char arg)
     running = 0;
 
     DPRINTF(__NAME_WM__": Quitting for restart\n");
+}
+
+void
+ipc_workspace_select_adjacent(char arg)
+{
+    int i;
+
+    i = selmon->active_workspace;
+    i += arg;
+    manage_goto_workspace(i);
+}
+
+void
+ipc_workspace_select(char arg)
+{
+    int i;
+
+    i = arg;
+    manage_goto_workspace(i);
 }
 
 void

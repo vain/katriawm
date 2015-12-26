@@ -6,15 +6,31 @@
 
 enum IPCCommand
 {
-    IPCLayout = 0,
-    IPCMouseMove,
-    IPCMouseResize,
-    IPCNavClientAdj,
-    IPCNavMonitor,
-    IPCNavWorkspace,
-    IPCNavWorkspaceAdj,
-    IPCQuit,
-    IPCRestart,
+    /* These commands shall use the following name scheme:
+     *
+     *     $subject $predicate $adverb
+     *
+     * For example:
+     *
+     *     IPCClientMoveMouse
+     *        \____/\__/\___/
+     *           |    |   |
+     *           |    |   \- $adverb, i.e. how it is done or by which
+     *           |    |      means
+     *           |    |
+     *           |    \- $predicate, i.e. what is to be done
+     *           |
+     *           \- $subject, i.e. what is affected by this action
+     */
+    IPCClientMoveMouse = 0,
+    IPCClientResizeMouse,
+    IPCClientSelectAdjacent,
+    IPCLayoutSet,
+    IPCMonitorSelectAdjacent,
+    IPCWMQuit,
+    IPCWMRestart,
+    IPCWorkspaceSelect,
+    IPCWorkspaceSelectAdjacent,
 
     IPCLast,
 };

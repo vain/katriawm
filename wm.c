@@ -1257,7 +1257,7 @@ setup(void)
 
         /* TODO Ignore mirrors. */
 
-        m = malloc(sizeof (struct Monitor));
+        m = calloc(1, sizeof (struct Monitor));
         if (selmon == NULL)
             selmon = m;
         m->wx = m->mx = ci->x;

@@ -1222,7 +1222,11 @@ setup(void)
         .event_mask = ExposureMask,
     };
 
-    dpy = XOpenDisplay(NULL);
+    if ((dpy = XOpenDisplay(NULL)) == NULL)
+    {
+        fprintf(stderr, __NAME_WM__": Cannot open display\n");
+        exit(EXIT_FAILURE);
+    }
     root = DefaultRootWindow(dpy);
     screen = DefaultScreen(dpy);
     xerrorxlib = XSetErrorHandler(xerror);

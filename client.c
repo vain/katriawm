@@ -130,6 +130,19 @@ main(int argc, char **argv)
             arg = 2;
         }
     }
+    if (strncmp(argv[1], "nav_client", strlen("nav_client")) == 0 && argc >= 3)
+    {
+        if (strncmp(argv[2], "prev", strlen("prev")) == 0)
+        {
+            cmd = IPCNavClientAdj;
+            arg = -1;
+        }
+        if (strncmp(argv[2], "next", strlen("next")) == 0)
+        {
+            cmd = IPCNavClientAdj;
+            arg = 1;
+        }
+    }
     if (strncmp(argv[1], "nav_monitor", strlen("nav_monitor")) == 0 && argc >= 3)
     {
         if (strncmp(argv[2], "left", strlen("left")) == 0)

@@ -9,6 +9,7 @@ enum IPCCommand
     IPCLayout = 0,
     IPCMouseMove,
     IPCMouseResize,
+    IPCNavClientAdj,
     IPCNavMonitor,
     IPCNavWorkspace,
     IPCNavWorkspaceAdj,

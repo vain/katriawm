@@ -134,6 +134,7 @@ static void handle_unmapnotify(XEvent *e);
 static void ipc_layout(char arg);
 static void ipc_mouse_move(char arg);
 static void ipc_mouse_resize(char arg);
+static void ipc_nav_client_adj(char arg);
 static void ipc_nav_monitor(char arg);
 static void ipc_nav_workspace_adj(char arg);
 static void ipc_nav_workspace(char arg);
@@ -160,6 +161,7 @@ static void (*ipc_handler[IPCLast]) (char arg) = {
     [IPCLayout] = ipc_layout,
     [IPCMouseMove] = ipc_mouse_move,
     [IPCMouseResize] = ipc_mouse_resize,
+    [IPCNavClientAdj] = ipc_nav_client_adj,
     [IPCNavMonitor] = ipc_nav_monitor,
     [IPCNavWorkspaceAdj] = ipc_nav_workspace_adj,
     [IPCNavWorkspace] = ipc_nav_workspace,
@@ -688,6 +690,37 @@ ipc_mouse_resize(char arg)
     }
     else if (arg == 2)
         mouse_dc = NULL;
+}
+
+void
+ipc_nav_client_adj(char arg)
+{
+    struct Client *c, *prev = NULL;
+    char use_next = 0;
+
+    for (c = clients; c; c = c->next)
+    {
+        if (c == selc)
+        {
+            if (arg < 0 && prev)
+            {
+                manage_raisefocus(prev);
+                return;
+            }
+            else if (arg > 0)
+                use_next = 1;
+        }
+        else if (c->mon == selmon && c->workspace == selmon->active_workspace)
+        {
+            if (use_next)
+            {
+                manage_raisefocus(c);
+                return;
+            }
+            else
+                prev = c;
+        }
+    }
 }
 
 void

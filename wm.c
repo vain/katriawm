@@ -152,6 +152,7 @@ static void manage_focus_set(struct Client *c);
 static void manage_goto_workspace(int i);
 static void manage_showhide(struct Client *c, char hide);
 static void manage_raisefocus(struct Client *c);
+static void manage_raisefocus_first_visible(void);
 static void manage_setsize(struct Client *c);
 static void run(void);
 static void scan(void);
@@ -695,7 +696,6 @@ void
 ipc_nav_monitor(char arg)
 {
     int i;
-    struct Client *c;
     struct Monitor *m;
 
     i = selmon->index;
@@ -712,17 +712,8 @@ ipc_nav_monitor(char arg)
         }
     }
 
-    /* Empty focus list and then focus the very first client on this
-     * monitor/workspace */
     selc = NULL;
-    for (c = clients; c; c = c->next)
-    {
-        if (c->mon == selmon && c->workspace == selmon->active_workspace)
-        {
-            manage_raisefocus(c);
-            break;
-        }
-    }
+    manage_raisefocus_first_visible();
 }
 
 void
@@ -910,6 +901,8 @@ manage_client_gone(struct Client *c)
     manage_focus_remove(c);
     if (selc)
         manage_raisefocus(selc);
+    else
+        manage_raisefocus_first_visible();
 }
 
 void
@@ -992,17 +985,8 @@ manage_goto_workspace(int i)
 
     selmon->active_workspace = i;
 
-    /* Empty focus list and then focus the very first client on this
-     * monitor/workspace */
     selc = NULL;
-    for (c = clients; c; c = c->next)
-    {
-        if (c->mon == selmon && c->workspace == selmon->active_workspace)
-        {
-            manage_raisefocus(c);
-            break;
-        }
-    }
+    manage_raisefocus_first_visible();
 }
 
 void
@@ -1017,6 +1001,21 @@ manage_raisefocus(struct Client *c)
         XRaiseWindow(dpy, c->decwin[i]);
 
     manage_focus_set(c);
+}
+
+void
+manage_raisefocus_first_visible(void)
+{
+    struct Client *c;
+
+    for (c = clients; c; c = c->next)
+    {
+        if (c->mon == selmon && c->workspace == selmon->active_workspace)
+        {
+            manage_raisefocus(c);
+            return;
+        }
+    }
 }
 
 void

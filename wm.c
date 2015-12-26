@@ -120,7 +120,6 @@ static void decorations_create(struct Client *c);
 static void decorations_destroy(struct Client *c);
 static void decorations_draw_for_client(struct Client *c,
                                         enum DecorationWindowLocation which);
-static void decorations_focus_update(struct Client *c);
 static void decorations_load(void);
 static char *decorations_tint(unsigned long color);
 static XImage *decorations_to_ximg(char *data);
@@ -147,6 +146,7 @@ static void manage(Window win, XWindowAttributes *wa);
 static void manage_arrange(struct Monitor *m);
 static void manage_client_gone(struct Client *c);
 static void manage_fit_on_monitor(struct Client *c);
+static void manage_focus_update(struct Client *c);
 static void manage_goto_workspace(int i);
 static void manage_showhide(struct Client *c, char hide);
 static void manage_raisefocus(struct Client *c);
@@ -364,20 +364,6 @@ decorations_draw_for_client(struct Client *c,
 }
 
 void
-decorations_focus_update(struct Client *new_selc)
-{
-    struct Client *old_selc;
-
-    old_selc = selc;
-    selc = new_selc;
-
-    if (old_selc)
-        decorations_draw_for_client(old_selc, DecWinLAST);
-
-    decorations_draw_for_client(new_selc, DecWinLAST);
-}
-
-void
 decorations_load(void)
 {
     char *tinted[DecTintLAST];
@@ -531,7 +517,7 @@ handle_enternotify(XEvent *e)
     XSetInputFocus(dpy, ev->window, RevertToPointerRoot, CurrentTime);
 
     if ((c = client_get_for_window(ev->window)))
-        decorations_focus_update(c);
+        manage_focus_update(c);
 }
 
 void
@@ -952,6 +938,20 @@ manage_fit_on_monitor(struct Client *c)
 }
 
 void
+manage_focus_update(struct Client *new_selc)
+{
+    struct Client *old_selc;
+
+    old_selc = selc;
+    selc = new_selc;
+
+    if (old_selc)
+        decorations_draw_for_client(old_selc, DecWinLAST);
+
+    decorations_draw_for_client(new_selc, DecWinLAST);
+}
+
+void
 manage_goto_workspace(int i)
 {
     struct Client *c;
@@ -983,7 +983,7 @@ manage_raisefocus(struct Client *c)
     for (i = DecWinTop; i <= DecWinBottom; i++)
         XRaiseWindow(dpy, c->decwin[i]);
 
-    decorations_focus_update(c);
+    manage_focus_update(c);
 }
 
 void

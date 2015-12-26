@@ -3,7 +3,8 @@
                                 ========
 
 
-A window manager which tries not to suck too much.
+A simple, themeable X11 window manager with title bars and virtual
+desktops.
 
 
 Installation

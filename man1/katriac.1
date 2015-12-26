@@ -15,6 +15,11 @@ can instruct the WM to move windows, switch workspaces, and so on.
 \fBkatriac\fP expects exactly one command, likely to be followed by some
 arguments. The following commands are available:
 .TP
+\fBclient_move_list\fP \fItarget\fP
+Move the currently selected client in the internal list of clients. This
+can affect the tiling layout, for example. \fItarget\fP must be one of
+\fBprev\fP, \fBnext\fP.
+.TP
 \fBclient_move_mouse\fP \fIevent\fP
 Move the window which is currently under the mouse pointer. \fIevent\fP
 must be one of \fBdown\fP, \fBmotion\fP, \fBup\fP. Note that

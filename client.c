@@ -76,6 +76,19 @@ main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
+    if (strncmp(argv[1], "client_move_list", strlen("client_move_list")) == 0 && argc >= 3)
+    {
+        if (strncmp(argv[2], "prev", strlen("prev")) == 0)
+        {
+            cmd = IPCClientMoveList;
+            arg = -1;
+        }
+        if (strncmp(argv[2], "next", strlen("next")) == 0)
+        {
+            cmd = IPCClientMoveList;
+            arg = 1;
+        }
+    }
     if (strncmp(argv[1], "client_move_mouse", strlen("client_move_mouse")) == 0 && argc >= 3)
     {
         if (strncmp(argv[2], "down", strlen("down")) == 0)

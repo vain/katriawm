@@ -130,6 +130,7 @@ static void handle_destroynotify(XEvent *e);
 static void handle_expose(XEvent *e);
 static void handle_maprequest(XEvent *e);
 static void handle_unmapnotify(XEvent *e);
+static void ipc_client_move_list(char arg);
 static void ipc_client_move_mouse(char arg);
 static void ipc_client_resize_mouse(char arg);
 static void ipc_client_select_adjacent(char arg);
@@ -162,6 +163,7 @@ static void unmanage(struct Client *c);
 static int xerror(Display *dpy, XErrorEvent *ee);
 
 static void (*ipc_handler[IPCLast]) (char arg) = {
+    [IPCClientMoveList] = ipc_client_move_list,
     [IPCClientMoveMouse] = ipc_client_move_mouse,
     [IPCClientResizeMouse] = ipc_client_resize_mouse,
     [IPCClientSelectAdjacent] = ipc_client_select_adjacent,
@@ -543,6 +545,93 @@ handle_unmapnotify(XEvent *e)
         unmanage(c);
         manage_client_gone(c);
     }
+}
+
+void
+ipc_client_move_list(char arg)
+{
+    char use_next = 0;
+    struct Client *c, *one = NULL, *two = NULL,
+                  *before_one = NULL, *before_two = NULL;
+
+    if (selc == NULL)
+        return;
+
+    if (arg < 0)
+    {
+        /* Find visible client before selc */
+        for (c = clients; c; c = c->next)
+        {
+            if (c->mon == selmon && c->workspace == selmon->active_workspace)
+            {
+                if (c == selc)
+                    break;
+                else
+                {
+                    /* List order: "one" precedes "two" */
+                    one = c;
+                    two = selc;
+                }
+            }
+        }
+    }
+    else
+    {
+        /* Find visible client after selc */
+        for (c = selc; c; c = c->next)
+        {
+            if (c->mon == selmon && c->workspace == selmon->active_workspace)
+            {
+                if (c == selc)
+                    use_next = 1;
+                else if (use_next)
+                {
+                    one = selc;
+                    two = c;
+                    break;
+                }
+            }
+        }
+    }
+
+    DPRINTF(__NAME_WM__": Found partners: %p, %p\n", (void *)one, (void *)two);
+
+    if (one == NULL || two == NULL)
+        return;
+
+    /* The following method does not really "swap" the two list
+     * elements. It simply removes the second item from the list and
+     * then prepends it in front of the first item. Thus, "two" now
+     * comes before "one". */
+
+    for (c = clients; c && c->next != two; c = c->next)
+        /* nop */;
+    before_two = c;
+
+    /* Remove "two" from the list */
+    before_two->next = two->next;
+
+    if (one == clients)
+    {
+        /* "one" is the very first client, so we can simply put "two" at
+         * the list head */
+        two->next = clients;
+        clients = two;
+    }
+    else
+    {
+        /* "one" is not the list head, so we have to find the item
+         * before it and then insert "two" at that location */
+
+        for (c = clients; c && c->next != one; c = c->next)
+            /* nop */;
+        before_one = c;
+
+        before_one->next = two;
+        two->next = one;
+    }
+
+    manage_arrange(selmon);
 }
 
 void
@@ -946,7 +1035,7 @@ manage_focus_remove(struct Client *new_selc)
 void
 manage_focus_set(struct Client *new_selc)
 {
-    struct Client *c;
+    struct Client *c, *old_selc = selc;
 
     /* Move newly selected client to head of focus list */
     manage_focus_remove(new_selc);
@@ -958,8 +1047,8 @@ manage_focus_set(struct Client *new_selc)
     DPRINTF("\n");
 
     /* Unfocus previous client, focus new client */
-    if (selc->focus_next)
-        decorations_draw_for_client(selc->focus_next, DecWinLAST);
+    if (old_selc)
+        decorations_draw_for_client(old_selc, DecWinLAST);
 
     decorations_draw_for_client(selc, DecWinLAST);
 }

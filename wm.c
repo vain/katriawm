@@ -118,8 +118,8 @@ static struct Client *client_get_for_window(Window win);
 static void client_save(struct Client *c);
 static void decorations_create(struct Client *c);
 static void decorations_destroy(struct Client *c);
-static void decorations_draw_for_client(struct Client *c, enum DecTint tint,
-                                        Pixmap *pm, GC *gc);
+static void decorations_draw_for_client(struct Client *c,
+                                        enum DecorationWindowLocation which);
 static void decorations_focus_update(struct Client *c);
 static void decorations_load(void);
 static char *decorations_tint(unsigned long color);
@@ -261,23 +261,28 @@ decorations_destroy(struct Client *c)
 }
 
 void
-decorations_draw_for_client(struct Client *c, enum DecTint tint,
-                            Pixmap *pm, GC *gc)
+decorations_draw_for_client(struct Client *c,
+                            enum DecorationWindowLocation which)
 {
     int x, y, w, h;
+    enum DecTint tint = DecTintNormal;
+    GC gc;
+    Pixmap dec_pm;
+
+    if (c == selc)
+        tint = DecTintSelect;
 
     w = dgeo.left_width + c->w + dgeo.right_width;
     h = dgeo.top_height + c->h + dgeo.bottom_height;
 
-    /* These have to be cleaned up by the caller: */
-    *gc = XCreateGC(dpy, root, 0, NULL);
-    *pm = XCreatePixmap(dpy, root, w, h, DefaultDepth(dpy, screen));
+    gc = XCreateGC(dpy, root, 0, NULL);
+    dec_pm = XCreatePixmap(dpy, root, w, h, DefaultDepth(dpy, screen));
 
     /* TODO optimize for speed, use tiling */
 
     for (x = 0; x < w; x += dec_coords[DecTop].w)
     {
-        XPutImage(dpy, *pm, *gc, dec_ximg[tint],
+        XPutImage(dpy, dec_pm, gc, dec_ximg[tint],
                   dec_coords[DecTop].x, dec_coords[DecTop].y,
                   x, 0,
                   dec_coords[DecTop].w, dec_coords[DecTop].h);
@@ -285,7 +290,7 @@ decorations_draw_for_client(struct Client *c, enum DecTint tint,
 
     for (x = 0; x < w; x += dec_coords[DecBottom].w)
     {
-        XPutImage(dpy, *pm, *gc, dec_ximg[tint],
+        XPutImage(dpy, dec_pm, gc, dec_ximg[tint],
                   dec_coords[DecBottom].x, dec_coords[DecBottom].y,
                   x, h - dgeo.bottom_height,
                   dec_coords[DecBottom].w, dec_coords[DecBottom].h);
@@ -293,7 +298,7 @@ decorations_draw_for_client(struct Client *c, enum DecTint tint,
 
     for (y = 0; y < c->h; y += dec_coords[DecLeft].h)
     {
-        XPutImage(dpy, *pm, *gc, dec_ximg[tint],
+        XPutImage(dpy, dec_pm, gc, dec_ximg[tint],
                   dec_coords[DecLeft].x, dec_coords[DecLeft].y,
                   0, dgeo.top_height + y,
                   dec_coords[DecLeft].w, dec_coords[DecLeft].h);
@@ -301,49 +306,72 @@ decorations_draw_for_client(struct Client *c, enum DecTint tint,
 
     for (y = 0; y < c->h; y += dec_coords[DecRight].h)
     {
-        XPutImage(dpy, *pm, *gc, dec_ximg[tint],
+        XPutImage(dpy, dec_pm, gc, dec_ximg[tint],
                   dec_coords[DecRight].x, dec_coords[DecRight].y,
                   dgeo.left_width + c->w, dgeo.top_height + y,
                   dec_coords[DecRight].w, dec_coords[DecRight].h);
     }
 
-    XPutImage(dpy, *pm, *gc, dec_ximg[tint],
+    XPutImage(dpy, dec_pm, gc, dec_ximg[tint],
               dec_coords[DecTopLeft].x, dec_coords[DecTopLeft].y,
               0, 0,
               dec_coords[DecTopLeft].w, dec_coords[DecTopLeft].h);
 
-    XPutImage(dpy, *pm, *gc, dec_ximg[tint],
+    XPutImage(dpy, dec_pm, gc, dec_ximg[tint],
               dec_coords[DecTopRight].x, dec_coords[DecTopRight].y,
               w - dec_coords[DecTopRight].w, 0,
               dec_coords[DecTopRight].w, dec_coords[DecTopRight].h);
 
-    XPutImage(dpy, *pm, *gc, dec_ximg[tint],
+    XPutImage(dpy, dec_pm, gc, dec_ximg[tint],
               dec_coords[DecBottomLeft].x, dec_coords[DecBottomLeft].y,
               0, h - dec_coords[DecBottomLeft].h,
               dec_coords[DecBottomLeft].w, dec_coords[DecBottomLeft].h);
 
-    XPutImage(dpy, *pm, *gc, dec_ximg[tint],
+    XPutImage(dpy, dec_pm, gc, dec_ximg[tint],
               dec_coords[DecBottomRight].x, dec_coords[DecBottomRight].y,
               w - dec_coords[DecTopRight].w, h - dec_coords[DecBottomLeft].h,
               dec_coords[DecBottomRight].w, dec_coords[DecBottomRight].h);
+
+    if (which == DecWinTop || which == DecWinLAST)
+        XCopyArea(dpy, dec_pm, c->decwin[DecWinTop], gc,
+                  0, 0,
+                  dgeo.left_width + c->w + dgeo.right_width, dgeo.top_height,
+                  0, 0);
+
+    if (which == DecWinLeft || which == DecWinLAST)
+        XCopyArea(dpy, dec_pm, c->decwin[DecWinLeft], gc,
+                  0, dgeo.top_height,
+                  dgeo.left_width, c->h,
+                  0, 0);
+
+    if (which == DecWinRight || which == DecWinLAST)
+        XCopyArea(dpy, dec_pm, c->decwin[DecWinRight], gc,
+                  dgeo.left_width + c->w, dgeo.top_height,
+                  dgeo.right_width, c->h,
+                  0, 0);
+
+    if (which == DecWinBottom || which == DecWinLAST)
+        XCopyArea(dpy, dec_pm, c->decwin[DecWinBottom], gc,
+                  0, dgeo.top_height + c->h,
+                  dgeo.left_width + c->w + dgeo.right_width, dgeo.bottom_height,
+                  0, 0);
+
+    XFreePixmap(dpy, dec_pm);
+    XFreeGC(dpy, gc);
 }
 
 void
 decorations_focus_update(struct Client *new_selc)
 {
-    size_t i;
+    struct Client *old_selc;
 
-    /* Cause expose event for previously selected client, then select
-     * new client, then do the same for it */
-
-    if (selc)
-        for (i = DecWinTop; i <= DecWinBottom; i++)
-            XClearArea(dpy, selc->decwin[i], 0, 0, 1, 1, True);
-
+    old_selc = selc;
     selc = new_selc;
 
-    for (i = DecWinTop; i <= DecWinBottom; i++)
-        XClearArea(dpy, selc->decwin[i], 0, 0, 1, 1, True);
+    if (old_selc)
+        decorations_draw_for_client(old_selc, DecWinLAST);
+
+    decorations_draw_for_client(new_selc, DecWinLAST);
 }
 
 void
@@ -509,53 +537,13 @@ void
 handle_expose(XEvent *e)
 {
     XExposeEvent *ev = &e->xexpose;
-    struct Client *c = NULL;
-    enum DecorationWindowLocation which = DecWinLAST;
-    enum DecTint tint = DecTintNormal;
-    GC gc;
-    Pixmap dec_pm;
+    struct Client *c;
+    enum DecorationWindowLocation which;
 
     if ((c = client_get_for_decoration(ev->window, &which)) == NULL)
         return;
 
-    if (c == selc)
-        tint = DecTintSelect;
-
-    decorations_draw_for_client(c, tint, &dec_pm, &gc);
-
-    switch (which)
-    {
-        case DecWinTop:
-            XCopyArea(dpy, dec_pm, c->decwin[which], gc,
-                      0, 0,
-                      dgeo.left_width + c->w + dgeo.right_width, dgeo.top_height,
-                      0, 0);
-            break;
-        case DecWinLeft:
-            XCopyArea(dpy, dec_pm, c->decwin[which], gc,
-                      0, dgeo.top_height,
-                      dgeo.left_width, c->h,
-                      0, 0);
-            break;
-        case DecWinRight:
-            XCopyArea(dpy, dec_pm, c->decwin[which], gc,
-                      dgeo.left_width + c->w, dgeo.top_height,
-                      dgeo.right_width, c->h,
-                      0, 0);
-            break;
-        case DecWinBottom:
-            XCopyArea(dpy, dec_pm, c->decwin[which], gc,
-                      0, dgeo.top_height + c->h,
-                      dgeo.left_width + c->w + dgeo.right_width, dgeo.bottom_height,
-                      0, 0);
-            break;
-        case DecWinLAST:
-            /* ignore */
-            break;
-    }
-
-    XFreePixmap(dpy, dec_pm);
-    XFreeGC(dpy, gc);
+    decorations_draw_for_client(c, which);
 }
 
 void

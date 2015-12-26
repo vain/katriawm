@@ -127,7 +127,6 @@ static XImage *decorations_to_ximg(char *data);
 static void handle_clientmessage(XEvent *e);
 static void handle_configurerequest(XEvent *e);
 static void handle_destroynotify(XEvent *e);
-static void handle_enternotify(XEvent *e);
 static void handle_expose(XEvent *e);
 static void handle_maprequest(XEvent *e);
 static void handle_unmapnotify(XEvent *e);
@@ -177,7 +176,6 @@ static void (*x11_handler[LASTEvent]) (XEvent *) = {
     [ClientMessage] = handle_clientmessage,
     [ConfigureRequest] = handle_configurerequest,
     [DestroyNotify] = handle_destroynotify,
-    [EnterNotify] = handle_enternotify,
     [Expose] = handle_expose,
     [MapRequest] = handle_maprequest,
     [UnmapNotify] = handle_unmapnotify,
@@ -505,22 +503,6 @@ handle_destroynotify(XEvent *e)
         unmanage(c);
         manage_client_gone(c);
     }
-}
-
-void
-handle_enternotify(XEvent *e)
-{
-    struct Client *c;
-    XCrossingEvent *ev = &e->xcrossing;
-
-    /* Taken from dwm */
-    if ((ev->mode != NotifyNormal || ev->detail == NotifyInferior) && ev->window != root)
-        return;
-
-    XSetInputFocus(dpy, ev->window, RevertToPointerRoot, CurrentTime);
-
-    if ((c = client_get_for_window(ev->window)))
-        manage_focus_set(c);
 }
 
 void
@@ -898,11 +880,6 @@ manage(Window win, XWindowAttributes *wa)
     c->h = wa->height;
 
     XSetWindowBorderWidth(dpy, c->win, 0);
-
-    XSelectInput(dpy, c->win, 0
-                              /* Focus */
-                              | EnterWindowMask
-                              );
 
     decorations_create(c);
     manage_fit_on_monitor(c);

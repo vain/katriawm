@@ -248,7 +248,7 @@ decorations_create(struct Client *c)
                 dpy, root, 0, 0, 10, 10, 0,
                 DefaultDepth(dpy, screen),
                 CopyFromParent, DefaultVisual(dpy, screen),
-                CWOverrideRedirect|CWBackPixmap|CWEventMask,
+                CWOverrideRedirect | CWBackPixmap | CWEventMask,
                 &wa
         );
         XMapRaised(dpy, c->decwin[i]);
@@ -1252,7 +1252,7 @@ setup(void)
             dpy, root, 0, 0, 10, 10, 0,
             DefaultDepth(dpy, screen),
             CopyFromParent, DefaultVisual(dpy, screen),
-            CWOverrideRedirect|CWBackPixmap|CWEventMask,
+            CWOverrideRedirect | CWBackPixmap | CWEventMask,
             &wa
     );
     XChangeProperty(dpy, root, XInternAtom(dpy, IPC_ATOM_WINDOW, False),

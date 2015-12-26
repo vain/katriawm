@@ -490,16 +490,20 @@ handle_clientmessage(XEvent *e)
     XClientMessageEvent *cme = &e->xclient;
     static Atom t = None;
     enum IPCCommand cmd;
-    char arg;
+    char arg, *an;
 
     if (t == None)
         t = XInternAtom(dpy, IPC_ATOM_COMMAND, False);
 
     if (cme->message_type != t)
     {
+        an = XGetAtomName(dpy, cme->message_type);
         fprintf(stderr,
-                __NAME_WM__": Received client message with unknown type: %lu\n",
-                cme->message_type);
+                __NAME_WM__": Received client message with unknown type: %lu"
+                ", %s\n",
+                cme->message_type, an ? an : "(nil)");
+        if (an)
+            XFree(an);
         return;
     }
 

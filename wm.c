@@ -145,6 +145,7 @@ static void layout_monocle(struct Monitor *m);
 static void layout_tile(struct Monitor *m);
 static void manage(Window win, XWindowAttributes *wa);
 static void manage_arrange(struct Monitor *m);
+static void manage_client_gone(struct Client *c);
 static void manage_fit_on_monitor(struct Client *c);
 static void manage_goto_workspace(int i);
 static void manage_showhide(struct Client *c, char hide);
@@ -509,13 +510,11 @@ handle_destroynotify(XEvent *e)
 {
     XDestroyWindowEvent *ev = &e->xdestroywindow;
     struct Client *c;
-    struct Monitor *m;
 
     if ((c = client_get_for_window(ev->window)))
     {
-        m = c->mon;
         unmanage(c);
-        manage_arrange(m);
+        manage_client_gone(c);
     }
 }
 
@@ -567,13 +566,11 @@ handle_unmapnotify(XEvent *e)
 {
     XUnmapEvent *ev = &e->xunmap;
     struct Client *c;
-    struct Monitor *m;
 
     if ((c = client_get_for_window(ev->window)))
     {
-        m = c->mon;
         unmanage(c);
-        manage_arrange(m);
+        manage_client_gone(c);
     }
 }
 
@@ -926,6 +923,12 @@ manage_arrange(struct Monitor *m)
 {
     DPRINTF(__NAME_WM__": Arranging monitor %p\n", (void *)m);
     layouts[m->layouts[m->active_workspace]](m);
+}
+
+void
+manage_client_gone(struct Client *c)
+{
+    manage_arrange(c->mon);
 }
 
 void

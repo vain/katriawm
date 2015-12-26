@@ -149,11 +149,11 @@ static void manage_client_gone(struct Client *c);
 static void manage_fit_on_monitor(struct Client *c);
 static void manage_focus_add(struct Client *c);
 static void manage_focus_remove(struct Client *c);
-static void manage_focus_set(struct Client *c);
+static void manage_focus_set(struct Client *c, char purge_list);
 static void manage_goto_workspace(int i);
 static void manage_showhide(struct Client *c, char hide);
-static void manage_raisefocus(struct Client *c);
-static void manage_raisefocus_first_visible(void);
+static void manage_raisefocus(struct Client *c, char purge_list);
+static void manage_raisefocus_first_visible(char purge_list);
 static void manage_setsize(struct Client *c);
 static void run(void);
 static void scan(void);
@@ -661,7 +661,7 @@ ipc_client_move_mouse(char arg)
             mouse_ocw = c->w;
             mouse_och = c->h;
 
-            manage_raisefocus(c);
+            manage_raisefocus(c, 0);
         }
     }
     else if (arg == 1)
@@ -712,7 +712,7 @@ ipc_client_resize_mouse(char arg)
             mouse_ocw = c->w;
             mouse_och = c->h;
 
-            manage_raisefocus(c);
+            manage_raisefocus(c, 0);
         }
     }
     else if (arg == 1)
@@ -746,7 +746,7 @@ ipc_client_select_adjacent(char arg)
         {
             if (arg < 0 && prev)
             {
-                manage_raisefocus(prev);
+                manage_raisefocus(prev, 0);
                 return;
             }
             else if (arg > 0)
@@ -756,7 +756,7 @@ ipc_client_select_adjacent(char arg)
         {
             if (use_next)
             {
-                manage_raisefocus(c);
+                manage_raisefocus(c, 0);
                 return;
             }
             else
@@ -800,8 +800,9 @@ ipc_monitor_select_adjacent(char arg)
         }
     }
 
-    selc = NULL;
-    manage_raisefocus_first_visible();
+    /* Focus first visible client on new monitor/workspace and clean
+     * focus history */
+    manage_raisefocus_first_visible(1);
 }
 
 void
@@ -971,7 +972,7 @@ manage(Window win, XWindowAttributes *wa)
 
     XMapWindow(dpy, c->win);
     manage_arrange(c->mon);
-    manage_raisefocus(c);
+    manage_raisefocus(c, 0);
 }
 
 void
@@ -984,13 +985,15 @@ manage_arrange(struct Monitor *m)
 void
 manage_client_gone(struct Client *c)
 {
-    manage_arrange(c->mon);
+    DPRINTF(__NAME_WM__": Client %p gone\n", (void *)c);
 
+    manage_arrange(c->mon);
     manage_focus_remove(c);
+
     if (selc)
-        manage_raisefocus(selc);
+        manage_raisefocus(selc, 0);
     else
-        manage_raisefocus_first_visible();
+        manage_raisefocus_first_visible(0);
 }
 
 void
@@ -1023,9 +1026,14 @@ manage_focus_add(struct Client *new_selc)
 void
 manage_focus_remove(struct Client *new_selc)
 {
-    struct Client **tc;
+    char found = 0;
+    struct Client **tc, *c;
 
-    if (selc == NULL)
+    for (c = selc; !found && c; c = c->focus_next)
+        if (c == new_selc)
+            found = 1;
+
+    if (!found)
         return;
 
     for (tc = &selc; *tc && *tc != new_selc; tc = &(*tc)->focus_next);
@@ -1033,24 +1041,49 @@ manage_focus_remove(struct Client *new_selc)
 }
 
 void
-manage_focus_set(struct Client *new_selc)
+manage_focus_set(struct Client *new_selc, char purge_list)
 {
-    struct Client *c, *old_selc = selc;
+    struct Client *c, *old_selc;
+
+    DPRINTF(__NAME_WM__": selc before list manipulation: %p (%p)\n",
+            (void *)selc, (void *)(selc ? selc->focus_next : NULL));
+    DPRINTF(__NAME_WM__": new_selc before list manipulation: %p (%p)\n",
+            (void *)new_selc, (void *)(new_selc ? new_selc->focus_next : NULL));
+
+    old_selc = selc;
+
+    if (purge_list)
+        selc = NULL;
 
     /* Move newly selected client to head of focus list */
-    manage_focus_remove(new_selc);
-    manage_focus_add(new_selc);
+    if (new_selc)
+    {
+        DPRINTF(__NAME_WM__": Focus list (pre remove): ");
+        for (c = selc; c; c = c->focus_next)
+            DPRINTF("%p (%p) ", (void *)c, (void *)(c ? c->focus_next : NULL));
+        DPRINTF("\n");
+
+        manage_focus_remove(new_selc);
+
+        DPRINTF(__NAME_WM__": Focus list (pre add): ");
+        for (c = selc; c; c = c->focus_next)
+            DPRINTF("%p (%p) ", (void *)c, (void *)(c ? c->focus_next : NULL));
+        DPRINTF("\n");
+
+        manage_focus_add(new_selc);
+    }
 
     DPRINTF(__NAME_WM__": Focus list: ");
     for (c = selc; c; c = c->focus_next)
-        DPRINTF("%p ", (void *)c);
+        DPRINTF("%p (%p) ", (void *)c, (void *)(c ? c->focus_next : NULL));
     DPRINTF("\n");
 
     /* Unfocus previous client, focus new client */
     if (old_selc)
         decorations_draw_for_client(old_selc, DecWinLAST);
 
-    decorations_draw_for_client(selc, DecWinLAST);
+    if (new_selc)
+        decorations_draw_for_client(new_selc, DecWinLAST);
 }
 
 void
@@ -1073,26 +1106,30 @@ manage_goto_workspace(int i)
 
     selmon->active_workspace = i;
 
-    selc = NULL;
-    manage_raisefocus_first_visible();
+    /* Focus first visible client on new monitor/workspace and clean
+     * focus history */
+    manage_raisefocus_first_visible(1);
 }
 
 void
-manage_raisefocus(struct Client *c)
+manage_raisefocus(struct Client *c, char purge_list)
 {
     size_t i;
 
-    XRaiseWindow(dpy, c->win);
-    XSetInputFocus(dpy, c->win, RevertToPointerRoot, CurrentTime);
+    if (c)
+    {
+        XRaiseWindow(dpy, c->win);
+        XSetInputFocus(dpy, c->win, RevertToPointerRoot, CurrentTime);
 
-    for (i = DecWinTop; i <= DecWinBottom; i++)
-        XRaiseWindow(dpy, c->decwin[i]);
+        for (i = DecWinTop; i <= DecWinBottom; i++)
+            XRaiseWindow(dpy, c->decwin[i]);
+    }
 
-    manage_focus_set(c);
+    manage_focus_set(c, purge_list);
 }
 
 void
-manage_raisefocus_first_visible(void)
+manage_raisefocus_first_visible(char purge_list)
 {
     struct Client *c;
 
@@ -1100,10 +1137,14 @@ manage_raisefocus_first_visible(void)
     {
         if (c->mon == selmon && c->workspace == selmon->active_workspace)
         {
-            manage_raisefocus(c);
+            manage_raisefocus(c, purge_list);
             return;
         }
     }
+
+    /* No client found on target monitor/workspace, but we still need to
+     * unfocus the previously selected one if focus is to be purged */
+    manage_raisefocus(NULL, purge_list);
 }
 
 void

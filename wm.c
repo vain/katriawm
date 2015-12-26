@@ -23,7 +23,7 @@ enum DecorationLocation
     DecLeft = 3,       DecRight = 4,
     DecBottomLeft = 5, DecBottom = 6, DecBottomRight = 7,
 
-    DecLAST = 8
+    DecLAST = 8,
 };
 
 enum DecorationWindowLocation
@@ -33,7 +33,7 @@ enum DecorationWindowLocation
     DecWinRight = 2,
     DecWinBottom = 3,
 
-    DecWinLAST = 4
+    DecWinLAST = 4,
 };
 
 struct DecorationGeometry
@@ -54,7 +54,7 @@ enum DecTint
     DecTintSelect = 1,
     DecTintUrgent = 2,
 
-    DecTintLAST = 3
+    DecTintLAST = 3,
 };
 
 #include "pixmaps.h"
@@ -464,7 +464,6 @@ handle_configurerequest(XEvent *e)
         /* This is a known client. However, we do not allow the client
          * to resize or move itself. Hence, we simply inform him about
          * the last known configuration. */
-
         ce.type = ConfigureNotify;
         ce.display = dpy;
         ce.event = c->win;

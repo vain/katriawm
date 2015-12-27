@@ -26,8 +26,8 @@ static struct SubImage dec_coords[] = {
 
 static char dec_has_title = 1;
 static struct TitleArea dec_title = {
-    .left_offset = 10,
-    .right_offset = 10,
+    .left_offset = 13,
+    .right_offset = 13,
     .baseline_top_offset = 21,
 };
 

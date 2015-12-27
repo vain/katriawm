@@ -21,7 +21,7 @@
 enum DecorationLocation
 {
     DecTopLeft = 0,    DecTop = 1,    DecTopRight = 2,
-    DecLeft = 3,       DecRight = 4,
+    DecLeft = 3,                      DecRight = 4,
     DecBottomLeft = 5, DecBottom = 6, DecBottomRight = 7,
 
     DecLAST = 8,
@@ -51,7 +51,9 @@ struct SubImage
 
 struct TitleArea
 {
-    int left_offset, right_offset, baseline_top_offset;
+    int left_offset;
+    int right_offset;
+    int baseline_top_offset;
 };
 
 enum DecTint
@@ -79,7 +81,7 @@ struct Client
 {
     Window win;
 
-    /* Inner size of the actual client */
+    /* Inner size of the actual client, excluding decorations */
     int x, y, w, h;
 
     int visible_x;
@@ -294,6 +296,24 @@ decorations_draw_for_client(struct Client *c,
     Pixmap dec_pm;
     char *titlestr = "proof of concept";
 
+    /* We first create a pixmap with the size of the "visible" client,
+     * i.e. the real client window + size of the window decorations.
+     * This allows for easier drawing algorithms. After that, the
+     * relevant portions will be copied to the real decoration windows.
+     *
+     * The decorations are drawn like this: First, all four sides will
+     * be drawn. This involves patterning/tiling the corresponding parts
+     * of the source image onto our pixmap. We will cover every pixel
+     * from left to right (or top to bottom). After that, the four
+     * corner images will be rendered on top.
+     *
+     * The title string will be rendered on top of this intermediate
+     * result.
+     *
+     * We always draw the complete decoration, even though only parts of
+     * it might actually be copied onto a real window (see parameter
+     * "which"). */
+
     if (c == selc)
         tint = DecTintSelect;
 
@@ -366,6 +386,8 @@ decorations_draw_for_client(struct Client *c,
         draw_text(dec_pm, font[FontTitle], &font_color[tint], x, y, w, titlestr);
     }
 
+    /* Pixmap drawing complete, now copy those areas onto the windows */
+
     if (which == DecWinTop || which == DecWinLAST)
         XCopyArea(dpy, dec_pm, c->decwin[DecWinTop], gc,
                   0, 0,
@@ -400,6 +422,10 @@ decorations_load(void)
     char *tinted[DecTintLAST];
     size_t i;
 
+    /* The source image of our decorations is grey scale, but it's
+     * already 24 bits. This allows us to easily tint the image. Then,
+     * an XImage will be created for each tinted source image. */
+
     for (i = DecTintNormal; i <= DecTintUrgent; i++)
     {
         tinted[i] = decorations_tint(dec_tints[i]);
@@ -423,7 +449,9 @@ decorations_tint(unsigned long color)
 
     for (i = 0; i < sizeof dec_img / sizeof dec_img[0]; i++)
     {
-        /* r = original_r * (tint / 256) */
+        /* r = original_r * tint / 256, i.e. a pixel with value 255 in
+         * the source image will have the full tint color, pixels with
+         * less than 255 will dim the tint color */
 
         r = (0x00FF0000 & dec_img[i]) >> 16;
         g = (0x0000FF00 & dec_img[i]) >> 8;
@@ -465,6 +493,8 @@ draw_text(Drawable d, XftFont *xfont, XftColor *col, int x, int y, int w, char *
     if (strlen(s) > 4096)
         return;
 
+    /* Reduce length until the rendered text can fit into the desired
+     * width -- this is "kind of"-ish UTF-8 compatible */
     len = strlen(s);
     for (;;)
     {
@@ -491,6 +521,9 @@ handle_clientmessage(XEvent *e)
     static Atom t = None;
     enum IPCCommand cmd;
     char arg, *an;
+
+    /* All sorts of client messages arrive here, including our own IPC
+     * mechanism */
 
     if (t == None)
         t = XInternAtom(dpy, IPC_ATOM_COMMAND, False);
@@ -703,6 +736,11 @@ ipc_client_move_mouse(char arg)
     Window child, dummy;
     struct Client *c;
 
+    /* We have no native means of handling mouse input, we merely handle
+     * an IPC request. This means that we will only query the current
+     * pointer location, plus the window that's below the pointer. No
+     * grabbing of keys, buttons, or pointers is involved. */
+
     XQueryPointer(dpy, root, &dummy, &child, &x, &y, &di, &di, &dui);
 
     if (arg == 0)
@@ -801,6 +839,8 @@ ipc_client_select_adjacent(char arg)
     struct Client *c, *prev = NULL;
     char use_next = 0;
 
+    /* Select the previous/next client which is visible */
+
     for (c = clients; c; c = c->next)
     {
         if (c == selc)
@@ -861,6 +901,8 @@ ipc_monitor_select_adjacent(char arg)
         }
     }
 
+    /* TODO warp mouse to new monitor */
+
     manage_raisefocus_first_matching();
 }
 
@@ -913,8 +955,6 @@ layout_float(struct Monitor *m)
 void
 layout_monocle(struct Monitor *m)
 {
-    /* XXX untested */
-
     struct Client *c;
 
     for (c = clients; c; c = c->next)
@@ -1029,6 +1069,7 @@ manage(Window win, XWindowAttributes *wa)
     DPRINTF(__NAME_WM__": Managing window %lu (%p) at %dx%d+%d+%d\n",
             c->win, (void *)c, c->w, c->h, c->x, c->y);
 
+    /* XXX why arrange after mapping the window? */
     XMapWindow(dpy, c->win);
     manage_arrange(c->mon);
     manage_raisefocus(c);
@@ -1084,6 +1125,8 @@ manage_fit_on_monitor(struct Client *c)
 void
 manage_focus_add(struct Client *new_selc)
 {
+    /* Add client to head of the focus list */
+
     new_selc->focus_next = selc;
     selc = new_selc;
 }
@@ -1093,6 +1136,8 @@ manage_focus_remove(struct Client *new_selc)
 {
     char found = 0;
     struct Client **tc, *c;
+
+    /* Remove client from focus list (if present) */
 
     for (c = selc; !found && c; c = c->focus_next)
         if (c == new_selc)

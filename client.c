@@ -8,13 +8,14 @@
 #include "ipc.h"
 
 static Atom
-getatomprop(Display *dpy, Window w, char *name, Atom type) {
-    /* Props to dwm */
-
+getatomprop(Display *dpy, Window w, char *name, Atom type)
+{
     int di;
     unsigned long dl;
     unsigned char *p = NULL;
     Atom da, atom = None, prop;
+
+    /* Props to dwm for this function */
 
     prop = XInternAtom(dpy, name, False);
 
@@ -51,8 +52,9 @@ send_command(enum IPCCommand cmd, char arg)
     memset(&ev, 0, sizeof ev);
     ev.xclient.type = ClientMessage;
     ev.xclient.window = root;
-    ev.xclient.message_type = XInternAtom(dpy, IPC_ATOM_COMMAND, False);
 
+    /* This is our "protocol": One byte opcode, one byte argument */
+    ev.xclient.message_type = XInternAtom(dpy, IPC_ATOM_COMMAND, False);
     ev.xclient.format = 8;
     ev.xclient.data.b[0] = cmd;
     ev.xclient.data.b[1] = arg;

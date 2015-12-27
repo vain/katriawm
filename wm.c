@@ -138,6 +138,7 @@ static void decorations_create(struct Client *c);
 static void decorations_destroy(struct Client *c);
 static void decorations_draw_for_client(struct Client *c,
                                         enum DecorationWindowLocation which);
+static Pixmap decorations_get_pm(GC gc, enum DecorationLocation l, enum DecTint t);
 static void decorations_load(void);
 static char *decorations_tint(unsigned long color);
 static XImage *decorations_to_ximg(char *data);
@@ -292,8 +293,8 @@ decorations_draw_for_client(struct Client *c,
 {
     int x, y, w, h;
     enum DecTint tint = DecTintNormal;
-    GC gc;
-    Pixmap dec_pm;
+    GC gc, gc_tiled;
+    Pixmap dec_pm, tile_pm;
     char *titlestr = "proof of concept";
 
     /* We first create a pixmap with the size of the "visible" client,
@@ -321,41 +322,40 @@ decorations_draw_for_client(struct Client *c,
     h = dgeo.top_height + c->h + dgeo.bottom_height;
 
     gc = XCreateGC(dpy, root, 0, NULL);
+    gc_tiled = XCreateGC(dpy, root, 0, NULL);
     dec_pm = XCreatePixmap(dpy, root, w, h, DefaultDepth(dpy, screen));
 
-    /* TODO optimize for speed, use tiling */
+    /* TODO only create tile pixmaps once and keep them for the whole
+     * session */
 
-    for (x = 0; x < w; x += dec_coords[DecTop].w)
-    {
-        XPutImage(dpy, dec_pm, gc, dec_ximg[tint],
-                  dec_coords[DecTop].x, dec_coords[DecTop].y,
-                  x, 0,
-                  dec_coords[DecTop].w, dec_coords[DecTop].h);
-    }
+    XSetFillStyle(dpy, gc_tiled, FillTiled);
 
-    for (x = 0; x < w; x += dec_coords[DecBottom].w)
-    {
-        XPutImage(dpy, dec_pm, gc, dec_ximg[tint],
-                  dec_coords[DecBottom].x, dec_coords[DecBottom].y,
-                  x, h - dgeo.bottom_height,
-                  dec_coords[DecBottom].w, dec_coords[DecBottom].h);
-    }
+    tile_pm = decorations_get_pm(gc, DecTop, tint);
+    XSetTile(dpy, gc_tiled, tile_pm);
+    XSetTSOrigin(dpy, gc_tiled, 0, 0);
+    XFillRectangle(dpy, dec_pm, gc_tiled, 0, 0, w, dec_coords[DecTop].h);
+    XFreePixmap(dpy, tile_pm);
 
-    for (y = 0; y < c->h; y += dec_coords[DecLeft].h)
-    {
-        XPutImage(dpy, dec_pm, gc, dec_ximg[tint],
-                  dec_coords[DecLeft].x, dec_coords[DecLeft].y,
-                  0, dgeo.top_height + y,
-                  dec_coords[DecLeft].w, dec_coords[DecLeft].h);
-    }
+    tile_pm = decorations_get_pm(gc, DecBottom, tint);
+    XSetTile(dpy, gc_tiled, tile_pm);
+    XSetTSOrigin(dpy, gc_tiled, 0, h - dgeo.bottom_height);
+    XFillRectangle(dpy, dec_pm, gc_tiled, 0, h - dgeo.bottom_height,
+                   w, dec_coords[DecBottom].h);
+    XFreePixmap(dpy, tile_pm);
 
-    for (y = 0; y < c->h; y += dec_coords[DecRight].h)
-    {
-        XPutImage(dpy, dec_pm, gc, dec_ximg[tint],
-                  dec_coords[DecRight].x, dec_coords[DecRight].y,
-                  dgeo.left_width + c->w, dgeo.top_height + y,
-                  dec_coords[DecRight].w, dec_coords[DecRight].h);
-    }
+    tile_pm = decorations_get_pm(gc, DecLeft, tint);
+    XSetTile(dpy, gc_tiled, tile_pm);
+    XSetTSOrigin(dpy, gc_tiled, 0, dgeo.top_height);
+    XFillRectangle(dpy, dec_pm, gc_tiled, 0, dgeo.top_height,
+                   dec_coords[DecLeft].w, c->h);
+    XFreePixmap(dpy, tile_pm);
+
+    tile_pm = decorations_get_pm(gc, DecRight, tint);
+    XSetTile(dpy, gc_tiled, tile_pm);
+    XSetTSOrigin(dpy, gc_tiled, w - dgeo.right_width, dgeo.top_height);
+    XFillRectangle(dpy, dec_pm, gc_tiled, w - dgeo.right_width, dgeo.top_height,
+                   dec_coords[DecRight].w, c->h);
+    XFreePixmap(dpy, tile_pm);
 
     XPutImage(dpy, dec_pm, gc, dec_ximg[tint],
               dec_coords[DecTopLeft].x, dec_coords[DecTopLeft].y,
@@ -414,6 +414,22 @@ decorations_draw_for_client(struct Client *c,
 
     XFreePixmap(dpy, dec_pm);
     XFreeGC(dpy, gc);
+    XFreeGC(dpy, gc_tiled);
+}
+
+Pixmap
+decorations_get_pm(GC gc, enum DecorationLocation l, enum DecTint t)
+{
+    Pixmap p;
+
+    p = XCreatePixmap(dpy, root, dec_coords[l].w, dec_coords[l].h,
+                      DefaultDepth(dpy, screen));
+    XPutImage(dpy, p, gc, dec_ximg[t],
+              dec_coords[l].x, dec_coords[l].y,
+              0, 0,
+              dec_coords[l].w, dec_coords[l].h);
+
+    return p;
 }
 
 void

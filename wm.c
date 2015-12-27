@@ -1748,8 +1748,6 @@ shutdown(void)
 
     XFreeCursor(dpy, cursor_normal);
 
-    XDeleteProperty(dpy, root, XInternAtom(dpy, IPC_ATOM_WINDOW, False));
-
     XCloseDisplay(dpy);
 }
 

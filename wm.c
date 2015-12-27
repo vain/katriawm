@@ -864,34 +864,46 @@ ipc_client_resize_mouse(char arg)
 void
 ipc_client_select_adjacent(char arg)
 {
-    struct Client *c, *prev = NULL;
-    char use_next = 0;
+    struct Client *c, *to_select = NULL;
 
-    /* Select the previous/next client which is visible */
+    /* Select the previous/next client which is visible, wrapping
+     * around. Once again, props to dwm. */
 
-    for (c = clients; c; c = c->next)
+    if (arg > 0)
     {
-        if (c == selc)
-        {
-            if (arg < 0 && prev)
-            {
-                manage_raisefocus(prev);
-                return;
-            }
-            else if (arg > 0)
-                use_next = 1;
-        }
-        else if (VIS_ON_SELMON(c))
-        {
-            if (use_next)
-            {
-                manage_raisefocus(c);
-                return;
-            }
-            else
-                prev = c;
-        }
+        /* Start at selc and search the next visible client. If that
+         * doesn't work, then start from the beginning of the list. */
+
+        for (c = selc->next; c && !VIS_ON_SELMON(c); c = c->next)
+            /* nop */;
+
+        if (!c)
+            for (c = clients; c && !VIS_ON_SELMON(c); c = c->next)
+                /* nop */;
+
+        to_select = c;
     }
+    else if (arg < 0)
+    {
+        /* Look at all visible clients before c, keep track of c and the
+         * visible client before it (to_select). Once we have found
+         * selc, we will not enter the loop body, thus to_select will
+         * still point to the visible client before c. */
+        for (c = clients; c != selc; c = c->next)
+            if (VIS_ON_SELMON(c))
+                to_select = c;
+
+        /* Nothing found? Then start at selc and look at all clients
+         * after c. After this loop, to_select will point to the last
+         * visible client in the list. */
+        if (!to_select)
+            for (c = selc->next; c; c = c->next)
+                if (VIS_ON_SELMON(c))
+                    to_select = c;
+    }
+
+    if (to_select)
+        manage_raisefocus(to_select);
 }
 
 void

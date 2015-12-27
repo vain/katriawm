@@ -5,6 +5,7 @@
  */
 
 #include <assert.h>
+#include <locale.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -287,10 +288,16 @@ client_update_title(struct Client *c)
     char **slist = NULL;
     int count;
 
+    c->title[0] = 0;
+
     if (!XGetTextProperty(dpy, c->win, &tp, atom_net[AtomNetWMName]))
     {
+        DPRINTF(__NAME_WM__": Title of client %p could not be read from EWMH\n",
+                (void *)c);
         if (!XGetTextProperty(dpy, c->win, &tp, XA_WM_NAME))
         {
+            DPRINTF(__NAME_WM__": Title of client %p could not be read from X\n",
+                    (void *)c);
             strncpy(c->title, WM_NAME_UNKNOWN, sizeof c->title);
             return;
         }
@@ -302,18 +309,32 @@ client_update_title(struct Client *c)
         return;
     }
 
-    /* This is a particularly gnarly function. Props to dwm which has
-     * figured out how to use it. */
-    if (XmbTextPropertyToTextList(dpy, &tp, &slist, &count) >= Success
-        && count > 0 && *slist)
+    if (tp.encoding == XA_STRING)
     {
-        strncpy(c->title, slist[0], sizeof c->title - 1);
-        XFreeStringList(slist);
+        strncpy(c->title, (char *)tp.value, sizeof c->title);
+        DPRINTF(__NAME_WM__": Title of client %p read as verbatim string\n",
+                (void *)c);
+    }
+    else
+    {
+        /* This is a particularly gnarly function. Props to dwm which has
+         * figured out how to use it. */
+        if (XmbTextPropertyToTextList(dpy, &tp, &slist, &count) >= Success
+            && count > 0 && *slist)
+        {
+            strncpy(c->title, slist[0], sizeof c->title - 1);
+            XFreeStringList(slist);
+            DPRINTF(__NAME_WM__": Title of client %p read as XmbText\n",
+                    (void *)c);
+        }
     }
 
     c->title[sizeof c->title - 1] = 0;
 
     XFree(tp.value);
+
+    DPRINTF(__NAME_WM__": Title of client %p is now '%s'\n", (void *)c,
+            c->title);
 }
 
 void
@@ -1522,6 +1543,9 @@ setup(void)
     int minx, minindex;
     char *chosen = NULL;
     size_t i;
+
+    if (!setlocale(LC_CTYPE, "") || !XSupportsLocale())
+        fprintf(stderr, __NAME_WM__": Could not set locale\n");
 
     if ((dpy = XOpenDisplay(NULL)) == NULL)
     {

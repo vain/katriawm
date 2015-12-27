@@ -8,7 +8,7 @@ enum IPCCommand
 {
     /* These commands shall use the following name scheme:
      *
-     *     $subject $predicate $adverb
+     *     $subject $predicate $adverb [$adverb ...]
      *
      * For example:
      *
@@ -26,6 +26,9 @@ enum IPCCommand
     IPCClientMoveMouse,
     IPCClientResizeMouse,
     IPCClientSelectAdjacent,
+    IPCClientSwitchMonitorAdjacent,
+    IPCClientSwitchWorkspace,
+    IPCClientSwitchWorkspaceAdjacent,
     IPCLayoutSet,
     IPCMonitorSelectAdjacent,
     IPCWMQuit,

@@ -174,6 +174,9 @@ static void ipc_client_move_list(char arg);
 static void ipc_client_move_mouse(char arg);
 static void ipc_client_resize_mouse(char arg);
 static void ipc_client_select_adjacent(char arg);
+static void ipc_client_switch_monitor_adjacent(char arg);
+static void ipc_client_switch_workspace(char arg);
+static void ipc_client_switch_workspace_adjacent(char arg);
 static void ipc_layout_set(char arg);
 static void ipc_monitor_select_adjacent(char arg);
 static void ipc_wm_quit(char arg);
@@ -208,6 +211,9 @@ static void (*ipc_handler[IPCLast]) (char arg) = {
     [IPCClientMoveMouse] = ipc_client_move_mouse,
     [IPCClientResizeMouse] = ipc_client_resize_mouse,
     [IPCClientSelectAdjacent] = ipc_client_select_adjacent,
+    [IPCClientSwitchMonitorAdjacent] = ipc_client_switch_monitor_adjacent,
+    [IPCClientSwitchWorkspace] = ipc_client_switch_workspace,
+    [IPCClientSwitchWorkspaceAdjacent] = ipc_client_switch_workspace_adjacent,
     [IPCLayoutSet] = ipc_layout_set,
     [IPCMonitorSelectAdjacent] = ipc_monitor_select_adjacent,
     [IPCWMQuit] = ipc_wm_quit,
@@ -981,6 +987,70 @@ ipc_client_select_adjacent(char arg)
 }
 
 void
+ipc_client_switch_monitor_adjacent(char arg)
+{
+    int i;
+    struct Monitor *m, *old_mon = NULL;
+
+    /* Move currently selected client to an adjacent monitor, causing
+     * both monitors to be re-arranged */
+
+    if (!SOMETHING_FOCUSED)
+        return;
+
+    i = selmon->index;
+    i += arg;
+    i = i < 0 ? 0 : i;
+    i = i >= monitors_num ? monitors_num - 1 : i;
+
+    for (m = monitors; m; m = m->next)
+    {
+        if (m->index == i)
+        {
+            old_mon = selc->mon;
+            selc->mon = m;
+            selc->workspace = selc->mon->active_workspace;
+            manage_arrange(old_mon);
+            manage_arrange(m);
+            manage_raisefocus_first_matching();
+            return;
+        }
+    }
+}
+
+void
+ipc_client_switch_workspace(char arg)
+{
+    int i;
+
+    if (!SOMETHING_FOCUSED)
+        return;
+
+    i = arg;
+    i = i < WORKSPACE_MIN ? WORKSPACE_MIN : i;
+    i = i > WORKSPACE_MAX ? WORKSPACE_MAX : i;
+
+    selc->workspace = i;
+    manage_goto_workspace(selmon->active_workspace);
+}
+
+void
+ipc_client_switch_workspace_adjacent(char arg)
+{
+    int i;
+
+    if (!SOMETHING_FOCUSED)
+        return;
+
+    i = selmon->active_workspace + arg;
+    i = i < WORKSPACE_MIN ? WORKSPACE_MIN : i;
+    i = i > WORKSPACE_MAX ? WORKSPACE_MAX : i;
+
+    selc->workspace = i;
+    manage_goto_workspace(selmon->active_workspace);
+}
+
+void
 ipc_layout_set(char arg)
 {
     int i = arg;
@@ -1335,6 +1405,7 @@ manage_goto_workspace(int i)
 
     selmon->active_workspace = i;
 
+    manage_arrange(selmon);
     manage_raisefocus_first_matching();
 }
 

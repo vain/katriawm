@@ -113,6 +113,37 @@ main(int argc, char **argv)
             arg = 1;
         }
     }
+    if (strncmp(argv[1], "client_switch_monitor", strlen("client_switch_monitor")) == 0 && argc >= 3)
+    {
+        if (strncmp(argv[2], "left", strlen("left")) == 0)
+        {
+            cmd = IPCClientSwitchMonitorAdjacent;
+            arg = -1;
+        }
+        if (strncmp(argv[2], "right", strlen("right")) == 0)
+        {
+            cmd = IPCClientSwitchMonitorAdjacent;
+            arg = 1;
+        }
+    }
+    if (strncmp(argv[1], "client_switch_workspace", strlen("client_switch_workspace")) == 0 && argc >= 3)
+    {
+        if (strncmp(argv[2], "prev", strlen("prev")) == 0)
+        {
+            cmd = IPCClientSwitchWorkspaceAdjacent;
+            arg = -1;
+        }
+        else if (strncmp(argv[2], "next", strlen("next")) == 0)
+        {
+            cmd = IPCClientSwitchWorkspaceAdjacent;
+            arg = 1;
+        }
+        else
+        {
+            if ((arg = atoi(argv[2])) > 0)
+                cmd = IPCClientSwitchWorkspace;
+        }
+    }
     if (strncmp(argv[1], "layout_set", strlen("layout_set")) == 0 && argc >= 3)
     {
         if (strncmp(argv[2], "float", strlen("float")) == 0)

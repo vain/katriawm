@@ -33,6 +33,15 @@ must be one of \fBdown\fP, \fBmotion\fP, \fBup\fP.
 Focus another client on the current workspace. \fItarget\fP must be one
 of \fBprev\fP, \fBnext\fP.
 .TP
+\fBclient_switch_monitor\fP \fItarget\fP
+Move currently selected client to another monitor. \fItarget\fP must be
+one of \fBleft\fP, \fBright\fP.
+.TP
+\fBclient_switch_workspace\fP \fItarget\fP
+Move currently selected client to another workspace on the same monitor.
+\fItarget\fP must be one of \fBprev\fP, \fBnext\fP, or an integer
+greater than 0 and less than 128 to denote one particular workspace.
+.TP
 \fBlayout_set\fP \fIalgorithm\fP
 Set the layout algorithm on the currently visible workspace on the
 currently selected monitor. \fIalgorithm\fP must be one of \fBtile\fP,

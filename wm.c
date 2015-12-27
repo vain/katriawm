@@ -141,7 +141,7 @@ static struct Client *clients = NULL, *selc = NULL;
 static struct Client *mouse_dc = NULL;
 static struct Monitor *monitors = NULL, *selmon = NULL;
 static int mouse_dx, mouse_dy, mouse_ocx, mouse_ocy, mouse_ocw, mouse_och;
-static Atom atom_net[AtomNetLAST], atom_wm[AtomWMLAST];
+static Atom atom_net[AtomNetLAST], atom_wm[AtomWMLAST], atom_state;
 static Cursor cursor_normal;
 static Display *dpy;
 static XftColor font_color[DecTintLAST];
@@ -209,6 +209,7 @@ static void manage_showhide(struct Client *c, char hide);
 static void manage_raisefocus(struct Client *c);
 static void manage_raisefocus_first_matching(void);
 static void manage_setsize(struct Client *c);
+static void publish_state(void);
 static void run(void);
 static void scan(void);
 static void setup(void);
@@ -1334,6 +1335,8 @@ manage_arrange(struct Monitor *m)
 {
     DPRINTF(__NAME_WM__": Arranging monitor %p\n", (void *)m);
     layouts[m->layouts[m->active_workspace]](m);
+
+    publish_state();
 }
 
 void
@@ -1354,6 +1357,8 @@ manage_client_gone(struct Client *c)
      * the correct workspace and monitor */
     if (c == old_selc)
         manage_raisefocus_first_matching();
+
+    publish_state();
 }
 
 void
@@ -1563,6 +1568,56 @@ manage_setsize(struct Client *c)
 }
 
 void
+publish_state(void)
+{
+    size_t size, byte_i, shifts_needed, i;
+    unsigned char *state = NULL, byte, mask;
+    struct Monitor *m;
+    struct Client *c;
+
+    /* The first monitors_num bytes indicate the active workspace on
+     * each monitor. Following that, we need WORKSPACE_MAX / 8 = ~16
+     * bytes per monitor to indicate whether that workspace is occupied.
+     * We need the same amount of data to indicate whether a workspace
+     * has the urgency hint set. */
+    size = monitors_num + monitors_num * 16 * 2;
+    state = calloc(size, sizeof (unsigned char));
+    if (state == NULL)
+    {
+        fprintf(stderr, __NAME_WM__": Could not allocate memory for state array\n");
+        return;
+    }
+
+    for (m = monitors; m; m = m->next)
+        state[m->index] = m->active_workspace;
+
+    for (c = clients; c; c = c->next)
+    {
+        /* Calculate which byte to alter and then which bit to set */
+
+        byte_i = c->workspace / 8;
+        shifts_needed = (c->workspace - 1) % 8;
+
+        mask = 1;
+        for (i = 0; i < shifts_needed; i++)
+            mask <<= 1;
+
+        i = monitors_num + byte_i;
+
+        byte = state[i];
+        byte |= mask;
+        state[i] = byte;
+    }
+
+    /* TODO fill in bits to indicate urgency hints */
+
+    XChangeProperty(dpy, root, atom_state, XA_INTEGER, 8, PropModeReplace,
+                    state, size);
+    DPRINTF(__NAME_WM__": Published internal state in root property %s\n",
+            IPC_ATOM_STATE);
+}
+
+void
 run(void)
 {
     XEvent ev;
@@ -1600,6 +1655,8 @@ setup(void)
     xerrorxlib = XSetErrorHandler(xerror);
 
     setup_hints();
+    atom_state = XInternAtom(dpy, IPC_ATOM_STATE, False);
+    publish_state();
 
     /* Initialize fonts and colors */
     /* XXX Yes, looping is meaningless until we have a bar with a
@@ -1746,6 +1803,7 @@ shutdown(void)
         for (j = DecTopLeft; j <= DecBottomRight; j++)
             XFreePixmap(dpy, dec_tiles[i][j]);
 
+    XDeleteProperty(dpy, root, atom_state);
     XFreeCursor(dpy, cursor_normal);
 
     XCloseDisplay(dpy);

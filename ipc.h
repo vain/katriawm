@@ -2,6 +2,7 @@
 #define _WM_IPC_H
 
 #define IPC_ATOM_COMMAND "_"__NAME_UPPERCASE__"_CLIENT_COMMAND"
+#define IPC_ATOM_STATE "_"__NAME_UPPERCASE__"_STATE"
 
 enum IPCCommand
 {

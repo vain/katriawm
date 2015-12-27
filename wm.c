@@ -76,6 +76,10 @@ enum Font
 
 #define WORKSPACE_MIN 1
 #define WORKSPACE_MAX 127
+#define VIS_ON_SELMON(c) ((c)->mon == selmon && \
+                          (c)->workspace == selmon->active_workspace)
+#define VIS_ON_M(c, m) ((c)->mon == (m) && \
+                        (c)->workspace == (m)->active_workspace)
 
 struct Client
 {
@@ -680,7 +684,7 @@ ipc_client_move_list(char arg)
         /* Find visible client before selc */
         for (c = clients; c; c = c->next)
         {
-            if (c->mon == selmon && c->workspace == selmon->active_workspace)
+            if (VIS_ON_SELMON(c))
             {
                 if (c == selc)
                     break;
@@ -698,7 +702,7 @@ ipc_client_move_list(char arg)
         /* Find visible client after selc */
         for (c = selc; c; c = c->next)
         {
-            if (c->mon == selmon && c->workspace == selmon->active_workspace)
+            if (VIS_ON_SELMON(c))
             {
                 if (c == selc)
                     use_next = 1;
@@ -877,7 +881,7 @@ ipc_client_select_adjacent(char arg)
             else if (arg > 0)
                 use_next = 1;
         }
-        else if (c->mon == selmon && c->workspace == selmon->active_workspace)
+        else if (VIS_ON_SELMON(c))
         {
             if (use_next)
             {
@@ -983,7 +987,7 @@ layout_monocle(struct Monitor *m)
 
     for (c = clients; c; c = c->next)
     {
-        if (c->mon == m && c->workspace == m->active_workspace)
+        if (VIS_ON_M(c, m))
         {
             c->x = c->mon->wx + dgeo.left_width;
             c->y = c->mon->wy + dgeo.top_height;
@@ -1005,12 +1009,12 @@ layout_tile(struct Monitor *m)
      * including decorations */
 
     for (c = clients; c; c = c->next)
-        if (c->mon == m && c->workspace == m->active_workspace)
+        if (VIS_ON_M(c, m))
             num_clients++;
 
     for (c = clients; c; c = c->next)
     {
-        if (c->mon == m && c->workspace == m->active_workspace)
+        if (VIS_ON_M(c, m))
         {
             if (i == 0)
             {
@@ -1265,7 +1269,7 @@ manage_raisefocus_first_matching(void)
 
     for (c = selc; c; c = c->focus_next)
     {
-        if (c->mon == selmon && c->workspace == selmon->active_workspace)
+        if (VIS_ON_SELMON(c))
         {
             manage_raisefocus(c);
             return;

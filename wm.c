@@ -75,6 +75,10 @@ enum Font
 
 #include "pixmaps.h"
 
+/* TODO include this in theme */
+#define WS_PADDING_TOP 20
+#define WS_PADDING_BOTTOM 20
+
 #define WORKSPACE_MIN 1
 #define WORKSPACE_MAX 127
 #define WM_NAME_UNKNOWN "<name unknown>"
@@ -1224,10 +1228,12 @@ layout_tile(struct Monitor *m)
 {
     struct Client *c;
     int i = 0;
-    int num_clients = 0, at_y = 0, slave_h, master_w;
+    int num_clients = 0, at_y, slave_h, master_w;
 
     /* Note: at_y, slave_h and master_w all the *visible* sizes
      * including decorations */
+
+    at_y = m->wy;
 
     for (c = clients; c; c = c->next)
         if (VIS_ON_M(c, m))
@@ -1269,7 +1275,7 @@ layout_tile(struct Monitor *m)
                        - dgeo.right_width;
 
                 if (i == num_clients - 1)
-                    slave_h = c->mon->wh - at_y;
+                    slave_h = c->mon->wh - at_y + m->wy;
                 else
                     slave_h = c->mon->wh / (num_clients - 1);
 
@@ -1721,6 +1727,10 @@ setup(void)
         m->wy = m->my = ci->y;
         m->ww = m->mw = ci->width;
         m->wh = m->mh = ci->height;
+
+        m->wy += WS_PADDING_TOP;
+        m->wh -= WS_PADDING_TOP + WS_PADDING_BOTTOM;
+
         m->index = monitors_num++;
         m->active_workspace = 1;
         m->next = monitors;

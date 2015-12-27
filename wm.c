@@ -81,6 +81,7 @@ enum Font
                           (c)->workspace == selmon->active_workspace)
 #define VIS_ON_M(c, m) ((c)->mon == (m) && \
                         (c)->workspace == (m)->active_workspace)
+#define SOMETHING_FOCUSED (selc && VIS_ON_SELMON(selc))
 
 struct Client
 {
@@ -746,7 +747,7 @@ ipc_client_move_list(char arg)
     struct Client *c, *one = NULL, *two = NULL,
                   *before_one = NULL, *before_two = NULL;
 
-    if (selc == NULL)
+    if (!SOMETHING_FOCUSED)
         return;
 
     if (arg < 0)
@@ -938,6 +939,9 @@ ipc_client_select_adjacent(char arg)
 
     /* Select the previous/next client which is visible, wrapping
      * around. Once again, props to dwm. */
+
+    if (!SOMETHING_FOCUSED)
+        return;
 
     if (arg > 0)
     {

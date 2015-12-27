@@ -129,11 +129,19 @@ enum AtomsNet
     AtomNetLAST,
 };
 
+enum AtomsWM
+{
+    AtomWMProtocols,
+    AtomWMDeleteWindow,
+
+    AtomWMLAST,
+};
+
 static struct Client *clients = NULL, *selc = NULL;
 static struct Client *mouse_dc = NULL;
 static struct Monitor *monitors = NULL, *selmon = NULL;
 static int mouse_dx, mouse_dy, mouse_ocx, mouse_ocy, mouse_ocw, mouse_och;
-static Atom atom_net[AtomNetLAST];
+static Atom atom_net[AtomNetLAST], atom_wm[AtomWMLAST];
 static Cursor cursor_normal;
 static Display *dpy;
 static XftColor font_color[DecTintLAST];
@@ -171,6 +179,8 @@ static void handle_expose(XEvent *e);
 static void handle_maprequest(XEvent *e);
 static void handle_propertynotify(XEvent *e);
 static void handle_unmapnotify(XEvent *e);
+static void ipc_client_close(char arg);
+static void ipc_client_kill(char arg);
 static void ipc_client_move_list(char arg);
 static void ipc_client_move_mouse(char arg);
 static void ipc_client_resize_mouse(char arg);
@@ -202,12 +212,14 @@ static void manage_setsize(struct Client *c);
 static void run(void);
 static void scan(void);
 static void setup(void);
-static void setup_ewmh(void);
+static void setup_hints(void);
 static void shutdown(void);
 static void unmanage(struct Client *c);
 static int xerror(Display *dpy, XErrorEvent *ee);
 
 static void (*ipc_handler[IPCLast]) (char arg) = {
+    [IPCClientClose] = ipc_client_close,
+    [IPCClientKill] = ipc_client_kill,
     [IPCClientMoveList] = ipc_client_move_list,
     [IPCClientMoveMouse] = ipc_client_move_mouse,
     [IPCClientResizeMouse] = ipc_client_resize_mouse,
@@ -765,6 +777,37 @@ handle_unmapnotify(XEvent *e)
         unmanage(c);
         manage_client_gone(c);
     }
+}
+
+void
+ipc_client_close(char arg)
+{
+    XEvent ev;
+
+    (void)arg;
+
+    if (!SOMETHING_FOCUSED)
+        return;
+
+    memset(&ev, 0, sizeof ev);
+    ev.xclient.type = ClientMessage;
+    ev.xclient.window = selc->win;
+    ev.xclient.message_type = atom_wm[AtomWMProtocols];
+    ev.xclient.format = 32;
+    ev.xclient.data.l[0] = atom_wm[AtomWMDeleteWindow];
+    ev.xclient.data.l[1] = CurrentTime;
+    XSendEvent(dpy, selc->win, False, NoEventMask, &ev);
+}
+
+void
+ipc_client_kill(char arg)
+{
+    (void)arg;
+
+    if (!SOMETHING_FOCUSED)
+        return;
+
+    XKillClient(dpy, selc->win);
 }
 
 void
@@ -1556,7 +1599,7 @@ setup(void)
     screen = DefaultScreen(dpy);
     xerrorxlib = XSetErrorHandler(xerror);
 
-    setup_ewmh();
+    setup_hints();
 
     /* Initialize fonts and colors */
     /* XXX Yes, looping is meaningless until we have a bar with a
@@ -1646,13 +1689,16 @@ setup(void)
 }
 
 void
-setup_ewmh(void)
+setup_hints(void)
 {
     atom_net[AtomNetSupported] = XInternAtom(dpy, "_NET_SUPPORTED", False);
     atom_net[AtomNetWMName] = XInternAtom(dpy, "_NET_WM_NAME", False);
 
     XChangeProperty(dpy, root, atom_net[AtomNetSupported], XA_ATOM, 32,
                     PropModeReplace, (unsigned char *) atom_net, AtomNetLAST);
+
+    atom_wm[AtomWMProtocols] = XInternAtom(dpy, "WM_PROTOCOLS", False);
+    atom_wm[AtomWMDeleteWindow] = XInternAtom(dpy, "WM_DELETE_WINDOW", False);
 }
 
 void

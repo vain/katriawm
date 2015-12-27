@@ -22,7 +22,9 @@ enum IPCCommand
      *           |
      *           \- $subject, i.e. what is affected by this action
      */
-    IPCClientMoveList = 0,
+    IPCClientClose = 0,
+    IPCClientKill,
+    IPCClientMoveList,
     IPCClientMoveMouse,
     IPCClientResizeMouse,
     IPCClientSelectAdjacent,

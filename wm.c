@@ -1149,8 +1149,8 @@ ipc_monitor_select_adjacent(char arg)
         }
     }
 
-    /* TODO warp mouse to new monitor */
-
+    XWarpPointer(dpy, None, root, 0, 0, 0, 0,
+                 selmon->wx + selmon->ww / 2, selmon->wy + selmon->wh / 2);
     manage_raisefocus_first_matching();
 }
 

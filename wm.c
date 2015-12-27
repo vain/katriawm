@@ -320,7 +320,7 @@ decorations_draw_for_client(struct Client *c,
      * it might actually be copied onto a real window (see parameter
      * "which"). */
 
-    if (c == selc)
+    if (c == selc && c->mon == selmon && VIS_ON_SELMON(c))
         tint = DecTintSelect;
 
     w = dgeo.left_width + c->w + dgeo.right_width;
@@ -1202,10 +1202,11 @@ manage_focus_set(struct Client *new_selc)
 
     old_selc = selc;
 
-    /* Move newly selected client to head of focus list, thus changing
-     * selc */
     if (new_selc)
     {
+        /* Move newly selected client to head of focus list, thus
+         * changing selc */
+
         DPRINTF(__NAME_WM__": Focus list (pre remove): ");
         for (c = selc; c; c = c->focus_next)
             DPRINTF("%p (%p) ", (void *)c, (void *)(c ? c->focus_next : NULL));
@@ -1270,6 +1271,8 @@ manage_raisefocus(struct Client *c)
         for (i = DecWinTop; i <= DecWinBottom; i++)
             XRaiseWindow(dpy, c->decwin[i]);
     }
+    else
+        XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);
 
     manage_focus_set(c);
 }
@@ -1287,6 +1290,11 @@ manage_raisefocus_first_matching(void)
             return;
         }
     }
+
+    /* If we end up here, then no client has been found on the target
+     * monitor. Still, due to the fact that we changed the monitor, we
+     * must now unfocus the previously selected client. */
+    manage_raisefocus(NULL);
 }
 
 void

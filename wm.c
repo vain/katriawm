@@ -76,6 +76,7 @@ enum Font
 
 #define WORKSPACE_MIN 1
 #define WORKSPACE_MAX 127
+#define WM_NAME_UNKNOWN "<name unknown>"
 #define VIS_ON_SELMON(c) ((c)->mon == selmon && \
                           (c)->workspace == selmon->active_workspace)
 #define VIS_ON_M(c, m) ((c)->mon == (m) && \
@@ -90,6 +91,8 @@ struct Client
 
     int visible_x;
     char hidden;
+
+    char title[512];
 
     struct Monitor *mon;
     int workspace;
@@ -116,10 +119,19 @@ struct Monitor
     struct Monitor *next;
 };
 
+enum AtomsNet
+{
+    AtomNetSupported,
+    AtomNetWMName,
+
+    AtomNetLAST,
+};
+
 static struct Client *clients = NULL, *selc = NULL;
 static struct Client *mouse_dc = NULL;
 static struct Monitor *monitors = NULL, *selmon = NULL;
 static int mouse_dx, mouse_dy, mouse_ocx, mouse_ocy, mouse_ocw, mouse_och;
+static Atom atom_net[AtomNetLAST];
 static Cursor cursor_normal;
 static Display *dpy;
 static XftColor font_color[DecTintLAST];
@@ -138,6 +150,7 @@ static struct Client *client_get_for_decoration(
 );
 static struct Client *client_get_for_window(Window win);
 static void client_save(struct Client *c);
+static void client_update_title(struct Client *c);
 static void decorations_create(struct Client *c);
 static void decorations_destroy(struct Client *c);
 static void decorations_draw_for_client(struct Client *c,
@@ -154,6 +167,7 @@ static void handle_configurerequest(XEvent *e);
 static void handle_destroynotify(XEvent *e);
 static void handle_expose(XEvent *e);
 static void handle_maprequest(XEvent *e);
+static void handle_propertynotify(XEvent *e);
 static void handle_unmapnotify(XEvent *e);
 static void ipc_client_move_list(char arg);
 static void ipc_client_move_mouse(char arg);
@@ -183,6 +197,7 @@ static void manage_setsize(struct Client *c);
 static void run(void);
 static void scan(void);
 static void setup(void);
+static void setup_ewmh(void);
 static void shutdown(void);
 static void unmanage(struct Client *c);
 static int xerror(Display *dpy, XErrorEvent *ee);
@@ -206,6 +221,7 @@ static void (*x11_handler[LASTEvent]) (XEvent *) = {
     [DestroyNotify] = handle_destroynotify,
     [Expose] = handle_expose,
     [MapRequest] = handle_maprequest,
+    [PropertyNotify] = handle_propertynotify,
     [UnmapNotify] = handle_unmapnotify,
 };
 
@@ -258,6 +274,42 @@ client_save(struct Client *c)
 }
 
 void
+client_update_title(struct Client *c)
+{
+    XTextProperty tp;
+    char **slist = NULL;
+    int count;
+
+    if (!XGetTextProperty(dpy, c->win, &tp, atom_net[AtomNetWMName]))
+    {
+        if (!XGetTextProperty(dpy, c->win, &tp, XA_WM_NAME))
+        {
+            strncpy(c->title, WM_NAME_UNKNOWN, sizeof c->title);
+            return;
+        }
+    }
+
+    if (tp.nitems == 0)
+    {
+        strncpy(c->title, WM_NAME_UNKNOWN, sizeof c->title);
+        return;
+    }
+
+    /* This is a particularly gnarly function. Props to dwm which has
+     * figured out how to use it. */
+    if (XmbTextPropertyToTextList(dpy, &tp, &slist, &count) >= Success
+        && count > 0 && *slist)
+    {
+        strncpy(c->title, slist[0], sizeof c->title - 1);
+        XFreeStringList(slist);
+    }
+
+    c->title[sizeof c->title - 1] = 0;
+
+    XFree(tp.value);
+}
+
+void
 decorations_create(struct Client *c)
 {
     size_t i;
@@ -300,7 +352,6 @@ decorations_draw_for_client(struct Client *c,
     enum DecTint tint = DecTintNormal;
     GC gc, gc_tiled;
     Pixmap dec_pm;
-    char *titlestr = "proof of concept";
 
     /* We first create a pixmap with the size of the "visible" client,
      * i.e. the real client window + size of the window decorations.
@@ -377,7 +428,7 @@ decorations_draw_for_client(struct Client *c,
         y = dec_title.baseline_top_offset;
         w = (dgeo.left_width + c->w + dgeo.right_width) - dec_title.left_offset
             - dec_title.right_offset;
-        draw_text(dec_pm, font[FontTitle], &font_color[tint], x, y, w, titlestr);
+        draw_text(dec_pm, font[FontTitle], &font_color[tint], x, y, w, c->title);
     }
 
     /* Pixmap drawing complete, now copy those areas onto the windows */
@@ -654,6 +705,25 @@ handle_maprequest(XEvent *e)
         return;
 
     manage(ev->window, &wa);
+}
+
+void
+handle_propertynotify(XEvent *e)
+{
+    XPropertyEvent *ev = &e->xproperty;
+    struct Client *c;
+
+    if ((c = client_get_for_window(ev->window)) == NULL)
+        return;
+
+    if (ev->state != PropertyDelete)
+    {
+        if (ev->atom == atom_net[AtomNetWMName] || ev->atom == XA_WM_NAME)
+        {
+            client_update_title(c);
+            decorations_draw_for_client(c, DecWinLAST);
+        }
+    }
 }
 
 void
@@ -1100,6 +1170,12 @@ manage(Window win, XWindowAttributes *wa)
 
     XSetWindowBorderWidth(dpy, c->win, 0);
 
+    client_update_title(c);
+    XSelectInput(dpy, c->win, 0
+                 /* All kinds of properties, window titles, EWMH, ... */
+                 | PropertyChangeMask
+                 );
+
     decorations_create(c);
     manage_fit_on_monitor(c);
     manage_setsize(c);
@@ -1381,6 +1457,8 @@ setup(void)
     screen = DefaultScreen(dpy);
     xerrorxlib = XSetErrorHandler(xerror);
 
+    setup_ewmh();
+
     /* Initialize fonts and colors */
     /* XXX Yes, looping is meaningless until we have a bar with a
      * different font */
@@ -1466,6 +1544,16 @@ setup(void)
     /* Set default cursor on root window */
     cursor_normal = XCreateFontCursor(dpy, XC_left_ptr);
     XDefineCursor(dpy, root, cursor_normal);
+}
+
+void
+setup_ewmh(void)
+{
+    atom_net[AtomNetSupported] = XInternAtom(dpy, "_NET_SUPPORTED", False);
+    atom_net[AtomNetWMName] = XInternAtom(dpy, "_NET_WM_NAME", False);
+
+    XChangeProperty(dpy, root, atom_net[AtomNetSupported], XA_ATOM, 32,
+                    PropModeReplace, (unsigned char *) atom_net, AtomNetLAST);
 }
 
 void

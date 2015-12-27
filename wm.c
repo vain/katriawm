@@ -121,7 +121,7 @@ static Display *dpy;
 static XftColor font_color[DecTintLAST];
 static XftFont *font[FontLAST];
 static XImage *dec_ximg[DecTintLAST];
-static Window root, command_window;
+static Window root;
 static int monitors_num = 0;
 static int running = 1;
 static int restart = 0;
@@ -1323,11 +1323,6 @@ setup(void)
     int minx, minindex;
     char *chosen = NULL;
     size_t i;
-    XSetWindowAttributes wa = {
-        .override_redirect = True,
-        .background_pixmap = ParentRelative,
-        .event_mask = ExposureMask,
-    };
 
     if ((dpy = XOpenDisplay(NULL)) == NULL)
     {
@@ -1413,25 +1408,16 @@ setup(void)
     decorations_load();
 
     XSelectInput(dpy, root, 0
-                 /* Manage creation and destruction of windows */
+                 /* Manage creation and destruction of windows.
+                  * SubstructureRedirectMask is also used by our IPC
+                  * client and possibly EWMH clients, both sending us
+                  * ClientMessages. */
                  | SubstructureRedirectMask | SubstructureNotifyMask
                  );
 
     /* Set default cursor on root window */
     cursor_normal = XCreateFontCursor(dpy, XC_left_ptr);
     XDefineCursor(dpy, root, cursor_normal);
-
-    /* Setup invisible window for the client to send messages to */
-    command_window = XCreateWindow(
-            dpy, root, 0, 0, 10, 10, 0,
-            DefaultDepth(dpy, screen),
-            CopyFromParent, DefaultVisual(dpy, screen),
-            CWOverrideRedirect | CWBackPixmap | CWEventMask,
-            &wa
-    );
-    XChangeProperty(dpy, root, XInternAtom(dpy, IPC_ATOM_WINDOW, False),
-                    XA_WINDOW, 32, PropModeReplace,
-                    (unsigned char *)&command_window, 1);
 }
 
 void
@@ -1477,9 +1463,6 @@ shutdown(void)
 
     for (i = DecTintNormal; i <= DecTintUrgent; i++)
         XDestroyImage(dec_ximg[i]);
-
-    XUnmapWindow(dpy, command_window);
-    XDestroyWindow(dpy, command_window);
 
     XFreeCursor(dpy, cursor_normal);
 

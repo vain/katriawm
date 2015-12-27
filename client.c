@@ -7,47 +7,17 @@
 #include "util.h"
 #include "ipc.h"
 
-static Atom
-getatomprop(Display *dpy, Window w, char *name, Atom type)
-{
-    int di;
-    unsigned long dl;
-    unsigned char *p = NULL;
-    Atom da, atom = None, prop;
-
-    /* Props to dwm for this function */
-
-    prop = XInternAtom(dpy, name, False);
-
-    if (XGetWindowProperty(dpy, w, prop, 0L, sizeof atom, False, type,
-                           &da, &di, &dl, &dl, &p) == Success && p)
-    {
-        atom = *(Atom *)p;
-        XFree(p);
-    }
-    return atom;
-}
-
 static int
 send_command(enum IPCCommand cmd, char arg)
 {
-    Atom cwa;
     Display *dpy;
-    Window root, command_window;
+    Window root;
     XEvent ev;
 
     if (!(dpy = XOpenDisplay(NULL)))
         return 0;
 
     root = DefaultRootWindow(dpy);
-
-    cwa = (Window)getatomprop(dpy, root, IPC_ATOM_WINDOW, XA_WINDOW);
-    if (cwa == None)
-    {
-        fprintf(stderr, __NAME_C__": Cannot find command window\n");
-        return 0;
-    }
-    command_window = (Window)cwa;
 
     memset(&ev, 0, sizeof ev);
     ev.xclient.type = ClientMessage;
@@ -59,8 +29,11 @@ send_command(enum IPCCommand cmd, char arg)
     ev.xclient.data.b[0] = cmd;
     ev.xclient.data.b[1] = arg;
 
+    /* Send this message to all clients which have selected for
+     * "SubstructureRedirectMask" on the root window. By definition,
+     * this is the window manager. */
     DPRINTF(__NAME_C__": Sending cmd %d, arg %d\n", cmd, arg);
-    XSendEvent(dpy, command_window, False, NoEventMask, &ev);
+    XSendEvent(dpy, root, False, SubstructureRedirectMask, &ev);
     XSync(dpy, False);
 
     return 1;

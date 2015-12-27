@@ -120,7 +120,7 @@ static Cursor cursor_normal;
 static Display *dpy;
 static XftColor font_color[DecTintLAST];
 static XftFont *font[FontLAST];
-static XImage *dec_ximg[DecTintLAST];
+static Pixmap dec_tiles[DecTintLAST][DecLAST];
 static Window root;
 static int monitors_num = 0;
 static int running = 1;
@@ -138,7 +138,8 @@ static void decorations_create(struct Client *c);
 static void decorations_destroy(struct Client *c);
 static void decorations_draw_for_client(struct Client *c,
                                         enum DecorationWindowLocation which);
-static Pixmap decorations_get_pm(GC gc, enum DecorationLocation l, enum DecTint t);
+static Pixmap decorations_get_pm(GC gc, XImage **ximg, enum DecorationLocation l,
+                                 enum DecTint t);
 static void decorations_load(void);
 static char *decorations_tint(unsigned long color);
 static XImage *decorations_to_ximg(char *data);
@@ -294,7 +295,7 @@ decorations_draw_for_client(struct Client *c,
     int x, y, w, h;
     enum DecTint tint = DecTintNormal;
     GC gc, gc_tiled;
-    Pixmap dec_pm, tile_pm;
+    Pixmap dec_pm;
     char *titlestr = "proof of concept";
 
     /* We first create a pixmap with the size of the "visible" client,
@@ -325,57 +326,46 @@ decorations_draw_for_client(struct Client *c,
     gc_tiled = XCreateGC(dpy, root, 0, NULL);
     dec_pm = XCreatePixmap(dpy, root, w, h, DefaultDepth(dpy, screen));
 
-    /* TODO only create tile pixmaps once and keep them for the whole
-     * session */
-
     XSetFillStyle(dpy, gc_tiled, FillTiled);
 
-    tile_pm = decorations_get_pm(gc, DecTop, tint);
-    XSetTile(dpy, gc_tiled, tile_pm);
+    XSetTile(dpy, gc_tiled, dec_tiles[tint][DecTop]);
     XSetTSOrigin(dpy, gc_tiled, 0, 0);
     XFillRectangle(dpy, dec_pm, gc_tiled, 0, 0, w, dec_coords[DecTop].h);
-    XFreePixmap(dpy, tile_pm);
 
-    tile_pm = decorations_get_pm(gc, DecBottom, tint);
-    XSetTile(dpy, gc_tiled, tile_pm);
+    XSetTile(dpy, gc_tiled, dec_tiles[tint][DecBottom]);
     XSetTSOrigin(dpy, gc_tiled, 0, h - dgeo.bottom_height);
     XFillRectangle(dpy, dec_pm, gc_tiled, 0, h - dgeo.bottom_height,
                    w, dec_coords[DecBottom].h);
-    XFreePixmap(dpy, tile_pm);
 
-    tile_pm = decorations_get_pm(gc, DecLeft, tint);
-    XSetTile(dpy, gc_tiled, tile_pm);
+    XSetTile(dpy, gc_tiled, dec_tiles[tint][DecLeft]);
     XSetTSOrigin(dpy, gc_tiled, 0, dgeo.top_height);
     XFillRectangle(dpy, dec_pm, gc_tiled, 0, dgeo.top_height,
                    dec_coords[DecLeft].w, c->h);
-    XFreePixmap(dpy, tile_pm);
 
-    tile_pm = decorations_get_pm(gc, DecRight, tint);
-    XSetTile(dpy, gc_tiled, tile_pm);
+    XSetTile(dpy, gc_tiled, dec_tiles[tint][DecRight]);
     XSetTSOrigin(dpy, gc_tiled, w - dgeo.right_width, dgeo.top_height);
     XFillRectangle(dpy, dec_pm, gc_tiled, w - dgeo.right_width, dgeo.top_height,
                    dec_coords[DecRight].w, c->h);
-    XFreePixmap(dpy, tile_pm);
 
-    XPutImage(dpy, dec_pm, gc, dec_ximg[tint],
-              dec_coords[DecTopLeft].x, dec_coords[DecTopLeft].y,
+    XCopyArea(dpy, dec_tiles[tint][DecTopLeft], dec_pm, gc,
               0, 0,
-              dec_coords[DecTopLeft].w, dec_coords[DecTopLeft].h);
+              dec_coords[DecTopLeft].w, dec_coords[DecTopLeft].h,
+              0, 0);
 
-    XPutImage(dpy, dec_pm, gc, dec_ximg[tint],
-              dec_coords[DecTopRight].x, dec_coords[DecTopRight].y,
-              w - dec_coords[DecTopRight].w, 0,
-              dec_coords[DecTopRight].w, dec_coords[DecTopRight].h);
+    XCopyArea(dpy, dec_tiles[tint][DecTopRight], dec_pm, gc,
+              0, 0,
+              dec_coords[DecTopRight].w, dec_coords[DecTopRight].h,
+              w - dec_coords[DecTopRight].w, 0);
 
-    XPutImage(dpy, dec_pm, gc, dec_ximg[tint],
-              dec_coords[DecBottomLeft].x, dec_coords[DecBottomLeft].y,
-              0, h - dec_coords[DecBottomLeft].h,
-              dec_coords[DecBottomLeft].w, dec_coords[DecBottomLeft].h);
+    XCopyArea(dpy, dec_tiles[tint][DecBottomLeft], dec_pm, gc,
+              0, 0,
+              dec_coords[DecBottomLeft].w, dec_coords[DecBottomLeft].h,
+              0, h - dec_coords[DecBottomLeft].h);
 
-    XPutImage(dpy, dec_pm, gc, dec_ximg[tint],
-              dec_coords[DecBottomRight].x, dec_coords[DecBottomRight].y,
-              w - dec_coords[DecTopRight].w, h - dec_coords[DecBottomLeft].h,
-              dec_coords[DecBottomRight].w, dec_coords[DecBottomRight].h);
+    XCopyArea(dpy, dec_tiles[tint][DecBottomRight], dec_pm, gc,
+              0, 0,
+              dec_coords[DecBottomRight].w, dec_coords[DecBottomRight].h,
+              w - dec_coords[DecBottomRight].w, h - dec_coords[DecBottomLeft].h);
 
     if (dec_has_title)
     {
@@ -418,13 +408,14 @@ decorations_draw_for_client(struct Client *c,
 }
 
 Pixmap
-decorations_get_pm(GC gc, enum DecorationLocation l, enum DecTint t)
+decorations_get_pm(GC gc, XImage **ximg, enum DecorationLocation l,
+                   enum DecTint t)
 {
     Pixmap p;
 
     p = XCreatePixmap(dpy, root, dec_coords[l].w, dec_coords[l].h,
                       DefaultDepth(dpy, screen));
-    XPutImage(dpy, p, gc, dec_ximg[t],
+    XPutImage(dpy, p, gc, ximg[t],
               dec_coords[l].x, dec_coords[l].y,
               0, 0,
               dec_coords[l].w, dec_coords[l].h);
@@ -436,17 +427,34 @@ void
 decorations_load(void)
 {
     char *tinted[DecTintLAST];
-    size_t i;
+    XImage *ximg[DecTintLAST];
+    size_t i, j;
+    GC gc;
 
     /* The source image of our decorations is grey scale, but it's
      * already 24 bits. This allows us to easily tint the image. Then,
-     * an XImage will be created for each tinted source image. */
+     * an XImage will be created for each tinted source image.
+     *
+     * XImages live in client memory, so we can pass xlib a pointer to
+     * our data. XImages can then be copied to Pixmaps which live on the
+     * server. Later on, we will only use those Pixmaps to draw
+     * decorations. */
 
     for (i = DecTintNormal; i <= DecTintUrgent; i++)
     {
         tinted[i] = decorations_tint(dec_tints[i]);
-        dec_ximg[i] = decorations_to_ximg(tinted[i]);
+        ximg[i] = decorations_to_ximg(tinted[i]);
     }
+
+    gc = XCreateGC(dpy, root, 0, NULL);
+    for (i = DecTintNormal; i <= DecTintUrgent; i++)
+        for (j = DecTopLeft; j <= DecBottomRight; j++)
+            dec_tiles[i][j] = decorations_get_pm(gc, ximg, j, i);
+    XFreeGC(dpy, gc);
+
+    for (i = DecTintNormal; i <= DecTintUrgent; i++)
+        /* Note: This also frees tinted[i] */
+        XDestroyImage(ximg[i]);
 }
 
 char *
@@ -1472,13 +1480,14 @@ scan(void)
 void
 shutdown(void)
 {
-    size_t i;
+    size_t i, j;
 
     while (clients != NULL)
         unmanage(clients);
 
     for (i = DecTintNormal; i <= DecTintUrgent; i++)
-        XDestroyImage(dec_ximg[i]);
+        for (j = DecTopLeft; j <= DecBottomRight; j++)
+            XFreePixmap(dpy, dec_tiles[i][j]);
 
     XFreeCursor(dpy, cursor_normal);
 

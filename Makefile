@@ -44,14 +44,14 @@ all: $(__NAME_WM__) $(__NAME_C__)
 
 $(__NAME_WM__): wm.c ipc.h util.h theme_types.h theme.h config.h
 	$(CC) $(CFLAGS) $(LDFLAGS) \
-		$(__NAME_DEFINES__) $(DEBUGFLAGS) \
+		$(__NAME_DEFINES__) $(DEBUGFLAGS) -DSRVR_$$HOSTNAME \
 		-o $@ $< \
 		-I/usr/include/freetype2 \
 		-lX11 -lXrandr -lXft
 
 $(__NAME_C__): client.c ipc.h util.h
 	$(CC) $(CFLAGS) $(LDFLAGS) \
-		$(__NAME_DEFINES__) $(DEBUGFLAGS) \
+		$(__NAME_DEFINES__) $(DEBUGFLAGS) -DSRVR_$$HOSTNAME \
 		-o $@ $< \
 		-lX11
 

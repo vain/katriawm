@@ -1620,7 +1620,6 @@ setup(void)
 
     setup_hints();
     atom_state = XInternAtom(dpy, IPC_ATOM_STATE, False);
-    publish_state();
 
     /* Initialize fonts and colors */
     /* XXX Yes, looping is meaningless until we have a bar with a
@@ -1711,6 +1710,8 @@ setup(void)
     /* Set default cursor on root window */
     cursor_normal = XCreateFontCursor(dpy, XC_left_ptr);
     XDefineCursor(dpy, root, cursor_normal);
+
+    publish_state();
 }
 
 void

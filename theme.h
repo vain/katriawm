@@ -1,14 +1,27 @@
-static struct DecorationGeometry dgeo = {
-    .top_height = 27,
-    .left_width = 7,
-    .right_width = 7,
-    .bottom_height = 7,
+#ifndef _WM_THEME_H
+#define _WM_THEME_H
+
+static char *dec_fonts[] = {
+    "Sans:pixelsize=12:style=bold:antialias=false",  /* FontTitle */
+};
+
+static char *dec_font_colors[] = {
+    "#AFAFAF",  /* DecTintNormal */
+    "#000000",  /* DecTintSelect */
+    "#000000",  /* DecTintUrgent */
 };
 
 static unsigned int dec_tints[] = {
     0x6a3f3f,  /* DecTintNormal */
     0xffcb38,  /* DecTintSelect */
     0xff0000,  /* DecTintUrgent */
+};
+
+static struct DecorationGeometry dgeo = {
+    .top_height = 27,
+    .left_width = 7,
+    .right_width = 7,
+    .bottom_height = 7,
 };
 
 static struct SubImage dec_coords[] = {
@@ -29,16 +42,6 @@ static struct TitleArea dec_title = {
     .left_offset = 13,
     .right_offset = 13,
     .baseline_top_offset = 21,
-};
-
-static char *dec_fonts[] = {
-    "Sans:pixelsize=12:style=bold:antialias=false",  /* FontTitle */
-};
-
-static char *dec_font_colors[] = {
-    "#AFAFAF",  /* DecTintNormal */
-    "#000000",  /* DecTintSelect */
-    "#000000",  /* DecTintUrgent */
 };
 
 static unsigned int dec_img_w = 59;
@@ -626,3 +629,5 @@ static unsigned int dec_img[] = {
 0xff656565, 0xff656565, 0xff656565, 0xff656565, 0xff656565, 0xff656565, 
 0xff656565
 };
+
+#endif /* _WM_THEME_H */

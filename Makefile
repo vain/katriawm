@@ -42,7 +42,7 @@ man1dir = $(mandir)/man1
 
 all: $(__NAME_WM__) $(__NAME_C__)
 
-$(__NAME_WM__): wm.c ipc.h pixmaps.h util.h
+$(__NAME_WM__): wm.c ipc.h theme_types.h theme.h util.h
 	$(CC) $(CFLAGS) $(LDFLAGS) \
 		$(__NAME_DEFINES__) $(DEBUGFLAGS) \
 		-o $@ $< \

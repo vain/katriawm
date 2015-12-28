@@ -1751,7 +1751,7 @@ publish_state(void)
     {
         /* Calculate which byte to alter and then which bit to set */
 
-        byte_i = c->workspace / 8;
+        byte_i = (c->workspace - 1) / 8;
         shifts_needed = (c->workspace - 1) % 8;
 
         mask = 1;

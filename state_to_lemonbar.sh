@@ -46,6 +46,8 @@ do
         do
             byte=${info[offset_ws + byte_i]}
             ubyte=${info[offset_ws + byte_i + mn * size_monws]}
+            (( byte < 0 )) && (( byte += 256 ))
+            (( ubyte < 0 )) && (( ubyte += 256 ))
             mask=1
             for (( bit = 0; bit < 8; bit++ ))
             do

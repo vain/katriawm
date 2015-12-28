@@ -38,7 +38,8 @@ struct Client
     /* Inner size of the actual client, excluding decorations */
     int x, y, w, h;
 
-    int visible_x;
+    int normal_x, normal_y, normal_w, normal_h;
+    char fullscreen;
     char hidden;
 
     char title[512];
@@ -77,6 +78,8 @@ enum AtomsNet
 {
     AtomNetSupported,
     AtomNetWMName,
+    AtomNetWMState,
+    AtomNetWMStateFullscreen,
 
     AtomNetLAST,
 };
@@ -95,7 +98,7 @@ static struct Client *clients = NULL, *selc = NULL;
 static struct Client *mouse_dc = NULL;
 static struct Monitor *monitors = NULL, *selmon = NULL;
 static int mouse_dx, mouse_dy, mouse_ocx, mouse_ocy, mouse_ocw, mouse_och;
-static Atom atom_net[AtomNetLAST], atom_wm[AtomWMLAST], atom_state;
+static Atom atom_net[AtomNetLAST], atom_wm[AtomWMLAST], atom_state, atom_ipc;
 static Cursor cursor_normal;
 static Display *dpy;
 static XftColor font_color[DecTintLAST];
@@ -158,6 +161,7 @@ static void manage_fit_on_monitor(struct Client *c);
 static void manage_focus_add(struct Client *c);
 static void manage_focus_remove(struct Client *c);
 static void manage_focus_set(struct Client *c);
+static void manage_fullscreen(struct Client *c, char fs);
 static void manage_goto_workspace(int i);
 static void manage_showhide(struct Client *c, char hide);
 static void manage_raisefocus(struct Client *c);
@@ -592,33 +596,69 @@ void
 handle_clientmessage(XEvent *e)
 {
     XClientMessageEvent *cme = &e->xclient;
-    static Atom t = None;
     enum IPCCommand cmd;
     char arg, *an;
+    struct Client *c;
 
     /* All sorts of client messages arrive here, including our own IPC
      * mechanism */
 
-    if (t == None)
-        t = XInternAtom(dpy, IPC_ATOM_COMMAND, False);
+    if (cme->message_type == atom_ipc)
+    {
+        cmd = (enum IPCCommand)cme->data.b[0];
+        arg = (char)cme->data.b[1];
 
-    if (cme->message_type != t)
+        if (ipc_handler[cmd])
+            ipc_handler[cmd](arg);
+    }
+    else if (cme->message_type == atom_net[AtomNetWMState])
+    {
+        if ((c = client_get_for_window(cme->window)) == NULL)
+        {
+            DPRINTF(__NAME_WM__": Window %lu sent EWMH message, but we don't "
+                    "manage this window\n", cme->window);
+        }
+
+        if (c)
+        {
+            /* An EWMH client state message might contain two properties
+             * to alter, data.l[1] and data.l[2] */
+            if ((Atom)cme->data.l[1] == atom_net[AtomNetWMStateFullscreen]
+                || (Atom)cme->data.l[2] == atom_net[AtomNetWMStateFullscreen])
+            {
+                DPRINTF(__NAME_WM__": Client %p requested EWMH fullscreen\n",
+                        (void *)c);
+
+                /* 0 = remove, 1 = add, 2 = toggle */
+                if (cme->data.l[0] == 0
+                    || (cme->data.l[0] == 2 && c->fullscreen))
+                {
+                    manage_fullscreen(c, 0);
+                }
+                else if (cme->data.l[0] == 1
+                         || (cme->data.l[0] == 2 && !c->fullscreen))
+                {
+                    manage_fullscreen(c, 1);
+                }
+            }
+            else
+            {
+                an = XGetAtomName(dpy, cme->message_type);
+                DPRINTF(__NAME_WM__": Received EWMH message with unknown "
+                        "action: %lu, %s\n", cme->data.l[0], an ? an : "(nil)");
+                if (an)
+                    XFree(an);
+            }
+        }
+    }
+    else
     {
         an = XGetAtomName(dpy, cme->message_type);
-        fprintf(stderr,
-                __NAME_WM__": Received client message with unknown type: %lu"
-                ", %s\n",
-                cme->message_type, an ? an : "(nil)");
+        DPRINTF(__NAME_WM__": Received client message with unknown type: %lu"
+                ", %s\n", cme->message_type, an ? an : "(nil)");
         if (an)
             XFree(an);
-        return;
     }
-
-    cmd = (enum IPCCommand)cme->data.b[0];
-    arg = (char)cme->data.b[1];
-
-    if (ipc_handler[cmd])
-        ipc_handler[cmd](arg);
 }
 
 void
@@ -1420,6 +1460,38 @@ manage_focus_set(struct Client *new_selc)
 }
 
 void
+manage_fullscreen(struct Client *c, char fs)
+{
+    if (fs)
+    {
+        c->fullscreen = 1;
+
+        c->normal_x = c->x;
+        c->normal_y = c->y;
+        c->normal_w = c->w;
+        c->normal_h = c->h;
+
+        c->x = c->mon->mx;
+        c->y = c->mon->my;
+        c->w = c->mon->mw;
+        c->h = c->mon->mh;
+
+        manage_setsize(c);
+    }
+    else
+    {
+        c->fullscreen = 0;
+
+        c->x = c->normal_x;
+        c->y = c->normal_y;
+        c->w = c->normal_w;
+        c->h = c->normal_h;
+
+        manage_setsize(c);
+    }
+}
+
+void
 manage_goto_workspace(int i)
 {
     struct Client *c;
@@ -1487,7 +1559,7 @@ manage_showhide(struct Client *c, char hide)
 {
     if (hide && !c->hidden)
     {
-        c->visible_x = c->x;
+        c->normal_x = c->x;
         c->x = -2 * c->w;
         c->hidden = 1;
 
@@ -1496,7 +1568,7 @@ manage_showhide(struct Client *c, char hide)
 
     if (!hide)
     {
-        c->x = c->visible_x;
+        c->x = c->normal_x;
         c->hidden = 0;
 
         manage_setsize(c);
@@ -1514,20 +1586,30 @@ manage_setsize(struct Client *c)
     DPRINTF(__NAME_WM__": Moving client %p to %d, %d with size %d, %d\n",
             (void *)c, c->x, c->y, c->w, c->h);
 
-    XMoveResizeWindow(dpy, c->decwin[DecWinTop],
-                      c->x - dgeo.left_width, c->y - dgeo.top_height,
-                      dgeo.left_width + c->w + dgeo.right_width,
-                      dgeo.top_height);
-    XMoveResizeWindow(dpy, c->decwin[DecWinLeft],
-                      c->x - dgeo.left_width, c->y,
-                      dgeo.left_width, c->h);
-    XMoveResizeWindow(dpy, c->decwin[DecWinRight],
-                      c->x + c->w, c->y,
-                      dgeo.right_width, c->h);
-    XMoveResizeWindow(dpy, c->decwin[DecWinBottom],
-                      c->x - dgeo.left_width, c->y + c->h,
-                      dgeo.left_width + c->w + dgeo.right_width,
-                      dgeo.bottom_height);
+    if (c->fullscreen)
+    {
+        XMoveResizeWindow(dpy, c->decwin[DecWinTop], -15, 0, 10, 10);
+        XMoveResizeWindow(dpy, c->decwin[DecWinLeft], -15, 0, 10, 10);
+        XMoveResizeWindow(dpy, c->decwin[DecWinRight], -15, 0, 10, 10);
+        XMoveResizeWindow(dpy, c->decwin[DecWinBottom], -15, 0, 10, 10);
+    }
+    else
+    {
+        XMoveResizeWindow(dpy, c->decwin[DecWinTop],
+                          c->x - dgeo.left_width, c->y - dgeo.top_height,
+                          dgeo.left_width + c->w + dgeo.right_width,
+                          dgeo.top_height);
+        XMoveResizeWindow(dpy, c->decwin[DecWinLeft],
+                          c->x - dgeo.left_width, c->y,
+                          dgeo.left_width, c->h);
+        XMoveResizeWindow(dpy, c->decwin[DecWinRight],
+                          c->x + c->w, c->y,
+                          dgeo.right_width, c->h);
+        XMoveResizeWindow(dpy, c->decwin[DecWinBottom],
+                          c->x - dgeo.left_width, c->y + c->h,
+                          dgeo.left_width + c->w + dgeo.right_width,
+                          dgeo.bottom_height);
+    }
 
     XMoveResizeWindow(dpy, c->win, c->x, c->y, c->w, c->h);
 }
@@ -1634,6 +1716,7 @@ setup(void)
     xerrorxlib = XSetErrorHandler(xerror);
 
     setup_hints();
+    atom_ipc = XInternAtom(dpy, IPC_ATOM_COMMAND, False);
     atom_state = XInternAtom(dpy, IPC_ATOM_STATE, False);
 
     /* Initialize fonts and colors */
@@ -1736,6 +1819,10 @@ setup_hints(void)
 {
     atom_net[AtomNetSupported] = XInternAtom(dpy, "_NET_SUPPORTED", False);
     atom_net[AtomNetWMName] = XInternAtom(dpy, "_NET_WM_NAME", False);
+    atom_net[AtomNetWMState] = XInternAtom(dpy, "_NET_WM_STATE", False);
+    atom_net[AtomNetWMStateFullscreen] = XInternAtom(dpy,
+                                                     "_NET_WM_STATE_FULLSCREEN",
+                                                     False);
 
     XChangeProperty(dpy, root, atom_net[AtomNetSupported], XA_ATOM, 32,
                     PropModeReplace, (unsigned char *)atom_net, AtomNetLAST);

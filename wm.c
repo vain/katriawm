@@ -796,6 +796,7 @@ handle_propertynotify(XEvent *e)
                     DPRINTF(__NAME_WM__": Urgency hint on client %p cleared\n",
                             (void *)c);
                 }
+                publish_state();
                 XFree(wmh);
             }
         }
@@ -1598,6 +1599,7 @@ manage_raisefocus(struct Client *c)
             XSetWMHints(dpy, c->win, wmh);
             XFree(wmh);
         }
+        publish_state();
 
         XRaiseWindow(dpy, c->win);
         XSetInputFocus(dpy, c->win, RevertToPointerRoot, CurrentTime);
@@ -1730,17 +1732,21 @@ publish_state(void)
         return;
     }
 
+    /* Number of detected monitors (int) */
     state[0] = monitors_num;
     off = 1;
 
+    /* Active workspace on each monitor (int) */
     for (m = monitors; m; m = m->next)
         state[off + m->index] = m->active_workspace;
     off += monitors_num;
 
+    /* Visible layout on each monitor (layout index as int) */
     for (m = monitors; m; m = m->next)
         state[off + m->index] = m->layouts[m->active_workspace];
     off += monitors_num;
 
+    /* Bitmasks for occupied workspaces and urgent hints */
     for (c = clients; c; c = c->next)
     {
         /* Calculate which byte to alter and then which bit to set */
@@ -1752,13 +1758,22 @@ publish_state(void)
         for (i = 0; i < shifts_needed; i++)
             mask <<= 1;
 
-        byte = state[off + c->mon->index * size_monws + byte_i];
+        /* Occupied workspaces */
+        i = off + c->mon->index * size_monws + byte_i;
+        byte = state[i];
         byte |= mask;
-        state[off + c->mon->index * size_monws + byte_i] = byte;
-    }
-    off += monitors_num * size_monws;
+        state[i] = byte;
 
-    /* TODO fill in bits to indicate urgency hints */
+        /* Urgency hints */
+        if (c->urgent)
+        {
+            i += monitors_num * size_monws;
+            byte = state[i];
+            byte |= mask;
+            state[i] = byte;
+        }
+    }
+    off += 2 * (monitors_num * size_monws);
 
     XChangeProperty(dpy, root, atom_state, XA_INTEGER, 8, PropModeReplace,
                     state, size);

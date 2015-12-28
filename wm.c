@@ -21,7 +21,6 @@
 
 #include "theme_types.h"
 #include "theme.h"
-#include "config.h"
 
 #define WORKSPACE_MIN 1
 #define WORKSPACE_MAX 127
@@ -69,6 +68,11 @@ struct Monitor
     struct Monitor *next;
 };
 
+struct WorkareaInsets
+{
+    int top, left, right, bottom;
+};
+
 enum AtomsNet
 {
     AtomNetSupported,
@@ -84,6 +88,8 @@ enum AtomsWM
 
     AtomWMLAST,
 };
+
+#include "config.h"
 
 static struct Client *clients = NULL, *selc = NULL;
 static struct Client *mouse_dc = NULL;
@@ -1685,8 +1691,10 @@ setup(void)
         m->ww = m->mw = ci->width;
         m->wh = m->mh = ci->height;
 
-        m->wy += WS_PADDING_TOP;
-        m->wh -= WS_PADDING_TOP + WS_PADDING_BOTTOM;
+        m->wx += wai.left;
+        m->ww -= wai.left + wai.right;
+        m->wy += wai.top;
+        m->wh -= wai.top + wai.bottom;
 
         m->index = monitors_num++;
         m->active_workspace = 1;

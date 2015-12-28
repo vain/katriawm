@@ -1,2 +1,6 @@
-#define WS_PADDING_TOP 20
-#define WS_PADDING_BOTTOM 20
+struct WorkareaInsets wai = {
+    .top = 20,
+    .left = 0,
+    .right = 0,
+    .bottom = 20,
+};

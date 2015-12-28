@@ -41,6 +41,7 @@ struct Client
     int normal_x, normal_y, normal_w, normal_h;
     char fullscreen;
     char hidden;
+    char urgent;
 
     char title[512];
 
@@ -372,7 +373,9 @@ decorations_draw_for_client(struct Client *c,
      * it might actually be copied onto a real window (see parameter
      * "which"). */
 
-    if (c == selc && c->mon == selmon && VIS_ON_SELMON(c))
+    if (c->urgent)
+        tint = DecTintUrgent;
+    else if (c == selc && c->mon == selmon && VIS_ON_SELMON(c))
         tint = DecTintSelect;
 
     w = dgeo.left_width + c->w + dgeo.right_width;
@@ -747,6 +750,7 @@ handle_maprequest(XEvent *e)
 void
 handle_propertynotify(XEvent *e)
 {
+    XWMHints *wmh;
     XPropertyEvent *ev = &e->xproperty;
     struct Client *c;
     char *an = NULL;
@@ -760,6 +764,40 @@ handle_propertynotify(XEvent *e)
         {
             client_update_title(c);
             decorations_draw_for_client(c, DecWinLAST);
+        }
+        else if (ev->atom == XA_WM_HINTS)
+        {
+            if ((wmh = XGetWMHints(dpy, c->win)))
+            {
+                if (wmh->flags & XUrgencyHint)
+                {
+                    if (c == selc)
+                    {
+                        /* Setting the urgency hint on the currently
+                         * selected window shall have no effect */
+                        wmh->flags &= ~XUrgencyHint;
+                        XSetWMHints(dpy, c->win, wmh);
+                        DPRINTF(__NAME_WM__": Urgency hint on client %p "
+                                "ignored because selected\n", (void *)c);
+                    }
+                    else
+                    {
+                        c->urgent = 1;
+                        decorations_draw_for_client(c, DecWinLAST);
+                        DPRINTF(__NAME_WM__": Urgency hint on client %p set\n",
+                                (void *)c);
+                    }
+                }
+                else if (c->urgent)
+                {
+                    /* Urgency hint has been cleared by the application */
+                    c->urgent = 0;
+                    decorations_draw_for_client(c, DecWinLAST);
+                    DPRINTF(__NAME_WM__": Urgency hint on client %p cleared\n",
+                            (void *)c);
+                }
+                XFree(wmh);
+            }
         }
         else
         {
@@ -1549,9 +1587,18 @@ void
 manage_raisefocus(struct Client *c)
 {
     size_t i;
+    XWMHints *wmh;
 
     if (c)
     {
+        c->urgent = 0;
+        if ((wmh = XGetWMHints(dpy, c->win)))
+        {
+            wmh->flags &= ~XUrgencyHint;
+            XSetWMHints(dpy, c->win, wmh);
+            XFree(wmh);
+        }
+
         XRaiseWindow(dpy, c->win);
         XSetInputFocus(dpy, c->win, RevertToPointerRoot, CurrentTime);
 

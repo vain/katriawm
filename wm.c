@@ -1520,17 +1520,22 @@ manage_setsize(struct Client *c)
 void
 publish_state(void)
 {
-    size_t size, byte_i, shifts_needed, i;
+    size_t size, off, byte_i, shifts_needed, i;
     unsigned char *state = NULL, byte, mask;
     struct Monitor *m;
     struct Client *c;
 
-    /* The first monitors_num bytes indicate the active workspace on
-     * each monitor. Following that, we need WORKSPACE_MAX / 8 = ~16
-     * bytes per monitor to indicate whether that workspace is occupied.
-     * We need the same amount of data to indicate whether a workspace
-     * has the urgency hint set. */
-    size = monitors_num + monitors_num * 16 * 2;
+    /* The very first byte indicates the number of monitors detected by
+     * us. Then, the first monitors_num bytes indicate the active
+     * workspace on each monitor. The next monitors_num bytes indicate
+     * the active layout on each monitor (note: different layouts might
+     * be active on different workspaces on each monitor, but they are
+     * not visible anyway, so they're not included). Following that, we
+     * need WORKSPACE_MAX / 8 = ~16 bytes per monitor to indicate
+     * whether that workspace is occupied. We need the same amount of
+     * data to indicate whether a workspace has the urgency hint set. */
+
+    size = 1 + monitors_num * 2 + monitors_num * 16 * 2;
     state = calloc(size, sizeof (unsigned char));
     if (state == NULL)
     {
@@ -1538,8 +1543,16 @@ publish_state(void)
         return;
     }
 
+    state[0] = monitors_num;
+    off = 1;
+
     for (m = monitors; m; m = m->next)
-        state[m->index] = m->active_workspace;
+        state[off + m->index] = m->active_workspace;
+    off += monitors_num;
+
+    for (m = monitors; m; m = m->next)
+        state[off + m->index] = m->layouts[m->active_workspace];
+    off += monitors_num;
 
     for (c = clients; c; c = c->next)
     {
@@ -1552,12 +1565,11 @@ publish_state(void)
         for (i = 0; i < shifts_needed; i++)
             mask <<= 1;
 
-        i = monitors_num + byte_i;
-
-        byte = state[i];
+        byte = state[off + byte_i];
         byte |= mask;
-        state[i] = byte;
+        state[off + byte_i] = byte;
     }
+    off += monitors_num * 16;
 
     /* TODO fill in bits to indicate urgency hints */
 

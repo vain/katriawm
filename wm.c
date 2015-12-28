@@ -1520,7 +1520,7 @@ manage_setsize(struct Client *c)
 void
 publish_state(void)
 {
-    size_t size, off, byte_i, shifts_needed, i;
+    size_t size, off, byte_i, shifts_needed, i, size_monws;
     unsigned char *state = NULL, byte, mask;
     struct Monitor *m;
     struct Client *c;
@@ -1535,7 +1535,9 @@ publish_state(void)
      * whether that workspace is occupied. We need the same amount of
      * data to indicate whether a workspace has the urgency hint set. */
 
-    size = 1 + monitors_num * 2 + monitors_num * 16 * 2;
+    size_monws = 16;
+
+    size = 1 + monitors_num * 2 + monitors_num * size_monws * 2;
     state = calloc(size, sizeof (unsigned char));
     if (state == NULL)
     {
@@ -1565,11 +1567,11 @@ publish_state(void)
         for (i = 0; i < shifts_needed; i++)
             mask <<= 1;
 
-        byte = state[off + byte_i];
+        byte = state[off + c->mon->index * size_monws + byte_i];
         byte |= mask;
-        state[off + byte_i] = byte;
+        state[off + c->mon->index * size_monws + byte_i] = byte;
     }
-    off += monitors_num * 16;
+    off += monitors_num * size_monws;
 
     /* TODO fill in bits to indicate urgency hints */
 

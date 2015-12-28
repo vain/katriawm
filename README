@@ -10,9 +10,17 @@ desktops.
 Installation
 ------------
 
-The following C libraries are required:
+The following C libraries are required at runtime:
 
     - libx11
+    - libxft
+    - libxrandr
+
+During build, the following additional tools are required, if you want
+to make use of the theme creation script:
+
+    - Probably a GNU OS
+    - ImageMagick
 
 katriawm expects to be run on a POSIX-ish operating system.
 

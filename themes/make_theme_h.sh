@@ -3,7 +3,7 @@
 # Ugh, uhm, I guess this only works on GNU.
 # And ImageMagick is required.
 
-dir=$1
+dir=$(readlink -e "$1")
 
 if [[ -z "$dir" ]]
 then

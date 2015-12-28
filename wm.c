@@ -21,10 +21,7 @@
 
 #include "theme_types.h"
 #include "theme.h"
-
-/* TODO include this in theme */
-#define WS_PADDING_TOP 20
-#define WS_PADDING_BOTTOM 20
+#include "config.h"
 
 #define WORKSPACE_MIN 1
 #define WORKSPACE_MAX 127

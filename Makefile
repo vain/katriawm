@@ -42,7 +42,7 @@ man1dir = $(mandir)/man1
 
 all: $(__NAME_WM__) $(__NAME_C__)
 
-$(__NAME_WM__): wm.c ipc.h theme_types.h theme.h util.h
+$(__NAME_WM__): wm.c ipc.h util.h theme_types.h theme.h config.h
 	$(CC) $(CFLAGS) $(LDFLAGS) \
 		$(__NAME_DEFINES__) $(DEBUGFLAGS) \
 		-o $@ $< \
@@ -54,6 +54,12 @@ $(__NAME_C__): client.c ipc.h util.h
 		$(__NAME_DEFINES__) $(DEBUGFLAGS) \
 		-o $@ $< \
 		-lX11
+
+config.h:
+	cp config.def.h config.h
+
+theme.h:
+	themes/make_theme_h.sh themes/motif >theme.h
 
 install: all installdirs
 	$(INSTALL_PROGRAM) $(__NAME_WM__) $(DESTDIR)$(bindir)/$(__NAME_WM__)

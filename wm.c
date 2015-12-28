@@ -1483,11 +1483,6 @@ manage_fullscreen(struct Client *c, char fs)
         c->normal_w = c->w;
         c->normal_h = c->h;
 
-        c->x = c->mon->mx;
-        c->y = c->mon->my;
-        c->w = c->mon->mw;
-        c->h = c->mon->mh;
-
         manage_setsize(c);
     }
     else
@@ -1571,7 +1566,9 @@ manage_showhide(struct Client *c, char hide)
 {
     if (hide && !c->hidden)
     {
-        c->normal_x = c->x;
+        if (!c->fullscreen)
+            c->normal_x = c->x;
+
         c->x = -2 * c->w;
         c->hidden = 1;
 
@@ -1580,7 +1577,11 @@ manage_showhide(struct Client *c, char hide)
 
     if (!hide)
     {
-        c->x = c->normal_x;
+        if (!c->fullscreen)
+            c->x = c->normal_x;
+        else
+            c->x = c->mon->mx;
+
         c->hidden = 0;
 
         manage_setsize(c);
@@ -1595,18 +1596,23 @@ manage_setsize(struct Client *c)
     if (c->h <= 0)
         c->h = 1;
 
-    DPRINTF(__NAME_WM__": Moving client %p to %d, %d with size %d, %d\n",
-            (void *)c, c->x, c->y, c->w, c->h);
-
-    if (c->fullscreen)
+    if (c->fullscreen && !c->hidden)
     {
+        DPRINTF(__NAME_WM__": Fullscreening client %p\n", (void *)c);
+
         XMoveResizeWindow(dpy, c->decwin[DecWinTop], -15, 0, 10, 10);
         XMoveResizeWindow(dpy, c->decwin[DecWinLeft], -15, 0, 10, 10);
         XMoveResizeWindow(dpy, c->decwin[DecWinRight], -15, 0, 10, 10);
         XMoveResizeWindow(dpy, c->decwin[DecWinBottom], -15, 0, 10, 10);
+
+        XMoveResizeWindow(dpy, c->win, c->mon->mx, c->mon->my,
+                          c->mon->mw, c->mon->mh);
     }
     else
     {
+        DPRINTF(__NAME_WM__": Moving client %p to %d, %d with size %d, %d\n",
+                (void *)c, c->x, c->y, c->w, c->h);
+
         XMoveResizeWindow(dpy, c->decwin[DecWinTop],
                           c->x - dgeo.left_width, c->y - dgeo.top_height,
                           dgeo.left_width + c->w + dgeo.right_width,
@@ -1621,9 +1627,9 @@ manage_setsize(struct Client *c)
                           c->x - dgeo.left_width, c->y + c->h,
                           dgeo.left_width + c->w + dgeo.right_width,
                           dgeo.bottom_height);
-    }
 
-    XMoveResizeWindow(dpy, c->win, c->x, c->y, c->w, c->h);
+        XMoveResizeWindow(dpy, c->win, c->x, c->y, c->w, c->h);
+    }
 }
 
 void

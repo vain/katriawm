@@ -138,6 +138,7 @@ static void handle_propertynotify(XEvent *e);
 static void handle_unmapnotify(XEvent *e);
 static void ipc_client_close(char arg);
 static void ipc_client_kill(char arg);
+static void ipc_client_fullscreen_toggle(char arg);
 static void ipc_client_move_list(char arg);
 static void ipc_client_move_mouse(char arg);
 static void ipc_client_resize_mouse(char arg);
@@ -178,6 +179,7 @@ static int xerror(Display *dpy, XErrorEvent *ee);
 
 static void (*ipc_handler[IPCLast]) (char arg) = {
     [IPCClientClose] = ipc_client_close,
+    [IPCClientFullscreenToggle] = ipc_client_fullscreen_toggle,
     [IPCClientKill] = ipc_client_kill,
     [IPCClientMoveList] = ipc_client_move_list,
     [IPCClientMoveMouse] = ipc_client_move_mouse,
@@ -812,6 +814,17 @@ ipc_client_kill(char arg)
         return;
 
     XKillClient(dpy, selc->win);
+}
+
+void
+ipc_client_fullscreen_toggle(char arg)
+{
+    (void)arg;
+
+    if (!SOMETHING_FOCUSED)
+        return;
+
+    manage_fullscreen(selc, !selc->fullscreen);
 }
 
 void

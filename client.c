@@ -53,6 +53,8 @@ main(int argc, char **argv)
 
     if (strncmp(argv[1], "client_close", strlen("client_close")) == 0)
         cmd = IPCClientClose;
+    if (strncmp(argv[1], "client_fullscreen_toggle", strlen("client_fullscreen_toggle")) == 0)
+        cmd = IPCClientFullscreenToggle;
     if (strncmp(argv[1], "client_kill", strlen("client_kill")) == 0)
         cmd = IPCClientKill;
     if (strncmp(argv[1], "client_move_list", strlen("client_move_list")) == 0 && argc >= 3)

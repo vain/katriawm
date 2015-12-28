@@ -23,6 +23,7 @@ enum IPCCommand
      *           \- $subject, i.e. what is affected by this action
      */
     IPCClientClose,
+    IPCClientFullscreenToggle,
     IPCClientKill,
     IPCClientMoveList,
     IPCClientMoveMouse,

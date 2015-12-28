@@ -1777,8 +1777,11 @@ publish_state(void)
 
     XChangeProperty(dpy, root, atom_state, XA_INTEGER, 8, PropModeReplace,
                     state, size);
-    DPRINTF(__NAME_WM__": Published internal state in root property %s\n",
+    DPRINTF(__NAME_WM__": Published internal state in root property %s: ",
             IPC_ATOM_STATE);
+    for (i = 0; i < size; i++)
+        DPRINTF("%d ", state[i]);
+    DPRINTF("\n");
 }
 
 void

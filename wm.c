@@ -1729,7 +1729,7 @@ setup_hints(void)
     atom_net[AtomNetWMName] = XInternAtom(dpy, "_NET_WM_NAME", False);
 
     XChangeProperty(dpy, root, atom_net[AtomNetSupported], XA_ATOM, 32,
-                    PropModeReplace, (unsigned char *) atom_net, AtomNetLAST);
+                    PropModeReplace, (unsigned char *)atom_net, AtomNetLAST);
 
     atom_wm[AtomWMProtocols] = XInternAtom(dpy, "WM_PROTOCOLS", False);
     atom_wm[AtomWMDeleteWindow] = XInternAtom(dpy, "WM_DELETE_WINDOW", False);

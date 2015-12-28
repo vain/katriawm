@@ -58,6 +58,24 @@ client. Here's an example:
 
     ...
 
+katriawm publishes some of its internal state as a property on the root
+window. You can use this to draw a "pager". I suggest using lemonbar:
+
+    https://github.com/LemonBoy/bar
+
+A script, which you can use in your ~/.xinitrc, to read and evaluate
+that property is provided by us:
+
+    $ state_to_lemonbar.sh | lemonbar -d ...
+
+
+Customization
+-------------
+
+You can configure some behaviour in a config.h at compile time.
+Additionally, you must provide a theme.h at compile time which contains
+window decorations, their layout, colors, and fonts.
+
 
 Background information
 ----------------------

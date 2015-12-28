@@ -707,6 +707,7 @@ handle_propertynotify(XEvent *e)
 {
     XPropertyEvent *ev = &e->xproperty;
     struct Client *c;
+    char *an = NULL;
 
     if ((c = client_get_for_window(ev->window)) == NULL)
         return;
@@ -717,6 +718,14 @@ handle_propertynotify(XEvent *e)
         {
             client_update_title(c);
             decorations_draw_for_client(c, DecWinLAST);
+        }
+        else
+        {
+            an = XGetAtomName(dpy, ev->atom);
+            DPRINTF(__NAME_WM__": PropertyNotify about unhandled atom '%s'\n",
+                    an ? an : "(nil)");
+            if (an)
+                XFree(an);
         }
     }
 }

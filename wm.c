@@ -771,7 +771,7 @@ handle_propertynotify(XEvent *e)
             {
                 if (wmh->flags & XUrgencyHint)
                 {
-                    if (c == selc)
+                    if (c == selc && VIS_ON_SELMON(c))
                     {
                         /* Setting the urgency hint on the currently
                          * selected window shall have no effect */

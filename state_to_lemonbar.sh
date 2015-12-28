@@ -9,6 +9,19 @@ layout_names[1]='[M]'
 layout_names[2]='><>'
 size_monws=16
 
+style_nor='%{B-}%{F-}%{-u}%{-o}'
+style_sel='%{+u}%{+o}'
+style_urg='%{R}'
+
+while getopts n:s:u: name
+do
+    case $name in
+        n) style_nor=$OPTARG ;;
+        s) style_sel=$OPTARG ;;
+        u) style_urg=$OPTARG ;;
+    esac
+done
+
 for (( i = 0; i < 100; i++ ))
 do
     if (( i == 99 ))
@@ -53,16 +66,16 @@ do
             do
                 if (( ubyte & mask ))
                 then
-                    out+="%{R}"
+                    out+=$style_urg
                     out+=" $ws_num "
-                    out+="%{R}"
+                    out+=$style_nor
                 elif (( byte & mask )) || (( ws_num == active_workspace ))
                 then
                     if (( ws_num == active_workspace ))
                     then
-                        out+="%{!u}%{!o}"
+                        out+=$style_sel
                         out+=" $ws_num "
-                        out+="%{!u}%{!o}"
+                        out+=$style_nor
                     else
                         out+=" $ws_num "
                     fi

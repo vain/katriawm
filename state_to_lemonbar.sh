@@ -45,16 +45,22 @@ do
         for (( byte_i = 0; byte_i < size_monws; byte_i++ ))
         do
             byte=${info[offset_ws + byte_i]}
+            ubyte=${info[offset_ws + byte_i + mn * size_monws]}
             mask=1
             for (( bit = 0; bit < 8; bit++ ))
             do
-                if (( byte & mask )) || (( ws_num == active_workspace ))
+                if (( ubyte & mask ))
+                then
+                    out+="%{R}"
+                    out+=" $ws_num "
+                    out+="%{R}"
+                elif (( byte & mask )) || (( ws_num == active_workspace ))
                 then
                     if (( ws_num == active_workspace ))
                     then
-                        out+="%{R}"
+                        out+="%{!u}%{!o}"
                         out+=" $ws_num "
-                        out+="%{R}"
+                        out+="%{!u}%{!o}"
                     else
                         out+=" $ws_num "
                     fi

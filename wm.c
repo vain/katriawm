@@ -1496,6 +1496,12 @@ manage_fullscreen(struct Client *c, char fs)
         c->normal_w = c->w;
         c->normal_h = c->h;
 
+        /* We only support the state "fullscreen", so it's okay-ish to
+         * only ever set this property (and kill all others) */
+        XChangeProperty(dpy, c->win, atom_net[AtomNetWMState], XA_ATOM,
+                        32, PropModeReplace,
+                        (unsigned char *)&atom_net[AtomNetWMStateFullscreen], 1);
+
         manage_setsize(c);
     }
     else
@@ -1506,6 +1512,10 @@ manage_fullscreen(struct Client *c, char fs)
         c->y = c->normal_y;
         c->w = c->normal_w;
         c->h = c->normal_h;
+
+        /* XXX dwm empties the list instead of simply removing the
+         * property. Why is that? */
+        XDeleteProperty(dpy, c->win, atom_net[AtomNetWMState]);
 
         manage_setsize(c);
     }

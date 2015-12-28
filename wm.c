@@ -824,6 +824,9 @@ ipc_client_move_list(char arg)
     if (!SOMETHING_FOCUSED)
         return;
 
+    if (selc->fullscreen)
+        return;
+
     if (arg < 0)
     {
         /* Find visible client before selc */
@@ -923,7 +926,7 @@ ipc_client_move_mouse(char arg)
 
         mouse_dc = NULL;
 
-        if ((c = client_get_for_window(child)))
+        if ((c = client_get_for_window(child)) && !c->fullscreen)
         {
             mouse_dc = c;
             mouse_dx = x;
@@ -974,7 +977,7 @@ ipc_client_resize_mouse(char arg)
 
         mouse_dc = NULL;
 
-        if ((c = client_get_for_window(child)))
+        if ((c = client_get_for_window(child)) && !c->fullscreen)
         {
             mouse_dc = c;
             mouse_dx = x;
@@ -1066,6 +1069,9 @@ ipc_client_switch_monitor_adjacent(char arg)
     if (!SOMETHING_FOCUSED)
         return;
 
+    if (selc->fullscreen)
+        return;
+
     i = selmon->index;
     i += arg;
     i = i < 0 ? 0 : i;
@@ -1094,6 +1100,9 @@ ipc_client_switch_workspace(char arg)
     if (!SOMETHING_FOCUSED)
         return;
 
+    if (selc->fullscreen)
+        return;
+
     i = arg;
     i = i < WORKSPACE_MIN ? WORKSPACE_MIN : i;
     i = i > WORKSPACE_MAX ? WORKSPACE_MAX : i;
@@ -1108,6 +1117,9 @@ ipc_client_switch_workspace_adjacent(char arg)
     int i;
 
     if (!SOMETHING_FOCUSED)
+        return;
+
+    if (selc->fullscreen)
         return;
 
     i = selmon->active_workspace + arg;

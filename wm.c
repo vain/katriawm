@@ -144,6 +144,7 @@ static void ipc_client_move_list(char arg);
 static void ipc_client_move_mouse(char arg);
 static void ipc_client_resize_mouse(char arg);
 static void ipc_client_select_adjacent(char arg);
+static void ipc_client_select_recent(char arg);
 static void ipc_client_switch_monitor_adjacent(char arg);
 static void ipc_client_switch_workspace(char arg);
 static void ipc_client_switch_workspace_adjacent(char arg);
@@ -189,6 +190,7 @@ static void (*ipc_handler[IPCLast]) (char arg) = {
     [IPCClientMoveMouse] = ipc_client_move_mouse,
     [IPCClientResizeMouse] = ipc_client_resize_mouse,
     [IPCClientSelectAdjacent] = ipc_client_select_adjacent,
+    [IPCClientSelectRecent] = ipc_client_select_recent,
     [IPCClientSwitchMonitorAdjacent] = ipc_client_switch_monitor_adjacent,
     [IPCClientSwitchWorkspace] = ipc_client_switch_workspace,
     [IPCClientSwitchWorkspaceAdjacent] = ipc_client_switch_workspace_adjacent,
@@ -1112,6 +1114,25 @@ ipc_client_select_adjacent(char arg)
 
     if (to_select)
         manage_raisefocus(to_select);
+}
+
+void
+ipc_client_select_recent(char arg)
+{
+    struct Client *c;
+
+    (void)arg;
+
+    /* In the focus list, we must find the second matching client for
+     * the current workspace/monitor. By definition, the first matching
+     * client is selc itself, so we can easily skip it. */
+
+    for (c = selc->focus_next; c; c = c->focus_next)
+        if (VIS_ON_SELMON(c))
+            break;
+
+    if (c)
+        manage_raisefocus(c);
 }
 
 void

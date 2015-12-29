@@ -36,6 +36,7 @@ static struct Command c[] = {
     {  {  "client_resize_mouse",       "up"       },  IPCClientResizeMouse,              fn_int,   2          },
     {  {  "client_select",             "next"     },  IPCClientSelectAdjacent,           fn_int,   +1         },
     {  {  "client_select",             "prev"     },  IPCClientSelectAdjacent,           fn_int,   -1         },
+    {  {  "client_select",             "recent"   },  IPCClientSelectRecent,             NULL,     0          },
     {  {  "client_switch_monitor",     "left"     },  IPCClientSwitchMonitorAdjacent,    fn_int,   -1         },
     {  {  "client_switch_monitor",     "right"    },  IPCClientSwitchMonitorAdjacent,    fn_int,   +1         },
     {  {  "client_switch_workspace",   "next"     },  IPCClientSwitchWorkspaceAdjacent,  fn_int,   +1         },

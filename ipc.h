@@ -29,6 +29,7 @@ enum IPCCommand
     IPCClientMoveMouse,
     IPCClientResizeMouse,
     IPCClientSelectAdjacent,
+    IPCClientSelectRecent,
     IPCClientSwitchMonitorAdjacent,
     IPCClientSwitchWorkspace,
     IPCClientSwitchWorkspaceAdjacent,

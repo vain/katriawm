@@ -50,6 +50,7 @@ static struct Command c[] = {
     {  {  "wm_restart",                ANY        },  IPCWMRestart,                      NULL,     0          },
     {  {  "workspace_select",          "next"     },  IPCWorkspaceSelectAdjacent,        fn_int,   +1         },
     {  {  "workspace_select",          "prev"     },  IPCWorkspaceSelectAdjacent,        fn_int,   -1         },
+    {  {  "workspace_select",          "recent"   },  IPCWorkspaceSelectRecent,          NULL,     0          },
     {  {  "workspace_select",          ANY        },  IPCWorkspaceSelect,                fn_atoi,  0          },
 };
 

@@ -38,6 +38,7 @@ enum IPCCommand
     IPCWMRestart,
     IPCWorkspaceSelect,
     IPCWorkspaceSelectAdjacent,
+    IPCWorkspaceSelectRecent,
 
     IPCLast,
 };

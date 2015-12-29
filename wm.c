@@ -57,7 +57,7 @@ struct Client
 struct Monitor
 {
     int index;
-    int active_workspace;
+    int active_workspace, recent_workspace;
 
     int layouts[WORKSPACE_MAX + 1];
 
@@ -152,6 +152,7 @@ static void ipc_monitor_select_adjacent(char arg);
 static void ipc_wm_quit(char arg);
 static void ipc_wm_restart(char arg);
 static void ipc_workspace_select_adjacent(char arg);
+static void ipc_workspace_select_recent(char arg);
 static void ipc_workspace_select(char arg);
 static void layout_float(struct Monitor *m);
 static void layout_monocle(struct Monitor *m);
@@ -194,6 +195,7 @@ static void (*ipc_handler[IPCLast]) (char arg) = {
     [IPCWMQuit] = ipc_wm_quit,
     [IPCWMRestart] = ipc_wm_restart,
     [IPCWorkspaceSelectAdjacent] = ipc_workspace_select_adjacent,
+    [IPCWorkspaceSelectRecent] = ipc_workspace_select_recent,
     [IPCWorkspaceSelect] = ipc_workspace_select,
 };
 
@@ -1254,6 +1256,14 @@ ipc_workspace_select_adjacent(char arg)
 }
 
 void
+ipc_workspace_select_recent(char arg)
+{
+    (void)arg;
+
+    manage_goto_workspace(selmon->recent_workspace);
+}
+
+void
 ipc_workspace_select(char arg)
 {
     int i;
@@ -1578,6 +1588,7 @@ manage_goto_workspace(int i)
         if (c->mon == selmon && c->workspace == i)
             manage_showhide(c, 0);
 
+    selmon->recent_workspace = selmon->active_workspace;
     selmon->active_workspace = i;
 
     manage_arrange(selmon);
@@ -1895,7 +1906,7 @@ setup(void)
         m->wh -= wai.top + wai.bottom;
 
         m->index = monitors_num++;
-        m->active_workspace = 1;
+        m->active_workspace = m->recent_workspace = 1;
         m->next = monitors;
         monitors = m;
         DPRINTF(__NAME_WM__": monitor: %d %d %d %d\n",

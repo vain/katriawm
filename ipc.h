@@ -34,6 +34,7 @@ enum IPCCommand
     IPCClientSwitchWorkspaceAdjacent,
     IPCLayoutSet,
     IPCMonitorSelectAdjacent,
+    IPCMonitorSelectRecent,
     IPCWMQuit,
     IPCWMRestart,
     IPCWorkspaceSelect,

@@ -45,6 +45,7 @@ static struct Command c[] = {
     {  {  "layout_set",                "monocle"  },  IPCLayoutSet,                      fn_int,   LAMonocle  },
     {  {  "layout_set",                "tile"     },  IPCLayoutSet,                      fn_int,   LATile     },
     {  {  "monitor_select",            "left"     },  IPCMonitorSelectAdjacent,          fn_int,   -1         },
+    {  {  "monitor_select",            "recent"   },  IPCMonitorSelectRecent,            NULL,     0          },
     {  {  "monitor_select",            "right"    },  IPCMonitorSelectAdjacent,          fn_int,   +1         },
     {  {  "wm_quit",                   ANY        },  IPCWMQuit,                         NULL,     0          },
     {  {  "wm_restart",                ANY        },  IPCWMRestart,                      NULL,     0          },

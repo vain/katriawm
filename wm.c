@@ -106,7 +106,7 @@ static XftColor font_color[DecTintLAST];
 static XftFont *font[FontLAST];
 static Pixmap dec_tiles[DecTintLAST][DecLAST];
 static Window root;
-static int monitors_num = 0;
+static int monitors_num = 0, prevmon_i = 0;
 static int running = 1;
 static int restart = 0;
 static int screen;
@@ -149,6 +149,7 @@ static void ipc_client_switch_workspace(char arg);
 static void ipc_client_switch_workspace_adjacent(char arg);
 static void ipc_layout_set(char arg);
 static void ipc_monitor_select_adjacent(char arg);
+static void ipc_monitor_select_recent(char arg);
 static void ipc_wm_quit(char arg);
 static void ipc_wm_restart(char arg);
 static void ipc_workspace_select_adjacent(char arg);
@@ -165,6 +166,7 @@ static void manage_focus_add(struct Client *c);
 static void manage_focus_remove(struct Client *c);
 static void manage_focus_set(struct Client *c);
 static void manage_fullscreen(struct Client *c, char fs);
+static void manage_goto_monitor(int i);
 static void manage_goto_workspace(int i);
 static void manage_showhide(struct Client *c, char hide);
 static void manage_raisefocus(struct Client *c);
@@ -192,6 +194,7 @@ static void (*ipc_handler[IPCLast]) (char arg) = {
     [IPCClientSwitchWorkspaceAdjacent] = ipc_client_switch_workspace_adjacent,
     [IPCLayoutSet] = ipc_layout_set,
     [IPCMonitorSelectAdjacent] = ipc_monitor_select_adjacent,
+    [IPCMonitorSelectRecent] = ipc_monitor_select_recent,
     [IPCWMQuit] = ipc_wm_quit,
     [IPCWMRestart] = ipc_wm_restart,
     [IPCWorkspaceSelectAdjacent] = ipc_workspace_select_adjacent,
@@ -1203,25 +1206,21 @@ void
 ipc_monitor_select_adjacent(char arg)
 {
     int i;
-    struct Monitor *m;
 
     i = selmon->index;
     i += arg;
     i = i < 0 ? 0 : i;
     i = i >= monitors_num ? monitors_num - 1 : i;
 
-    for (m = monitors; m; m = m->next)
-    {
-        if (m->index == i)
-        {
-            selmon = m;
-            break;
-        }
-    }
+    manage_goto_monitor(i);
+}
 
-    XWarpPointer(dpy, None, root, 0, 0, 0, 0,
-                 selmon->wx + selmon->ww / 2, selmon->wy + selmon->wh / 2);
-    manage_raisefocus_first_matching();
+void
+ipc_monitor_select_recent(char arg)
+{
+    (void)arg;
+
+    manage_goto_monitor(prevmon_i);
 }
 
 void
@@ -1568,6 +1567,31 @@ manage_fullscreen(struct Client *c, char fs)
 
         manage_setsize(c);
     }
+}
+
+void
+manage_goto_monitor(int i)
+{
+    struct Monitor *m, *new_selmon = NULL;
+
+    for (m = monitors; m; m = m->next)
+    {
+        if (m->index == i)
+        {
+            new_selmon = m;
+            break;
+        }
+    }
+
+    if (new_selmon == NULL)
+        return;
+
+    prevmon_i = selmon->index;
+    selmon = new_selmon;
+
+    XWarpPointer(dpy, None, root, 0, 0, 0, 0,
+                 selmon->wx + selmon->ww / 2, selmon->wy + selmon->wh / 2);
+    manage_raisefocus_first_matching();
 }
 
 void

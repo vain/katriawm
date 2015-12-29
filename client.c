@@ -7,6 +7,52 @@
 #include "util.h"
 #include "ipc.h"
 
+static int fn_atoi(char *s, char d) { (void)d; return atoi(s ? s : ""); }
+static int fn_int(char *d, char p) { (void)d; return p; }
+
+struct Command
+{
+    char *ops[2];
+    enum IPCCommand cmd;
+    int (*handler)(char *argv, char payload);
+    char payload;
+};
+
+static struct Command c[] = {
+    /* Note: Don't just pipe this trough "sort", order matters. If a
+     * command has a second argument NULL, then this means "match
+     * anything". Hence, "workspace_select, NULL" must come after
+     * "workspace_select, prev". */
+    {  {  "client_close",              NULL       },  IPCClientClose,                    NULL,     0          },
+    {  {  "client_fullscreen_toggle",  NULL       },  IPCClientFullscreenToggle,         NULL,     0          },
+    {  {  "client_kill",               NULL       },  IPCClientKill,                     NULL,     0          },
+    {  {  "client_move_list",          "next"     },  IPCClientMoveList,                 fn_int,   +1         },
+    {  {  "client_move_list",          "prev"     },  IPCClientMoveList,                 fn_int,   -1         },
+    {  {  "client_move_mouse",         "down"     },  IPCClientMoveMouse,                fn_int,   0          },
+    {  {  "client_move_mouse",         "motion"   },  IPCClientMoveMouse,                fn_int,   1          },
+    {  {  "client_move_mouse",         "up"       },  IPCClientMoveMouse,                fn_int,   2          },
+    {  {  "client_resize_mouse",       "down"     },  IPCClientResizeMouse,              fn_int,   0          },
+    {  {  "client_resize_mouse",       "motion"   },  IPCClientResizeMouse,              fn_int,   1          },
+    {  {  "client_resize_mouse",       "up"       },  IPCClientResizeMouse,              fn_int,   2          },
+    {  {  "client_select",             "next"     },  IPCClientSelectAdjacent,           fn_int,   +1         },
+    {  {  "client_select",             "prev"     },  IPCClientSelectAdjacent,           fn_int,   -1         },
+    {  {  "client_switch_monitor",     "left"     },  IPCClientSwitchMonitorAdjacent,    fn_int,   -1         },
+    {  {  "client_switch_monitor",     "right"    },  IPCClientSwitchMonitorAdjacent,    fn_int,   +1         },
+    {  {  "client_switch_workspace",   "next"     },  IPCClientSwitchWorkspaceAdjacent,  fn_int,   +1         },
+    {  {  "client_switch_workspace",   "prev"     },  IPCClientSwitchWorkspaceAdjacent,  fn_int,   -1         },
+    {  {  "client_switch_workspace",   NULL       },  IPCClientSwitchWorkspace,          fn_atoi,  0          },
+    {  {  "layout_set",                "float"    },  IPCLayoutSet,                      fn_int,   LAFloat    },
+    {  {  "layout_set",                "monocle"  },  IPCLayoutSet,                      fn_int,   LAMonocle  },
+    {  {  "layout_set",                "tile"     },  IPCLayoutSet,                      fn_int,   LATile     },
+    {  {  "monitor_select",            "left"     },  IPCMonitorSelectAdjacent,          fn_int,   -1         },
+    {  {  "monitor_select",            "right"    },  IPCMonitorSelectAdjacent,          fn_int,   +1         },
+    {  {  "wm_quit",                   NULL       },  IPCWMQuit,                         NULL,     0          },
+    {  {  "wm_restart",                NULL       },  IPCWMRestart,                      NULL,     0          },
+    {  {  "workspace_select",          "next"     },  IPCWorkspaceSelectAdjacent,        fn_int,   +1         },
+    {  {  "workspace_select",          "prev"     },  IPCWorkspaceSelectAdjacent,        fn_int,   -1         },
+    {  {  "workspace_select",          NULL       },  IPCWorkspaceSelect,                fn_atoi,  0          },
+};
+
 static int
 send_command(enum IPCCommand cmd, char arg)
 {
@@ -42,178 +88,37 @@ send_command(enum IPCCommand cmd, char arg)
 int
 main(int argc, char **argv)
 {
+    size_t i;
     enum IPCCommand cmd = IPCLast;
     char arg = 0;
 
     if (argc < 2)
     {
-        fprintf(stderr, "Expected arguments\n");
+        fprintf(stderr, "Usage: "__NAME_C__" COMMAND [OPTION]\n");
         exit(EXIT_FAILURE);
     }
 
-    if (strncmp(argv[1], "client_close", strlen("client_close")) == 0)
-        cmd = IPCClientClose;
-    if (strncmp(argv[1], "client_fullscreen_toggle", strlen("client_fullscreen_toggle")) == 0)
-        cmd = IPCClientFullscreenToggle;
-    if (strncmp(argv[1], "client_kill", strlen("client_kill")) == 0)
-        cmd = IPCClientKill;
-    if (strncmp(argv[1], "client_move_list", strlen("client_move_list")) == 0 && argc >= 3)
+    for (i = 0; i < sizeof c / sizeof c[0]; i++)
     {
-        if (strncmp(argv[2], "prev", strlen("prev")) == 0)
+        if (strncmp(argv[1], c[i].ops[0], strlen(c[i].ops[0])) == 0)
         {
-            cmd = IPCClientMoveList;
-            arg = -1;
-        }
-        if (strncmp(argv[2], "next", strlen("next")) == 0)
-        {
-            cmd = IPCClientMoveList;
-            arg = 1;
-        }
-    }
-    if (strncmp(argv[1], "client_move_mouse", strlen("client_move_mouse")) == 0 && argc >= 3)
-    {
-        if (strncmp(argv[2], "down", strlen("down")) == 0)
-        {
-            cmd = IPCClientMoveMouse;
-            arg = 0;
-        }
-        if (strncmp(argv[2], "motion", strlen("motion")) == 0)
-        {
-            cmd = IPCClientMoveMouse;
-            arg = 1;
-        }
-        if (strncmp(argv[2], "up", strlen("up")) == 0)
-        {
-            cmd = IPCClientMoveMouse;
-            arg = 2;
-        }
-    }
-    if (strncmp(argv[1], "client_resize_mouse", strlen("client_resize_mouse")) == 0 && argc >= 3)
-    {
-        if (strncmp(argv[2], "down", strlen("down")) == 0)
-        {
-            cmd = IPCClientResizeMouse;
-            arg = 0;
-        }
-        if (strncmp(argv[2], "motion", strlen("motion")) == 0)
-        {
-            cmd = IPCClientResizeMouse;
-            arg = 1;
-        }
-        if (strncmp(argv[2], "up", strlen("up")) == 0)
-        {
-            cmd = IPCClientResizeMouse;
-            arg = 2;
-        }
-    }
-    if (strncmp(argv[1], "client_select", strlen("client_select")) == 0 && argc >= 3)
-    {
-        if (strncmp(argv[2], "prev", strlen("prev")) == 0)
-        {
-            cmd = IPCClientSelectAdjacent;
-            arg = -1;
-        }
-        if (strncmp(argv[2], "next", strlen("next")) == 0)
-        {
-            cmd = IPCClientSelectAdjacent;
-            arg = 1;
-        }
-    }
-    if (strncmp(argv[1], "client_switch_monitor", strlen("client_switch_monitor")) == 0 && argc >= 3)
-    {
-        if (strncmp(argv[2], "left", strlen("left")) == 0)
-        {
-            cmd = IPCClientSwitchMonitorAdjacent;
-            arg = -1;
-        }
-        if (strncmp(argv[2], "right", strlen("right")) == 0)
-        {
-            cmd = IPCClientSwitchMonitorAdjacent;
-            arg = 1;
-        }
-    }
-    if (strncmp(argv[1], "client_switch_workspace", strlen("client_switch_workspace")) == 0 && argc >= 3)
-    {
-        if (strncmp(argv[2], "prev", strlen("prev")) == 0)
-        {
-            cmd = IPCClientSwitchWorkspaceAdjacent;
-            arg = -1;
-        }
-        else if (strncmp(argv[2], "next", strlen("next")) == 0)
-        {
-            cmd = IPCClientSwitchWorkspaceAdjacent;
-            arg = 1;
-        }
-        else
-        {
-            if ((arg = atoi(argv[2])) > 0)
-                cmd = IPCClientSwitchWorkspace;
-        }
-    }
-    if (strncmp(argv[1], "layout_set", strlen("layout_set")) == 0 && argc >= 3)
-    {
-        if (strncmp(argv[2], "float", strlen("float")) == 0)
-        {
-            cmd = IPCLayoutSet;
-            arg = LAFloat;
-        }
-        if (strncmp(argv[2], "monocle", strlen("monocle")) == 0)
-        {
-            cmd = IPCLayoutSet;
-            arg = LAMonocle;
-        }
-        if (strncmp(argv[2], "tile", strlen("tile")) == 0)
-        {
-            cmd = IPCLayoutSet;
-            arg = LATile;
-        }
-    }
-    if (strncmp(argv[1], "monitor_select", strlen("monitor_select")) == 0 && argc >= 3)
-    {
-        if (strncmp(argv[2], "left", strlen("left")) == 0)
-        {
-            cmd = IPCMonitorSelectAdjacent;
-            arg = -1;
-        }
-        if (strncmp(argv[2], "right", strlen("right")) == 0)
-        {
-            cmd = IPCMonitorSelectAdjacent;
-            arg = 1;
-        }
-    }
-    if (strncmp(argv[1], "wm_restart", strlen("wm_restart")) == 0)
-        cmd = IPCWMRestart;
-    if (strncmp(argv[1], "wm_quit", strlen("wm_quit")) == 0)
-        cmd = IPCWMQuit;
-    if (strncmp(argv[1], "workspace_select", strlen("workspace_select")) == 0 && argc >= 3)
-    {
-        if (strncmp(argv[2], "prev", strlen("prev")) == 0)
-        {
-            cmd = IPCWorkspaceSelectAdjacent;
-            arg = -1;
-        }
-        else if (strncmp(argv[2], "next", strlen("next")) == 0)
-        {
-            cmd = IPCWorkspaceSelectAdjacent;
-            arg = 1;
-        }
-        else
-        {
-            if ((arg = atoi(argv[2])) > 0)
-                cmd = IPCWorkspaceSelect;
+            if (c[i].ops[1] == NULL
+                || (argc >= 3
+                    && !strncmp(argv[2], c[i].ops[1], strlen(c[i].ops[1]))))
+            {
+                cmd = c[i].cmd;
+                if (c[i].handler)
+                    arg = c[i].handler(argc >= 3 ? argv[2] : NULL,
+                                       c[i].payload);
+
+                if (send_command(cmd, arg))
+                    exit(EXIT_SUCCESS);
+                else
+                    exit(EXIT_FAILURE);
+            }
         }
     }
 
-    if (cmd != IPCLast)
-    {
-        if (!send_command(cmd, arg))
-            exit(EXIT_FAILURE);
-    }
-    else
-    {
-        fprintf(stderr, __NAME_C__": Unknown command\n");
-            exit(EXIT_FAILURE);
-    }
-
-    exit(EXIT_SUCCESS);
+    fprintf(stderr, __NAME_C__": Unknown command '%s'\n", argv[1]);
+        exit(EXIT_FAILURE);
 }

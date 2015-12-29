@@ -18,14 +18,14 @@ struct Command
     char payload;
 };
 
+#define ANY NULL
 static struct Command c[] = {
-    /* Note: Don't just pipe this trough "sort", order matters. If a
-     * command has a second argument NULL, then this means "match
-     * anything". Hence, "workspace_select, NULL" must come after
-     * "workspace_select, prev". */
-    {  {  "client_close",              NULL       },  IPCClientClose,                    NULL,     0          },
-    {  {  "client_fullscreen_toggle",  NULL       },  IPCClientFullscreenToggle,         NULL,     0          },
-    {  {  "client_kill",               NULL       },  IPCClientKill,                     NULL,     0          },
+    /* If you sort this list, make sure to sort in asciibetical order,
+     * i.e. set LANG=C. Order matters, ANY would also match "next", for
+     * example. */
+    {  {  "client_close",              ANY        },  IPCClientClose,                    NULL,     0          },
+    {  {  "client_fullscreen_toggle",  ANY        },  IPCClientFullscreenToggle,         NULL,     0          },
+    {  {  "client_kill",               ANY        },  IPCClientKill,                     NULL,     0          },
     {  {  "client_move_list",          "next"     },  IPCClientMoveList,                 fn_int,   +1         },
     {  {  "client_move_list",          "prev"     },  IPCClientMoveList,                 fn_int,   -1         },
     {  {  "client_move_mouse",         "down"     },  IPCClientMoveMouse,                fn_int,   0          },
@@ -40,17 +40,17 @@ static struct Command c[] = {
     {  {  "client_switch_monitor",     "right"    },  IPCClientSwitchMonitorAdjacent,    fn_int,   +1         },
     {  {  "client_switch_workspace",   "next"     },  IPCClientSwitchWorkspaceAdjacent,  fn_int,   +1         },
     {  {  "client_switch_workspace",   "prev"     },  IPCClientSwitchWorkspaceAdjacent,  fn_int,   -1         },
-    {  {  "client_switch_workspace",   NULL       },  IPCClientSwitchWorkspace,          fn_atoi,  0          },
+    {  {  "client_switch_workspace",   ANY        },  IPCClientSwitchWorkspace,          fn_atoi,  0          },
     {  {  "layout_set",                "float"    },  IPCLayoutSet,                      fn_int,   LAFloat    },
     {  {  "layout_set",                "monocle"  },  IPCLayoutSet,                      fn_int,   LAMonocle  },
     {  {  "layout_set",                "tile"     },  IPCLayoutSet,                      fn_int,   LATile     },
     {  {  "monitor_select",            "left"     },  IPCMonitorSelectAdjacent,          fn_int,   -1         },
     {  {  "monitor_select",            "right"    },  IPCMonitorSelectAdjacent,          fn_int,   +1         },
-    {  {  "wm_quit",                   NULL       },  IPCWMQuit,                         NULL,     0          },
-    {  {  "wm_restart",                NULL       },  IPCWMRestart,                      NULL,     0          },
+    {  {  "wm_quit",                   ANY        },  IPCWMQuit,                         NULL,     0          },
+    {  {  "wm_restart",                ANY        },  IPCWMRestart,                      NULL,     0          },
     {  {  "workspace_select",          "next"     },  IPCWorkspaceSelectAdjacent,        fn_int,   +1         },
     {  {  "workspace_select",          "prev"     },  IPCWorkspaceSelectAdjacent,        fn_int,   -1         },
-    {  {  "workspace_select",          NULL       },  IPCWorkspaceSelect,                fn_atoi,  0          },
+    {  {  "workspace_select",          ANY        },  IPCWorkspaceSelect,                fn_atoi,  0          },
 };
 
 static int
@@ -102,7 +102,7 @@ main(int argc, char **argv)
     {
         if (strncmp(argv[1], c[i].ops[0], strlen(c[i].ops[0])) == 0)
         {
-            if (c[i].ops[1] == NULL
+            if (c[i].ops[1] == ANY
                 || (argc >= 3
                     && !strncmp(argv[2], c[i].ops[1], strlen(c[i].ops[1]))))
             {

@@ -592,14 +592,11 @@ draw_text(Drawable d, XftFont *xfont, XftColor *col, int x, int y, int w, char *
 
     /* Reduce length until the rendered text can fit into the desired
      * width -- this is "kind of"-ish UTF-8 compatible */
-    len = strlen(s);
-    for (;;)
+    for (len = strlen(s); len >= 0; len--)
     {
         XftTextExtentsUtf8(dpy, xfont, (XftChar8 *)s, len, &ext);
         if (ext.xOff < w)
             break;
-        else
-            len--;
     }
 
     if (len == 0)

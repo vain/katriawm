@@ -39,6 +39,7 @@ struct Client
     int x, y, w, h;
 
     int normal_x, normal_y, normal_w, normal_h;
+    char floating;
     char fullscreen;
     char hidden;
     char urgent;
@@ -1305,7 +1306,7 @@ layout_monocle(struct Monitor *m)
 
     for (c = clients; c; c = c->next)
     {
-        if (VIS_ON_M(c, m))
+        if (VIS_ON_M(c, m) && !c->floating)
         {
             c->x = c->mon->wx + dgeo.left_width;
             c->y = c->mon->wy + dgeo.top_height;
@@ -1329,12 +1330,12 @@ layout_tile(struct Monitor *m)
     at_y = m->wy;
 
     for (c = clients; c; c = c->next)
-        if (VIS_ON_M(c, m))
+        if (VIS_ON_M(c, m) && !c->floating)
             num_clients++;
 
     for (c = clients; c; c = c->next)
     {
-        if (VIS_ON_M(c, m))
+        if (VIS_ON_M(c, m) && !c->floating)
         {
             if (i == 0)
             {
@@ -1386,7 +1387,8 @@ layout_tile(struct Monitor *m)
 void
 manage(Window win, XWindowAttributes *wa)
 {
-    struct Client *c;
+    struct Client *c, *tc;
+    Window transient_for;
 
     if (client_get_for_window(win))
     {
@@ -1415,6 +1417,29 @@ manage(Window win, XWindowAttributes *wa)
                  );
 
     decorations_create(c);
+
+    if (XGetTransientForHint(dpy, c->win, &transient_for))
+    {
+        /* ICCCM says: "The WM_TRANSIENT_FOR property (of type WINDOW)
+         * contains the ID of another top-level window. The implication
+         * is that this window is a pop-up on behalf of the named
+         * window [...]"
+         *
+         * A popup window should always be floating. */
+        c->floating = 1;
+
+        /* Try to find the other client this window is transient for. If
+         * we don't find it, root and None are valid values, too
+         * (according to EWMH), meaning this window should be treated as
+         * "transient for all other windows in this group". However, we
+         * don't have to do anything special in these cases. */
+        if ((tc = client_get_for_window(transient_for)))
+        {
+            c->mon = tc->mon;
+            c->workspace = tc->workspace;
+        }
+    }
+
     manage_fit_on_monitor(c);
     manage_setsize(c);
 

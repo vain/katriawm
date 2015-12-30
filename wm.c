@@ -1235,6 +1235,14 @@ ipc_client_switch_monitor_adjacent(char arg)
             old_mon = selc->mon;
             selc->mon = m;
             selc->workspace = selc->mon->active_workspace;
+
+            /* If the client is floating or the target layout is
+             * floating, then we need to re-fit the client and apply the
+             * newly calculated size. This has no effect for
+             * non-floaters because we call manage_arrange() afterwards. */
+            manage_fit_on_monitor(selc);
+            manage_setsize(selc);
+
             manage_arrange(old_mon);
             manage_arrange(m);
             manage_raisefocus_first_matching();
@@ -1618,7 +1626,9 @@ manage_fit_on_monitor(struct Client *c)
     if (c->y + c->h + dgeo.bottom_height >= c->mon->wy + c->mon->wh)
         c->y = c->mon->wy + c->mon->wh - c->h - dgeo.bottom_height;
 
-    /* When a window spawns "in the background", we put into hidden state */
+    /* When a window spawns "in the background", we put into hidden
+     * state. Caution: This function is also called by
+     * ipc_client_switch_monitor_adjacent(), not only by manage(). */
     if (c->workspace != c->mon->active_workspace)
     {
         DPRINTF(__NAME_WM__": Client %p spawned in background, hiding\n",

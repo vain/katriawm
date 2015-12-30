@@ -2027,24 +2027,34 @@ scan(void)
 
     /* TODO grab the server while doing this. */
 
-    /* TODO dwm splits this: First, it looks at non-transient windows
-     * and then at transient ones. dwm's manage() always places
-     * transient windows on the same monitor/tags as their "parents".
-     *
-     * We'll be doing the same at some later stage of development. */
-
     /* TODO We ignore iconified windows for now. */
 
     if (XQueryTree(dpy, root, &d1, &d2, &wins, &num))
     {
         DPRINTF(__NAME_WM__": scan() saw %d windows\n", num);
 
+        /* First, manage all top-level windows. Then manage transient
+         * windows. This is required because the windows pointed to by
+         * "transient_for" must already be managed by us -- we copy some
+         * attributes from the parents to their popups. */
         for (i = 0; i < num; i++)
         {
             if (!XGetWindowAttributes(dpy, wins[i], &wa) || wa.override_redirect)
                 continue;
+            if (XGetTransientForHint(dpy, wins[i], &d1))
+                continue;
             if (wa.map_state == IsViewable)
                 manage(wins[i], &wa);
+        }
+        for (i = 0; i < num; i++)
+        {
+            if (!XGetWindowAttributes(dpy, wins[i], &wa) || wa.override_redirect)
+                continue;
+            if (XGetTransientForHint(dpy, wins[i], &d1))
+            {
+                if (wa.map_state == IsViewable)
+                    manage(wins[i], &wa);
+            }
         }
         if (wins)
             XFree(wins);

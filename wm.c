@@ -183,6 +183,8 @@ static void manage_showhide(struct Client *c, char hide);
 static void manage_raisefocus(struct Client *c);
 static void manage_raisefocus_first_matching(void);
 static void manage_setsize(struct Client *c);
+static void manage_xfocus(struct Client *c);
+static void manage_xraise(struct Client *c);
 static void publish_state(void);
 static void run(void);
 static void scan(void);
@@ -792,8 +794,7 @@ handle_focusin(XEvent *e)
      * think should have it. */
 
     if (selc && ev->window != selc->win)
-        XSetInputFocus(dpy, selc->win, RevertToPointerRoot, CurrentTime);
-        /* XXX maybe we also need to send WMTakeFocus */
+        manage_xfocus(selc);
 }
 
 void
@@ -1779,9 +1780,6 @@ manage_goto_workspace(int i)
 void
 manage_raisefocus(struct Client *c)
 {
-    size_t i;
-    XWMHints *wmh;
-
     if (c && !VIS_ON_SELMON(c))
     {
         DPRINTF(__NAME_WM__": Client %p should have been focused/raised, "
@@ -1789,26 +1787,8 @@ manage_raisefocus(struct Client *c)
         return;
     }
 
-    if (c)
-    {
-        c->urgent = 0;
-        if ((wmh = XGetWMHints(dpy, c->win)))
-        {
-            wmh->flags &= ~XUrgencyHint;
-            XSetWMHints(dpy, c->win, wmh);
-            XFree(wmh);
-        }
-        publish_state();
-
-        XRaiseWindow(dpy, c->win);
-        XSetInputFocus(dpy, c->win, RevertToPointerRoot, CurrentTime);
-
-        for (i = DecWinTop; i <= DecWinBottom; i++)
-            XRaiseWindow(dpy, c->decwin[i]);
-    }
-    else
-        XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);
-
+    manage_xraise(c);
+    manage_xfocus(c);
     manage_focus_set(c);
 }
 
@@ -1901,6 +1881,42 @@ manage_setsize(struct Client *c)
 
         XMoveResizeWindow(dpy, c->win, c->x, c->y, c->w, c->h);
     }
+}
+
+void
+manage_xfocus(struct Client *c)
+{
+    XWMHints *wmh;
+
+    if (c)
+    {
+        c->urgent = 0;
+        if ((wmh = XGetWMHints(dpy, c->win)))
+        {
+            wmh->flags &= ~XUrgencyHint;
+            XSetWMHints(dpy, c->win, wmh);
+            XFree(wmh);
+        }
+        publish_state();
+
+        XSetInputFocus(dpy, c->win, RevertToPointerRoot, CurrentTime);
+    }
+    else
+        XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);
+}
+
+void
+manage_xraise(struct Client *c)
+{
+    size_t i;
+
+    if (!c)
+        return;
+
+    XRaiseWindow(dpy, c->win);
+
+    for (i = DecWinTop; i <= DecWinBottom; i++)
+        XRaiseWindow(dpy, c->decwin[i]);
 }
 
 void

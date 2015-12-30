@@ -2054,9 +2054,11 @@ setup(void)
     atom_ipc = XInternAtom(dpy, IPC_ATOM_COMMAND, False);
     atom_state = XInternAtom(dpy, IPC_ATOM_STATE, False);
 
-    /* Initialize fonts and colors */
-    /* XXX Yes, looping is meaningless until we have a bar with a
-     * different font */
+    /* Initialize fonts and colors
+     *
+     * (Yes, looping over that one item in the font array is
+     * meaningless. Today. In the future, there might be more than one
+     * font.) */
     for (i = FontTitle; i <= FontTitle; i++)
     {
         font[i] = XftFontOpenName(dpy, screen, dec_fonts[i]);

@@ -82,6 +82,12 @@ enum AtomsNet
     AtomNetWMName,
     AtomNetWMState,
     AtomNetWMStateFullscreen,
+    AtomNetWMWindowType,
+    AtomNetWMWindowTypeDialog,
+    AtomNetWMWindowTypeMenu,
+    AtomNetWMWindowTypeSplash,
+    AtomNetWMWindowTypeToolbar,
+    AtomNetWMWindowTypeUtility,
 
     AtomNetLAST,
 };
@@ -1395,6 +1401,11 @@ manage(Window win, XWindowAttributes *wa)
 {
     struct Client *c, *tc;
     Window transient_for;
+    Atom prop, da;
+    unsigned char *prop_ret = NULL;
+    int di;
+    unsigned long dl;
+    char *an;
 
     if (client_get_for_window(win))
     {
@@ -1445,6 +1456,38 @@ manage(Window win, XWindowAttributes *wa)
             c->workspace = tc->workspace;
         }
     }
+
+    if (XGetWindowProperty(dpy, c->win, atom_net[AtomNetWMWindowType], 0,
+                           sizeof (Atom), False, XA_ATOM, &da, &di, &dl, &dl,
+                           &prop_ret)
+        == Success)
+    {
+        if (prop_ret)
+        {
+            prop = ((Atom *)prop_ret)[0];
+            if (prop == atom_net[AtomNetWMWindowTypeDialog]
+                || prop == atom_net[AtomNetWMWindowTypeMenu]
+                || prop == atom_net[AtomNetWMWindowTypeSplash]
+                || prop == atom_net[AtomNetWMWindowTypeToolbar]
+                || prop == atom_net[AtomNetWMWindowTypeUtility])
+            {
+                c->floating = 1;
+                an = XGetAtomName(dpy, prop);
+                DPRINTF(__NAME_WM__": Client %p should be floating, says EWMH"
+                        " (has type %s)\n", (void *)c, an ? an : "(nil)");
+                if (an)
+                    XFree(an);
+            }
+            else
+                DPRINTF(__NAME_WM__": Client %p has EWMH type, but we don't "
+                        "know that type\n", (void *)c);
+        }
+        else
+            DPRINTF(__NAME_WM__": Client %p has EWMH type, but pointer NULL\n",
+                    (void *)c);
+    }
+    else
+        DPRINTF(__NAME_WM__": Client %p has no EWMH window type\n", (void *)c);
 
     manage_fit_on_monitor(c);
     manage_setsize(c);
@@ -2016,6 +2059,37 @@ setup_hints(void)
     atom_net[AtomNetWMStateFullscreen] = XInternAtom(dpy,
                                                      "_NET_WM_STATE_FULLSCREEN",
                                                      False);
+
+    atom_net[AtomNetWMWindowType] = XInternAtom(
+            dpy,
+            "_NET_WM_WINDOW_TYPE",
+            False
+    );
+    atom_net[AtomNetWMWindowTypeDialog] = XInternAtom(
+            dpy,
+            "_NET_WM_WINDOW_TYPE_DIALOG",
+            False
+    );
+    atom_net[AtomNetWMWindowTypeMenu] = XInternAtom(
+            dpy,
+            "_NET_WM_WINDOW_TYPE_MENU",
+            False
+    );
+    atom_net[AtomNetWMWindowTypeSplash] = XInternAtom(
+            dpy,
+            "_NET_WM_WINDOW_TYPE_SPLASH",
+            False
+    );
+    atom_net[AtomNetWMWindowTypeToolbar] = XInternAtom(
+            dpy,
+            "_NET_WM_WINDOW_TYPE_TOOLBAR",
+            False
+    );
+    atom_net[AtomNetWMWindowTypeUtility] = XInternAtom(
+            dpy,
+            "_NET_WM_WINDOW_TYPE_UTILITY",
+            False
+    );
 
     XChangeProperty(dpy, root, atom_net[AtomNetSupported], XA_ATOM, 32,
                     PropModeReplace, (unsigned char *)atom_net, AtomNetLAST);

@@ -1505,6 +1505,9 @@ manage(Window win, XWindowAttributes *wa)
     else
         DPRINTF(__NAME_WM__": Client %p has no EWMH window type\n", (void *)c);
 
+    DPRINTF(__NAME_WM__": Client %p lives on WS %d on monitor %d\n", (void *)c,
+            c->workspace, c->mon->index);
+
     manage_fit_on_monitor(c);
     manage_setsize(c);
 
@@ -1568,6 +1571,14 @@ manage_fit_on_monitor(struct Client *c)
         c->x = c->mon->wx + c->mon->ww - c->w - dgeo.right_width;
     if (c->y + c->h + dgeo.bottom_height >= c->mon->wy + c->mon->wh)
         c->y = c->mon->wy + c->mon->wh - c->h - dgeo.bottom_height;
+
+    /* When a window spawns "in the background", we put into hidden state */
+    if (c->workspace != c->mon->active_workspace)
+    {
+        DPRINTF(__NAME_WM__": Client %p spawned in background, hiding\n",
+                (void *)c);
+        manage_showhide(c, 1);
+    }
 }
 
 void
@@ -1735,6 +1746,13 @@ manage_raisefocus(struct Client *c)
 {
     size_t i;
     XWMHints *wmh;
+
+    if (c && !VIS_ON_SELMON(c))
+    {
+        DPRINTF(__NAME_WM__": Client %p should have been focused/raised, "
+                "but it's not currently visible. Ignoring.\n", (void *)c);
+        return;
+    }
 
     if (c)
     {

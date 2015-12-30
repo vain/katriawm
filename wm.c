@@ -105,6 +105,7 @@ enum AtomsWM
 static struct Client *clients = NULL, *selc = NULL;
 static struct Client *mouse_dc = NULL;
 static struct Monitor *monitors = NULL, *selmon = NULL;
+static int screen_w = -1, screen_h = -1;
 static int mouse_dx, mouse_dy, mouse_ocx, mouse_ocy, mouse_ocw, mouse_och;
 static Atom atom_net[AtomNetLAST], atom_wm[AtomWMLAST], atom_state, atom_ipc;
 static Cursor cursor_normal;
@@ -138,6 +139,7 @@ static XImage *decorations_to_ximg(char *data);
 static void draw_text(Drawable d, XftFont *xfont, XftColor *col, int x, int y,
                       int w, char *s);
 static void handle_clientmessage(XEvent *e);
+static void handle_configurenotify(XEvent *e);
 static void handle_configurerequest(XEvent *e);
 static void handle_destroynotify(XEvent *e);
 static void handle_expose(XEvent *e);
@@ -186,7 +188,9 @@ static void run(void);
 static void scan(void);
 static void setup(void);
 static void setup_hints(void);
+static void setup_monitors_read(void);
 static void shutdown(void);
+static void shutdown_monitors_free(void);
 static void unmanage(struct Client *c);
 static int xerror(Display *dpy, XErrorEvent *ee);
 
@@ -214,6 +218,7 @@ static void (*ipc_handler[IPCLast]) (char arg) = {
 
 static void (*x11_handler[LASTEvent]) (XEvent *) = {
     [ClientMessage] = handle_clientmessage,
+    [ConfigureNotify] = handle_configurenotify,
     [ConfigureRequest] = handle_configurerequest,
     [DestroyNotify] = handle_destroynotify,
     [Expose] = handle_expose,
@@ -677,6 +682,36 @@ handle_clientmessage(XEvent *e)
         if (an)
             XFree(an);
     }
+}
+
+void
+handle_configurenotify(XEvent *e)
+{
+    XConfigureEvent *ev = &e->xconfigure;
+    struct Client *c;
+
+    if (ev->window != root)
+        return;
+
+    /* screen_w and screen_h don't really matter to us. We use XRandR to
+     * detect monitors. However, sometimes there are multiple identical
+     * ConfigureNotify events. In order to avoid unnecessary
+     * reconfiguration on our part, we try to filter those. */
+    if (ev->width == screen_w && ev->height == screen_h)
+        return;
+
+    DPRINTF(__NAME_WM__": ConfigureNotify received, reconfiguring monitors \n");
+
+    shutdown_monitors_free();
+    setup_monitors_read();
+
+    for (c = clients; c; c = c->next)
+        c->mon = selmon;
+
+    screen_w = ev->width;
+    screen_h = ev->height;
+
+    manage_arrange(selmon);
 }
 
 void
@@ -1965,12 +2000,6 @@ run(void)
 void
 setup(void)
 {
-    XRRCrtcInfo *ci;
-    XRRScreenResources *sr;
-    struct Monitor *m;
-    int c, cinner;
-    int minx, minindex;
-    char *chosen = NULL;
     size_t i;
 
     if (!setlocale(LC_CTYPE, "") || !XSupportsLocale())
@@ -2015,61 +2044,15 @@ setup(void)
         DPRINTF(__NAME_WM__": Loaded color '%s'\n", dec_font_colors[i]);
     }
 
-    /* TODO handle monitor setup changes during runtime */
-
-    sr = XRRGetScreenResources(dpy, root);
-    assert(sr->ncrtc > 0);
-    chosen = calloc(sr->ncrtc, sizeof (char));
-    for (c = 0; c < sr->ncrtc; c++)
-    {
-        /* Always sort monitors by their X offset. */
-        minx = -1;
-        minindex = -1;
-        for (cinner = 0; cinner < sr->ncrtc; cinner++)
-        {
-            ci = XRRGetCrtcInfo(dpy, sr, sr->crtcs[cinner]);
-            if (ci == NULL || ci->noutput == 0 || ci->mode == None)
-                continue;
-
-            if (chosen[cinner] == 0 && (minx == -1 || ci->x < minx))
-            {
-                minx = ci->x;
-                minindex = cinner;
-            }
-        }
-        if (minindex == -1)
-            continue;
-
-        ci = XRRGetCrtcInfo(dpy, sr, sr->crtcs[minindex]);
-        chosen[minindex] = 1;
-
-        /* TODO Ignore mirrors. */
-
-        m = calloc(1, sizeof (struct Monitor));
-        if (selmon == NULL)
-            selmon = m;
-        m->wx = m->mx = ci->x;
-        m->wy = m->my = ci->y;
-        m->ww = m->mw = ci->width;
-        m->wh = m->mh = ci->height;
-
-        m->wx += wai.left;
-        m->ww -= wai.left + wai.right;
-        m->wy += wai.top;
-        m->wh -= wai.top + wai.bottom;
-
-        m->index = monitors_num++;
-        m->active_workspace = m->recent_workspace = 1;
-        m->next = monitors;
-        monitors = m;
-        DPRINTF(__NAME_WM__": monitor: %d %d %d %d\n",
-                ci->x, ci->y, ci->width, ci->height);
-    }
-    free(chosen);
-
+    setup_monitors_read();
     decorations_load();
 
     XSelectInput(dpy, root, 0
+                 /* RandR protocol says: "Clients MAY select for
+                  * ConfigureNotify on the root window to be
+                  * informed of screen changes." Selecting for
+                  * StructureNotifyMask creates such events. */
+                 | StructureNotifyMask
                  /* Manage creation and destruction of windows.
                   * SubstructureRedirectMask is also used by our IPC
                   * client and possibly EWMH clients, both sending us
@@ -2133,6 +2116,67 @@ setup_hints(void)
 }
 
 void
+setup_monitors_read(void)
+{
+    XRRCrtcInfo *ci;
+    XRRScreenResources *sr;
+    struct Monitor *m;
+    int c, cinner;
+    int minx, minindex;
+    char *chosen = NULL;
+
+    sr = XRRGetScreenResources(dpy, root);
+    assert(sr->ncrtc > 0);
+    chosen = calloc(sr->ncrtc, sizeof (char));
+    for (c = 0; c < sr->ncrtc; c++)
+    {
+        /* Always sort monitors by their X offset. */
+        minx = -1;
+        minindex = -1;
+        for (cinner = 0; cinner < sr->ncrtc; cinner++)
+        {
+            ci = XRRGetCrtcInfo(dpy, sr, sr->crtcs[cinner]);
+            if (ci == NULL || ci->noutput == 0 || ci->mode == None)
+                continue;
+
+            if (chosen[cinner] == 0 && (minx == -1 || ci->x < minx))
+            {
+                minx = ci->x;
+                minindex = cinner;
+            }
+        }
+        if (minindex == -1)
+            continue;
+
+        ci = XRRGetCrtcInfo(dpy, sr, sr->crtcs[minindex]);
+        chosen[minindex] = 1;
+
+        /* TODO Ignore mirrors. */
+
+        m = calloc(1, sizeof (struct Monitor));
+        if (selmon == NULL)
+            selmon = m;
+        m->wx = m->mx = ci->x;
+        m->wy = m->my = ci->y;
+        m->ww = m->mw = ci->width;
+        m->wh = m->mh = ci->height;
+
+        m->wx += wai.left;
+        m->ww -= wai.left + wai.right;
+        m->wy += wai.top;
+        m->wh -= wai.top + wai.bottom;
+
+        m->index = monitors_num++;
+        m->active_workspace = m->recent_workspace = 1;
+        m->next = monitors;
+        monitors = m;
+        DPRINTF(__NAME_WM__": monitor: %d %d %d %d\n",
+                ci->x, ci->y, ci->width, ci->height);
+    }
+    free(chosen);
+}
+
+void
 scan(void)
 {
     unsigned int i, num;
@@ -2192,6 +2236,23 @@ shutdown(void)
     XFreeCursor(dpy, cursor_normal);
 
     XCloseDisplay(dpy);
+}
+
+void
+shutdown_monitors_free(void)
+{
+    struct Monitor *m, *n;
+
+    m = monitors;
+    while (m)
+    {
+        n = m->next;
+        free(m);
+        m = n;
+    }
+    monitors = NULL;
+    monitors_num = 0;
+    selmon = NULL;
 }
 
 void

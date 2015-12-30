@@ -249,13 +249,15 @@ client_get_for_decoration(Window win, enum DecorationWindowLocation *which)
         {
             if (c->decwin[i] == win)
             {
-                *which = i;
+                if (which)
+                    *which = i;
                 return c;
             }
         }
     }
 
-    *which = DecWinLAST;
+    if (which)
+        *which = DecWinLAST;
     return NULL;
 }
 
@@ -1048,17 +1050,21 @@ ipc_client_move_mouse(char arg)
 
         mouse_dc = NULL;
 
-        if ((c = client_get_for_window(child)) && !c->fullscreen)
+        if ((c = client_get_for_window(child))
+            || (c = client_get_for_decoration(child, NULL)))
         {
-            mouse_dc = c;
-            mouse_dx = x;
-            mouse_dy = y;
-            mouse_ocx = c->x;
-            mouse_ocy = c->y;
-            mouse_ocw = c->w;
-            mouse_och = c->h;
+            if (!c->fullscreen)
+            {
+                mouse_dc = c;
+                mouse_dx = x;
+                mouse_dy = y;
+                mouse_ocx = c->x;
+                mouse_ocy = c->y;
+                mouse_ocw = c->w;
+                mouse_och = c->h;
 
-            manage_raisefocus(c);
+                manage_raisefocus(c);
+            }
         }
     }
     else if (arg == 1)
@@ -1099,17 +1105,21 @@ ipc_client_resize_mouse(char arg)
 
         mouse_dc = NULL;
 
-        if ((c = client_get_for_window(child)) && !c->fullscreen)
+        if ((c = client_get_for_window(child))
+            || (c = client_get_for_decoration(child, NULL)))
         {
-            mouse_dc = c;
-            mouse_dx = x;
-            mouse_dy = y;
-            mouse_ocx = c->x;
-            mouse_ocy = c->y;
-            mouse_ocw = c->w;
-            mouse_och = c->h;
+            if (!c->fullscreen)
+            {
+                mouse_dc = c;
+                mouse_dx = x;
+                mouse_dy = y;
+                mouse_ocx = c->x;
+                mouse_ocy = c->y;
+                mouse_ocw = c->w;
+                mouse_och = c->h;
 
-            manage_raisefocus(c);
+                manage_raisefocus(c);
+            }
         }
     }
     else if (arg == 1)

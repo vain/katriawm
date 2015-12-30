@@ -808,6 +808,12 @@ handle_propertynotify(XEvent *e)
                 XFree(wmh);
             }
         }
+        /* XXX ev->atom == XA_WM_TRANSIENT_FOR
+         * dwm indicates that there might be changes to the
+         * transient_for_hint after the window has been mapped. I'm not
+         * sure if we really need this. I couldn't find anything in
+         * ICCCM that indicates that this could be happening. Maybe
+         * broken clients behave this way, though. */
         else
         {
             an = XGetAtomName(dpy, ev->atom);

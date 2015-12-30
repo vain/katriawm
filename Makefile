@@ -64,8 +64,8 @@ theme.h:
 install: all installdirs
 	$(INSTALL_PROGRAM) $(__NAME_WM__) $(DESTDIR)$(bindir)/$(__NAME_WM__)
 	$(INSTALL_PROGRAM) $(__NAME_C__) $(DESTDIR)$(bindir)/$(__NAME_C__)
-	$(INSTALL_DATA) man1/$(__NAME_WM__).1 $(DESTDIR)$(man1dir)/$(__NAME_WM__).1
-	$(INSTALL_DATA) man1/$(__NAME_C__).1 $(DESTDIR)$(man1dir)/$(__NAME_C__).1
+	$(INSTALL_DATA) doc/man1/$(__NAME_WM__).1 $(DESTDIR)$(man1dir)/$(__NAME_WM__).1
+	$(INSTALL_DATA) doc/man1/$(__NAME_C__).1 $(DESTDIR)$(man1dir)/$(__NAME_C__).1
 
 installdirs:
 	mkdir -p $(DESTDIR)$(bindir) $(DESTDIR)$(man1dir)

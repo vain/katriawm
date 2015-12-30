@@ -646,13 +646,13 @@ handle_clientmessage(XEvent *e)
                         (void *)c);
 
                 /* 0 = remove, 1 = add, 2 = toggle */
-                if (cme->data.l[0] == 0
-                    || (cme->data.l[0] == 2 && c->fullscreen))
+                if (c->fullscreen && (cme->data.l[0] == 0
+                                      || cme->data.l[0] == 2))
                 {
                     manage_fullscreen(c, 0);
                 }
-                else if (cme->data.l[0] == 1
-                         || (cme->data.l[0] == 2 && !c->fullscreen))
+                else if (!c->fullscreen && (cme->data.l[0] == 1
+                                            || cme->data.l[0] == 2))
                 {
                     manage_fullscreen(c, 1);
                 }

@@ -141,6 +141,7 @@ static void handle_clientmessage(XEvent *e);
 static void handle_configurerequest(XEvent *e);
 static void handle_destroynotify(XEvent *e);
 static void handle_expose(XEvent *e);
+static void handle_focusin(XEvent *e);
 static void handle_maprequest(XEvent *e);
 static void handle_propertynotify(XEvent *e);
 static void handle_unmapnotify(XEvent *e);
@@ -216,6 +217,7 @@ static void (*x11_handler[LASTEvent]) (XEvent *) = {
     [ConfigureRequest] = handle_configurerequest,
     [DestroyNotify] = handle_destroynotify,
     [Expose] = handle_expose,
+    [FocusIn] = handle_focusin,
     [MapRequest] = handle_maprequest,
     [PropertyNotify] = handle_propertynotify,
     [UnmapNotify] = handle_unmapnotify,
@@ -742,6 +744,21 @@ handle_expose(XEvent *e)
         return;
 
     decorations_draw_for_client(c, which);
+}
+
+void
+handle_focusin(XEvent *e)
+{
+    XFocusChangeEvent *ev = &e->xfocus;
+
+    /* Some clients try to grab focus without being the selected window.
+     * We don't want that. Unfortunately, there is no way to *prevent*
+     * this. The only thing we can do, is to revert the focus to what we
+     * think should have it. */
+
+    if (selc && ev->window != selc->win)
+        XSetInputFocus(dpy, selc->win, RevertToPointerRoot, CurrentTime);
+        /* XXX maybe we also need to send WMTakeFocus */
 }
 
 void
@@ -1426,6 +1443,8 @@ manage(Window win, XWindowAttributes *wa)
 
     client_update_title(c);
     XSelectInput(dpy, c->win, 0
+                 /* FocusIn, FocusOut */
+                 | FocusChangeMask
                  /* All kinds of properties, window titles, EWMH, ... */
                  | PropertyChangeMask
                  );

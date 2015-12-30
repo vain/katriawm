@@ -2151,6 +2151,7 @@ shutdown(void)
             XFreePixmap(dpy, dec_tiles[i][j]);
 
     XDeleteProperty(dpy, root, atom_state);
+    XDeleteProperty(dpy, root, atom_net[AtomNetSupported]);
     XFreeCursor(dpy, cursor_normal);
 
     XCloseDisplay(dpy);

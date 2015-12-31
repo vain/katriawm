@@ -3,8 +3,7 @@
                                 ========
 
 
-A simple, themeable X11 window manager with title bars and virtual
-desktops.
+A simple, themeable X11 window manager with title bars and workspaces.
 
 
 Installation
@@ -33,7 +32,7 @@ To build the program and install it to /usr/local:
 Running
 -------
 
-katriawm comprises two components: The actual window manager and a
+katriawm comprises two core components: The actual window manager and a
 client to control the manager. First, you run the WM via your ~/.xinitrc
 or similar:
 
@@ -74,20 +73,34 @@ Customization
 
 You can configure some behaviour in a config.h at compile time.
 Additionally, you must provide a theme.h at compile time which contains
-window decorations, their layout, colors, and fonts.
+window decorations, their layout, colors, and fonts. Some themes are
+provided in the themes/ subdirectory.
 
 
 Background information
 ----------------------
 
-Katria is a character from the game Skyrim. You encounter her in a
-little side quest. The name not only sounds nice, but also reflects some
-properties of this program.
+ Credits
 
-In the game, it's just a side quest. No big story, no massive impact.
-Similarly, katriawm is just a simple window manager. It does not try to
-introduce new concepts that will revolutionize the world.
+  katriawm was written from scratch. However, as I've been using dwm for
+  several years, many parts of katriawm are heavily inspired by dwm and
+  some routines have indeed been copied.
 
-You help Katria find ancient ruins. Likewise, katriawm's default theme
-was inspired by the Motif Window Manager which was written in the
-early-1980s.
+  So, many thanks to dwm and all its creators!
+
+  http://dwm.suckless.org/
+
+
+ About the name
+
+  Katria is a character from the game Skyrim. You encounter her in a
+  little side quest. The name not only sounds nice, but also reflects some
+  properties of this program.
+
+  In the game, it's just a side quest. No big story, no massive impact.
+  Similarly, katriawm is just a simple window manager. It does not try to
+  introduce new concepts that will revolutionize the world.
+
+  You help Katria find ancient ruins. Likewise, katriawm's default theme
+  was inspired by the Motif Window Manager which was written in the
+  early-1980s.

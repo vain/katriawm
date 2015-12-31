@@ -1,5 +1,5 @@
 static char *dec_fonts[] = {
-    "Sans:pixelsize=12:style=bold:antialias=false",  /* FontTitle */
+    "Sans:pixelsize=10:style=bold:antialias=false",  /* FontTitle */
 };
 
 static char *dec_font_colors[] = {

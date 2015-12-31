@@ -557,7 +557,7 @@ decorations_tint(unsigned long color)
 
     for (i = 0; i < sizeof dec_img / sizeof dec_img[0]; i++)
     {
-        /* r = original_r * tint / 256, i.e. a pixel with value 255 in
+        /* r = original_r * tint / 255, i.e. a pixel with value 255 in
          * the source image will have the full tint color, pixels with
          * less than 255 will dim the tint color */
 
@@ -569,9 +569,9 @@ decorations_tint(unsigned long color)
         g *= tg;
         b *= tb;
 
-        r /= 256;
-        g /= 256;
-        b /= 256;
+        r /= 255;
+        g /= 255;
+        b /= 255;
 
         r = r > 255 ? 255 : r;
         g = g > 255 ? 255 : g;

@@ -715,7 +715,17 @@ handle_configurenotify(XEvent *e)
     screen_w = ev->width;
     screen_h = ev->height;
 
+    /* Hide everything, then unhide what should be visible on the
+     * default workspace */
+    for (c = clients; c; c = c->next)
+        manage_showhide(c, 1);
+
+    for (c = clients; c; c = c->next)
+        if (c->mon == selmon && c->workspace == selmon->active_workspace)
+            manage_showhide(c, 0);
+
     manage_arrange(selmon);
+    manage_raisefocus_first_matching();
 }
 
 void

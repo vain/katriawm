@@ -1780,7 +1780,7 @@ manage_fit_on_monitor(struct Client *c)
     if (c->y + c->h + dgeo.bottom_height + gap_pixels >= c->mon->wy + c->mon->wh)
         c->y = c->mon->wy + c->mon->wh - c->h - dgeo.bottom_height - gap_pixels;
 
-    /* When a window spawns "in the background", we put into hidden
+    /* When a window spawns "in the background", we put it into hidden
      * state. Caution: This function is also called by
      * ipc_client_switch_monitor_adjacent(), not only by manage(). */
     if (c->workspace != c->mon->active_workspace)

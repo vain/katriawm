@@ -1428,60 +1428,70 @@ void
 layout_tile(struct Monitor *m)
 {
     struct Client *c;
-    int i = 0;
-    int num_clients = 0, at_y, slave_h, master_w;
+    int i, num_clients, at_y, slave_h, master_w, master_n;
 
-    /* Note: at_y, slave_h and master_w all the *visible* sizes
+    /* Note: at_y, slave_h and master_w all count the *visible* sizes
      * including decorations */
 
+    i = 0;
+    num_clients = 0;
     at_y = m->wy;
 
     for (c = clients; c; c = c->next)
         if (VIS_ON_M(c, m) && !c->floating && !c->fullscreen)
             num_clients++;
 
+    master_w = m->ww / 2;
+    master_n = num_clients / 2;
+
     for (c = clients; c; c = c->next)
     {
         if (VIS_ON_M(c, m) && !c->floating && !c->fullscreen)
         {
-            if (i == 0)
+            if (num_clients == 1)
             {
-                if (num_clients == 1)
-                {
-                    /* Only one client total, just maximize it */
-                    c->x = c->mon->wx + dgeo.left_width;
-                    c->y = c->mon->wy + dgeo.top_height;
-                    c->w = c->mon->ww - dgeo.left_width - dgeo.right_width;
-                    c->h = c->mon->wh - dgeo.top_height - dgeo.bottom_height;
-                }
-                else
-                {
-                    /* More than one client, place first client in
-                     * master column */
-                    master_w = c->mon->ww / 2;
-
-                    c->x = c->mon->wx + dgeo.left_width;
-                    c->y = c->mon->wy + dgeo.top_height;
-                    c->w = master_w - dgeo.left_width - dgeo.right_width;
-                    c->h = c->mon->wh - dgeo.top_height - dgeo.bottom_height;
-                }
+                /* Only one client total, just maximize it */
+                c->x = m->wx + dgeo.left_width;
+                c->y = m->wy + dgeo.top_height;
+                c->w = m->ww - dgeo.left_width - dgeo.right_width;
+                c->h = m->wh - dgeo.top_height - dgeo.bottom_height;
             }
             else
             {
-                /* Slave column, use remaining width and accumulate y
-                 * offset */
-                c->x = c->mon->wx + master_w + dgeo.left_width;
-                c->y = at_y + dgeo.top_height;
-                c->w = (c->mon->ww - master_w) - dgeo.left_width
-                       - dgeo.right_width;
+                /* Reset at_y on column switch */
+                if (i == master_n)
+                    at_y = m->wy;
 
-                if (i == num_clients - 1)
-                    slave_h = c->mon->wh - at_y + m->wy;
+                if (i < master_n)
+                {
+                    c->x = m->wx;
+                    c->w = master_w;
+                }
                 else
-                    slave_h = c->mon->wh / (num_clients - 1);
+                {
+                    c->x = m->wx + master_w;
+                    c->w = m->ww - master_w;
+                }
+
+                c->x += dgeo.left_width;
+                c->w -= dgeo.left_width + dgeo.right_width;
+
+                c->y = at_y + dgeo.top_height;
+
+                /* Clients in the last row get the remaining space in
+                 * order to avoid rounding issues. Note that we need to
+                 * add m->wy here because that's where at_y started.
+                 *
+                 * Regular clients in the master or slave column get
+                 * their normal share of available space. */
+                if (i == num_clients - 1 || i == master_n - 1)
+                    slave_h = m->wh - at_y + m->wy;
+                else if (i < master_n)
+                    slave_h = m->wh / master_n;
+                else
+                    slave_h = m->wh / (num_clients - master_n);
 
                 c->h = slave_h - dgeo.top_height - dgeo.bottom_height;
-
                 at_y += slave_h;
             }
 

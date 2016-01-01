@@ -22,6 +22,7 @@
 #include "theme_types.h"
 #include "theme.h"
 
+#define WORKSPACE_DEFAULT 1
 #define WORKSPACE_MIN 0
 #define WORKSPACE_MAX 127
 #define WM_NAME_UNKNOWN "<name unknown>"
@@ -2363,7 +2364,7 @@ setup_monitors_read(void)
         m->wh -= wai.top + wai.bottom;
 
         m->index = monitors_num++;
-        m->active_workspace = m->recent_workspace = WORKSPACE_MIN;
+        m->active_workspace = m->recent_workspace = WORKSPACE_DEFAULT;
         m->next = monitors;
         monitors = m;
         DPRINTF(__NAME_WM__": monitor: %d %d %d %d\n",

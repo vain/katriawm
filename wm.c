@@ -185,7 +185,8 @@ static void manage_apply_size(struct Client *c);
 static void manage_arrange(struct Monitor *m);
 static void manage_client_gone(struct Client *c);
 static void manage_fit_on_monitor(struct Client *c);
-static void manage_focus_add(struct Client *c);
+static void manage_focus_add_head(struct Client *c);
+static void manage_focus_add_tail(struct Client *c);
 static void manage_focus_remove(struct Client *c);
 static void manage_focus_set(struct Client *c);
 static void manage_fullscreen(struct Client *c, char fs);
@@ -1592,6 +1593,11 @@ manage(Window win, XWindowAttributes *wa)
 
     client_save(c);
 
+    /* Whatever happens, we must add the client to the focus list, even
+     * if it is not visible. Otherwise, *_first_matching() can never
+     * find the client when the user finally wants to select it. */
+    manage_focus_add_tail(c);
+
     DPRINTF(__NAME_WM__": Managing window %lu (%p) at %dx%d+%d+%d\n",
             c->win, (void *)c, c->w, c->h, c->x, c->y);
 
@@ -1773,12 +1779,44 @@ manage_fit_on_monitor(struct Client *c)
 }
 
 void
-manage_focus_add(struct Client *new_selc)
+manage_focus_add_head(struct Client *new_selc)
 {
     /* Add client to head of the focus list */
 
     new_selc->focus_next = selc;
     selc = new_selc;
+}
+
+void
+manage_focus_add_tail(struct Client *nc)
+{
+    struct Client *c, *last = NULL;
+
+    /* Add client to tail of the focus list */
+
+    DPRINTF(__NAME_WM__": Focus list (pre tail-add): ");
+    for (c = selc; c; c = c->focus_next)
+        DPRINTF("%p (%p) ", (void *)c, (void *)(c ? c->focus_next : NULL));
+    DPRINTF("\n");
+
+    for (c = selc; c; c = c->focus_next)
+        last = c;
+
+    DPRINTF(__NAME_WM__": Last client in focus list: %p\n", (void *)c);
+
+    /* If this is the very first client added to the list, then we must
+     * also set selc */
+    if (last == NULL)
+        selc = nc;
+    else
+        last->focus_next = nc;
+
+    nc->focus_next = NULL;
+
+    DPRINTF(__NAME_WM__": Focus list (post tail-add): ");
+    for (c = selc; c; c = c->focus_next)
+        DPRINTF("%p (%p) ", (void *)c, (void *)(c ? c->focus_next : NULL));
+    DPRINTF("\n");
 }
 
 void
@@ -1829,7 +1867,7 @@ manage_focus_set(struct Client *new_selc)
             DPRINTF("%p (%p) ", (void *)c, (void *)(c ? c->focus_next : NULL));
         DPRINTF("\n");
 
-        manage_focus_add(new_selc);
+        manage_focus_add_head(new_selc);
     }
 
     DPRINTF(__NAME_WM__": Focus list: ");

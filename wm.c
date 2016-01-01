@@ -149,8 +149,8 @@ static void handle_maprequest(XEvent *e);
 static void handle_propertynotify(XEvent *e);
 static void handle_unmapnotify(XEvent *e);
 static void ipc_client_close(char arg);
-static void ipc_client_kill(char arg);
 static void ipc_client_fullscreen_toggle(char arg);
+static void ipc_client_kill(char arg);
 static void ipc_client_move_list(char arg);
 static void ipc_client_move_mouse(char arg);
 static void ipc_client_resize_mouse(char arg);
@@ -164,9 +164,9 @@ static void ipc_monitor_select_adjacent(char arg);
 static void ipc_monitor_select_recent(char arg);
 static void ipc_wm_quit(char arg);
 static void ipc_wm_restart(char arg);
+static void ipc_workspace_select(char arg);
 static void ipc_workspace_select_adjacent(char arg);
 static void ipc_workspace_select_recent(char arg);
-static void ipc_workspace_select(char arg);
 static void layout_float(struct Monitor *m);
 static void layout_monocle(struct Monitor *m);
 static void layout_tile(struct Monitor *m);
@@ -181,8 +181,8 @@ static void manage_focus_set(struct Client *c);
 static void manage_fullscreen(struct Client *c, char fs);
 static void manage_goto_monitor(int i);
 static void manage_goto_workspace(int i);
-static void manage_raisefocus_first_matching(void);
 static void manage_raisefocus(struct Client *c);
+static void manage_raisefocus_first_matching(void);
 static void manage_showhide(struct Client *c, char hide);
 static void manage_xfocus(struct Client *c);
 static void manage_xraise(struct Client *c);
@@ -214,9 +214,9 @@ static void (*ipc_handler[IPCLast]) (char arg) = {
     [IPCMonitorSelectRecent] = ipc_monitor_select_recent,
     [IPCWMQuit] = ipc_wm_quit,
     [IPCWMRestart] = ipc_wm_restart,
+    [IPCWorkspaceSelect] = ipc_workspace_select,
     [IPCWorkspaceSelectAdjacent] = ipc_workspace_select_adjacent,
     [IPCWorkspaceSelectRecent] = ipc_workspace_select_recent,
-    [IPCWorkspaceSelect] = ipc_workspace_select,
 };
 
 static void (*x11_handler[LASTEvent]) (XEvent *) = {
@@ -928,17 +928,6 @@ ipc_client_close(char arg)
 }
 
 void
-ipc_client_kill(char arg)
-{
-    (void)arg;
-
-    if (!SOMETHING_FOCUSED)
-        return;
-
-    XKillClient(dpy, selc->win);
-}
-
-void
 ipc_client_fullscreen_toggle(char arg)
 {
     (void)arg;
@@ -947,6 +936,17 @@ ipc_client_fullscreen_toggle(char arg)
         return;
 
     manage_fullscreen(selc, !selc->fullscreen);
+}
+
+void
+ipc_client_kill(char arg)
+{
+    (void)arg;
+
+    if (!SOMETHING_FOCUSED)
+        return;
+
+    XKillClient(dpy, selc->win);
 }
 
 void
@@ -1358,6 +1358,15 @@ ipc_wm_restart(char arg)
 }
 
 void
+ipc_workspace_select(char arg)
+{
+    int i;
+
+    i = arg;
+    manage_goto_workspace(i);
+}
+
+void
 ipc_workspace_select_adjacent(char arg)
 {
     int i;
@@ -1373,15 +1382,6 @@ ipc_workspace_select_recent(char arg)
     (void)arg;
 
     manage_goto_workspace(selmon->recent_workspace);
-}
-
-void
-ipc_workspace_select(char arg)
-{
-    int i;
-
-    i = arg;
-    manage_goto_workspace(i);
 }
 
 void

@@ -1336,8 +1336,8 @@ ipc_monitor_select_adjacent(char arg)
 
     i = selmon->index;
     i += arg;
-    i = i < 0 ? 0 : i;
-    i = i >= monitors_num ? monitors_num - 1 : i;
+    i %= monitors_num;
+    i = i < 0 ? monitors_num + i : i;
 
     manage_goto_monitor(i);
 }

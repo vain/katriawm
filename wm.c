@@ -755,6 +755,9 @@ handle_configurenotify(XEvent *e)
 
     manage_arrange(selmon);
     manage_raisefocus_first_matching();
+
+    XWarpPointer(dpy, None, root, 0, 0, 0, 0,
+                 selmon->wx + selmon->ww / 2, selmon->wy + selmon->wh / 2);
 }
 
 void
@@ -2426,6 +2429,9 @@ setup(void)
     /* Set default cursor on root window */
     cursor_normal = XCreateFontCursor(dpy, XC_left_ptr);
     XDefineCursor(dpy, root, cursor_normal);
+
+    XWarpPointer(dpy, None, root, 0, 0, 0, 0,
+                 selmon->wx + selmon->ww / 2, selmon->wy + selmon->wh / 2);
 
     publish_state();
 }

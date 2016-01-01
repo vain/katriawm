@@ -72,6 +72,15 @@ struct Monitor
     struct Monitor *next;
 };
 
+struct Rule
+{
+    char *class;
+    char *instance;
+    int workspace;
+    int monitor;
+    char floating;
+};
+
 struct WorkareaInsets
 {
     int top, left, right, bottom;
@@ -171,6 +180,7 @@ static void layout_float(struct Monitor *m);
 static void layout_monocle(struct Monitor *m);
 static void layout_tile(struct Monitor *m);
 static void manage(Window win, XWindowAttributes *wa);
+static void manage_apply_rules(struct Client *c);
 static void manage_apply_size(struct Client *c);
 static void manage_arrange(struct Monitor *m);
 static void manage_client_gone(struct Client *c);
@@ -1572,6 +1582,8 @@ manage(Window win, XWindowAttributes *wa)
     else
         DPRINTF(__NAME_WM__": Client %p has no EWMH window type\n", (void *)c);
 
+    manage_apply_rules(c);
+
     DPRINTF(__NAME_WM__": Client %p lives on WS %d on monitor %d\n", (void *)c,
             c->workspace, c->mon->index);
 
@@ -1587,6 +1599,72 @@ manage(Window win, XWindowAttributes *wa)
     XMapWindow(dpy, c->win);
     manage_arrange(c->mon);
     manage_raisefocus(c);
+}
+
+void
+manage_apply_rules(struct Client *c)
+{
+    size_t i;
+    XClassHint ch;
+    struct Monitor *m;
+    char match_class, match_instance;
+
+    DPRINTF(__NAME_WM__": rules: Testing client %p\n", (void *)c);
+
+    if (XGetClassHint(dpy, c->win, &ch))
+    {
+        DPRINTF(__NAME_WM__": rules: Looking at class hints of client %p\n",
+                (void *)c);
+
+        for (i = 0; i < sizeof rules / sizeof rules[0]; i++)
+        {
+            DPRINTF(__NAME_WM__": rules: Testing %lu for %p\n", i, (void *)c);
+            DPRINTF(__NAME_WM__": rules: '%s', '%s' vs. '%s', '%s'\n",
+                    ch.res_class, ch.res_name,
+                    rules[i].class, rules[i].instance);
+
+            /* A window matches a rule if class and instance match. If
+             * the rule's class or instance is NULL, then this field
+             * matches everything. */
+
+            match_class = 0;
+            if (rules[i].class == NULL)
+                match_class = 1;
+            else if (ch.res_class && strncmp(rules[i].class, ch.res_class,
+                                             strlen(rules[i].class)) == 0)
+                match_class = 1;
+
+            match_instance = 0;
+            if (rules[i].instance == NULL)
+                match_instance = 1;
+            else if (ch.res_name && strncmp(rules[i].instance, ch.res_name,
+                                            strlen(rules[i].instance)) == 0)
+                match_instance = 1;
+
+            if (match_class && match_instance)
+            {
+                DPRINTF(__NAME_WM__": rules: %lu matches for %p\n", i,
+                        (void *)c);
+
+                if (rules[i].workspace != -1)
+                    c->workspace = rules[i].workspace;
+
+                for (m = monitors; m; m = m->next)
+                    if (m->index == rules[i].monitor)
+                        c->mon = m;
+
+                if (rules[i].floating != -1)
+                    c->floating = rules[i].floating;
+
+                break;
+            }
+        }
+
+        if (ch.res_class)
+            XFree(ch.res_class);
+        if (ch.res_name)
+            XFree(ch.res_name);
+    }
 }
 
 void

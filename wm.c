@@ -191,6 +191,8 @@ static void run(void);
 static void scan(void);
 static void setup(void);
 static void setup_hints(void);
+static int setup_monitors_is_duplicate(XRRCrtcInfo *ci, char *chosen,
+                                       XRRScreenResources *sr);
 static void setup_monitors_read(void);
 static void shutdown(void);
 static void shutdown_monitors_free(void);
@@ -2163,6 +2165,26 @@ setup_hints(void)
     atom_wm[AtomWMDeleteWindow] = XInternAtom(dpy, "WM_DELETE_WINDOW", False);
 }
 
+int
+setup_monitors_is_duplicate(XRRCrtcInfo *ci, char *chosen, XRRScreenResources *sr)
+{
+    XRRCrtcInfo *o;
+    int i;
+
+    for (i = 0; i < sr->ncrtc; i++)
+    {
+        if (chosen[i])
+        {
+            o = XRRGetCrtcInfo(dpy, sr, sr->crtcs[i]);
+            if (o->x == ci->x && o->y == ci->y
+                && o->width == ci->width && o->height == ci->height)
+                return 1;
+        }
+    }
+
+    return 0;
+}
+
 void
 setup_monitors_read(void)
 {
@@ -2173,7 +2195,16 @@ setup_monitors_read(void)
     int minx, minindex;
     char *chosen = NULL;
 
+    /* Note: This method has O(n**3) with n being the number of CRTCs
+     * returned by XRandR. This *should* be okay because you usually
+     * only have a couple of CRTCs in your system.
+     *
+     * If this turns out to be too slow, then the number of X-calls can
+     * be reduced by simply doing them once and them caching them
+     * locally. */
+
     sr = XRRGetScreenResources(dpy, root);
+    DPRINTF(__NAME_WM__": XRandR reported %d monitors/CRTCs\n", sr->ncrtc);
     assert(sr->ncrtc > 0);
     chosen = calloc(sr->ncrtc, sizeof (char));
     for (c = 0; c < sr->ncrtc; c++)
@@ -2187,6 +2218,9 @@ setup_monitors_read(void)
             if (ci == NULL || ci->noutput == 0 || ci->mode == None)
                 continue;
 
+            if (setup_monitors_is_duplicate(ci, chosen, sr))
+                continue;
+
             if (chosen[cinner] == 0 && (minx == -1 || ci->x < minx))
             {
                 minx = ci->x;
@@ -2198,8 +2232,6 @@ setup_monitors_read(void)
 
         ci = XRRGetCrtcInfo(dpy, sr, sr->crtcs[minindex]);
         chosen[minindex] = 1;
-
-        /* TODO Ignore mirrors. */
 
         m = calloc(1, sizeof (struct Monitor));
         if (selmon == NULL)
@@ -2222,6 +2254,7 @@ setup_monitors_read(void)
                 ci->x, ci->y, ci->width, ci->height);
     }
     free(chosen);
+    DPRINTF(__NAME_WM__": We found %d usable monitors\n", monitors_num);
 }
 
 void

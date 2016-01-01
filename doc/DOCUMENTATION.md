@@ -54,6 +54,29 @@ a superset.
 
 [ewmh]: http://standards.freedesktop.org/wm-spec/wm-spec-latest.html#idm140200477421552
 
+XRandR support and Save Slots
+-----------------------------
+
+XRandR is the predominant way of configuring your monitors these days.
+Thus, katriawm supports XRandR and nothing else.
+
+When changes to the monitor layout occur (new monitor activated, old
+ones removed, monitors moved around, ...), katriawm moves all windows to
+the very first monitor it can find. It does in no way try to preserve
+your current layout.
+
+However, you can manually save the current layout at any given time. You
+can use up to ten save slots. Later on, you can of course restore a
+layout. Exemplary workflow:
+
+-   You connect your laptop to some external screens and work like that
+    for some hours.
+-   It’s time for a meeting.
+-   You save the current layout, disconnect your laptop from the
+    external screens, attend the meeting.
+-   When you return, you reconnect the laptop to your monitors. Finally,
+    you can restore your previous layout.
+
 
 Client List and Focus List
 ==========================

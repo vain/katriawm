@@ -1,7 +1,5 @@
 #!/bin/bash
 
-# TODO evaluate urgency hints once they're published
-
 # These variables depend on __NAME__, ipc.h, and WORKSPACE_MAX.
 atom_name=_KATRIA_STATE
 layout_names[0]='[]='

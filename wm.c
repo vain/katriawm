@@ -171,6 +171,7 @@ static void layout_float(struct Monitor *m);
 static void layout_monocle(struct Monitor *m);
 static void layout_tile(struct Monitor *m);
 static void manage(Window win, XWindowAttributes *wa);
+static void manage_apply_size(struct Client *c);
 static void manage_arrange(struct Monitor *m);
 static void manage_client_gone(struct Client *c);
 static void manage_fit_on_monitor(struct Client *c);
@@ -180,10 +181,9 @@ static void manage_focus_set(struct Client *c);
 static void manage_fullscreen(struct Client *c, char fs);
 static void manage_goto_monitor(int i);
 static void manage_goto_workspace(int i);
-static void manage_showhide(struct Client *c, char hide);
-static void manage_raisefocus(struct Client *c);
 static void manage_raisefocus_first_matching(void);
-static void manage_setsize(struct Client *c);
+static void manage_raisefocus(struct Client *c);
+static void manage_showhide(struct Client *c, char hide);
 static void manage_xfocus(struct Client *c);
 static void manage_xraise(struct Client *c);
 static void publish_state(void);
@@ -1090,7 +1090,7 @@ ipc_client_move_mouse(char arg)
             mouse_dc->x = mouse_ocx + dx;
             mouse_dc->y = mouse_ocy + dy;
 
-            manage_setsize(mouse_dc);
+            manage_apply_size(mouse_dc);
         }
     }
     else if (arg == 2)
@@ -1145,7 +1145,7 @@ ipc_client_resize_mouse(char arg)
             mouse_dc->w = mouse_ocw + dx;
             mouse_dc->h = mouse_och + dy;
 
-            manage_setsize(mouse_dc);
+            manage_apply_size(mouse_dc);
         }
     }
     else if (arg == 2)
@@ -1252,7 +1252,7 @@ ipc_client_switch_monitor_adjacent(char arg)
              * newly calculated size. This has no effect for
              * non-floaters because we call manage_arrange() afterwards. */
             manage_fit_on_monitor(selc);
-            manage_setsize(selc);
+            manage_apply_size(selc);
 
             manage_arrange(old_mon);
             manage_arrange(m);
@@ -1403,7 +1403,7 @@ layout_monocle(struct Monitor *m)
             c->y = c->mon->wy + dgeo.top_height;
             c->w = c->mon->ww - dgeo.left_width - dgeo.right_width;
             c->h = c->mon->wh - dgeo.top_height - dgeo.bottom_height;
-            manage_setsize(c);
+            manage_apply_size(c);
         }
     }
 }
@@ -1469,7 +1469,7 @@ layout_tile(struct Monitor *m)
                 at_y += slave_h;
             }
 
-            manage_setsize(c);
+            manage_apply_size(c);
             i++;
         }
     }
@@ -1574,7 +1574,7 @@ manage(Window win, XWindowAttributes *wa)
             c->workspace, c->mon->index);
 
     manage_fit_on_monitor(c);
-    manage_setsize(c);
+    manage_apply_size(c);
 
     client_save(c);
 
@@ -1585,6 +1585,47 @@ manage(Window win, XWindowAttributes *wa)
     XMapWindow(dpy, c->win);
     manage_arrange(c->mon);
     manage_raisefocus(c);
+}
+
+void
+manage_apply_size(struct Client *c)
+{
+    if (c->w <= 0)
+        c->w = 1;
+    if (c->h <= 0)
+        c->h = 1;
+
+    if (c->fullscreen && !c->hidden)
+    {
+        DPRINTF(__NAME_WM__": Fullscreening client %p\n", (void *)c);
+
+        XMoveResizeWindow(dpy, c->decwin[DecWinTop], -15, 0, 10, 10);
+        XMoveResizeWindow(dpy, c->decwin[DecWinLeft], -15, 0, 10, 10);
+        XMoveResizeWindow(dpy, c->decwin[DecWinRight], -15, 0, 10, 10);
+        XMoveResizeWindow(dpy, c->decwin[DecWinBottom], -15, 0, 10, 10);
+    }
+    else
+    {
+        DPRINTF(__NAME_WM__": Moving client %p to %d, %d with size %d, %d\n",
+                (void *)c, c->x, c->y, c->w, c->h);
+
+        XMoveResizeWindow(dpy, c->decwin[DecWinTop],
+                          c->x - dgeo.left_width, c->y - dgeo.top_height,
+                          dgeo.left_width + c->w + dgeo.right_width,
+                          dgeo.top_height);
+        XMoveResizeWindow(dpy, c->decwin[DecWinLeft],
+                          c->x - dgeo.left_width, c->y,
+                          dgeo.left_width, c->h);
+        XMoveResizeWindow(dpy, c->decwin[DecWinRight],
+                          c->x + c->w, c->y,
+                          dgeo.right_width, c->h);
+        XMoveResizeWindow(dpy, c->decwin[DecWinBottom],
+                          c->x - dgeo.left_width, c->y + c->h,
+                          dgeo.left_width + c->w + dgeo.right_width,
+                          dgeo.bottom_height);
+    }
+
+    XMoveResizeWindow(dpy, c->win, c->x, c->y, c->w, c->h);
 }
 
 void
@@ -1747,7 +1788,7 @@ manage_fullscreen(struct Client *c, char fs)
                         32, PropModeReplace,
                         (unsigned char *)&atom_net[AtomNetWMStateFullscreen], 1);
 
-        manage_setsize(c);
+        manage_apply_size(c);
     }
     else
     {
@@ -1762,7 +1803,7 @@ manage_fullscreen(struct Client *c, char fs)
          * property. Why is that? */
         XDeleteProperty(dpy, c->win, atom_net[AtomNetWMState]);
 
-        manage_setsize(c);
+        manage_apply_size(c);
     }
 }
 
@@ -1860,7 +1901,7 @@ manage_showhide(struct Client *c, char hide)
         c->x = -2 * c->w;
         c->hidden = 1;
 
-        manage_setsize(c);
+        manage_apply_size(c);
     }
 
     if (!hide)
@@ -1868,49 +1909,8 @@ manage_showhide(struct Client *c, char hide)
         c->x = c->nonhidden_x;
         c->hidden = 0;
 
-        manage_setsize(c);
+        manage_apply_size(c);
     }
-}
-
-void
-manage_setsize(struct Client *c)
-{
-    if (c->w <= 0)
-        c->w = 1;
-    if (c->h <= 0)
-        c->h = 1;
-
-    if (c->fullscreen && !c->hidden)
-    {
-        DPRINTF(__NAME_WM__": Fullscreening client %p\n", (void *)c);
-
-        XMoveResizeWindow(dpy, c->decwin[DecWinTop], -15, 0, 10, 10);
-        XMoveResizeWindow(dpy, c->decwin[DecWinLeft], -15, 0, 10, 10);
-        XMoveResizeWindow(dpy, c->decwin[DecWinRight], -15, 0, 10, 10);
-        XMoveResizeWindow(dpy, c->decwin[DecWinBottom], -15, 0, 10, 10);
-    }
-    else
-    {
-        DPRINTF(__NAME_WM__": Moving client %p to %d, %d with size %d, %d\n",
-                (void *)c, c->x, c->y, c->w, c->h);
-
-        XMoveResizeWindow(dpy, c->decwin[DecWinTop],
-                          c->x - dgeo.left_width, c->y - dgeo.top_height,
-                          dgeo.left_width + c->w + dgeo.right_width,
-                          dgeo.top_height);
-        XMoveResizeWindow(dpy, c->decwin[DecWinLeft],
-                          c->x - dgeo.left_width, c->y,
-                          dgeo.left_width, c->h);
-        XMoveResizeWindow(dpy, c->decwin[DecWinRight],
-                          c->x + c->w, c->y,
-                          dgeo.right_width, c->h);
-        XMoveResizeWindow(dpy, c->decwin[DecWinBottom],
-                          c->x - dgeo.left_width, c->y + c->h,
-                          dgeo.left_width + c->w + dgeo.right_width,
-                          dgeo.bottom_height);
-    }
-
-    XMoveResizeWindow(dpy, c->win, c->x, c->y, c->w, c->h);
 }
 
 void

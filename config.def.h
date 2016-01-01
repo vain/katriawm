@@ -16,5 +16,5 @@ struct Rule rules[] = {
      * Both monitor indexes and workspace indexes start at 0. */
 
     /* class   instance   workspace   monitor  floating */
-    {  NULL,   NULL,      -1,         -1,      -1 },
+    {  NULL,   NULL,      -1,         -1,      -1  },
 };

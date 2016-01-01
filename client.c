@@ -24,6 +24,7 @@ static struct Command c[] = {
      * i.e. set LANG=C. Order matters, ANY would also match "next", for
      * example. */
     {  {  "client_close",              ANY        },  IPCClientClose,                    NULL,     0          },
+    {  {  "client_floating_toggle",    ANY        },  IPCClientFloatingToggle,           NULL,     0          },
     {  {  "client_fullscreen_toggle",  ANY        },  IPCClientFullscreenToggle,         NULL,     0          },
     {  {  "client_kill",               ANY        },  IPCClientKill,                     NULL,     0          },
     {  {  "client_move_list",          "next"     },  IPCClientMoveList,                 fn_int,   +1         },

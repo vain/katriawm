@@ -159,6 +159,7 @@ static void handle_maprequest(XEvent *e);
 static void handle_propertynotify(XEvent *e);
 static void handle_unmapnotify(XEvent *e);
 static void ipc_client_close(char arg);
+static void ipc_client_floating_toggle(char arg);
 static void ipc_client_fullscreen_toggle(char arg);
 static void ipc_client_kill(char arg);
 static void ipc_client_move_list(char arg);
@@ -215,6 +216,7 @@ static int xerror(Display *dpy, XErrorEvent *ee);
 
 static void (*ipc_handler[IPCLast]) (char arg) = {
     [IPCClientClose] = ipc_client_close,
+    [IPCClientFloatingToggle] = ipc_client_floating_toggle,
     [IPCClientFullscreenToggle] = ipc_client_fullscreen_toggle,
     [IPCClientKill] = ipc_client_kill,
     [IPCClientMoveList] = ipc_client_move_list,
@@ -942,6 +944,18 @@ ipc_client_close(char arg)
     ev.xclient.data.l[0] = atom_wm[AtomWMDeleteWindow];
     ev.xclient.data.l[1] = CurrentTime;
     XSendEvent(dpy, selc->win, False, NoEventMask, &ev);
+}
+
+void
+ipc_client_floating_toggle(char arg)
+{
+    (void)arg;
+
+    if (!SOMETHING_FOCUSED)
+        return;
+
+    selc->floating = !selc->floating;
+    manage_arrange(selmon);
 }
 
 void

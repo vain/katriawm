@@ -5,6 +5,8 @@ struct WorkareaInsets wai = {
     .bottom = 20,
 };
 
+int gap_pixels = 5;
+
 struct Rule rules[] = {
     /* xprop(1):  WM_CLASS(STRING) = instance, class  */
 

@@ -181,6 +181,7 @@ static void layout_float(struct Monitor *m);
 static void layout_monocle(struct Monitor *m);
 static void layout_tile(struct Monitor *m);
 static void manage(Window win, XWindowAttributes *wa);
+static void manage_apply_gaps(struct Client *c);
 static void manage_apply_rules(struct Client *c);
 static void manage_apply_size(struct Client *c);
 static void manage_arrange(struct Monitor *m);
@@ -1417,6 +1418,7 @@ layout_monocle(struct Monitor *m)
             c->y = c->mon->wy + dgeo.top_height;
             c->w = c->mon->ww - dgeo.left_width - dgeo.right_width;
             c->h = c->mon->wh - dgeo.top_height - dgeo.bottom_height;
+            manage_apply_gaps(c);
             manage_apply_size(c);
         }
     }
@@ -1483,6 +1485,7 @@ layout_tile(struct Monitor *m)
                 at_y += slave_h;
             }
 
+            manage_apply_gaps(c);
             manage_apply_size(c);
             i++;
         }
@@ -1606,6 +1609,15 @@ manage(Window win, XWindowAttributes *wa)
     XMapWindow(dpy, c->win);
     manage_arrange(c->mon);
     manage_raisefocus(c);
+}
+
+void
+manage_apply_gaps(struct Client *c)
+{
+    c->x += gap_pixels;
+    c->y += gap_pixels;
+    c->w -= 2 * gap_pixels;
+    c->h -= 2 * gap_pixels;
 }
 
 void
@@ -1759,14 +1771,14 @@ manage_fit_on_monitor(struct Client *c)
     if (c->fullscreen)
         return;
 
-    if (c->x - dgeo.left_width < c->mon->wx)
-        c->x = c->mon->wx + dgeo.left_width;
-    if (c->y - dgeo.top_height < c->mon->wy)
-        c->y = c->mon->wy + dgeo.top_height;
-    if (c->x + c->w + dgeo.right_width >= c->mon->wx + c->mon->ww)
-        c->x = c->mon->wx + c->mon->ww - c->w - dgeo.right_width;
-    if (c->y + c->h + dgeo.bottom_height >= c->mon->wy + c->mon->wh)
-        c->y = c->mon->wy + c->mon->wh - c->h - dgeo.bottom_height;
+    if (c->x - dgeo.left_width - gap_pixels < c->mon->wx)
+        c->x = c->mon->wx + dgeo.left_width + gap_pixels;
+    if (c->y - dgeo.top_height - gap_pixels < c->mon->wy)
+        c->y = c->mon->wy + dgeo.top_height + gap_pixels;
+    if (c->x + c->w + dgeo.right_width + gap_pixels >= c->mon->wx + c->mon->ww)
+        c->x = c->mon->wx + c->mon->ww - c->w - dgeo.right_width - gap_pixels;
+    if (c->y + c->h + dgeo.bottom_height + gap_pixels >= c->mon->wy + c->mon->wh)
+        c->y = c->mon->wy + c->mon->wh - c->h - dgeo.bottom_height - gap_pixels;
 
     /* When a window spawns "in the background", we put into hidden
      * state. Caution: This function is also called by

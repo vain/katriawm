@@ -39,6 +39,7 @@ struct Client
     int x, y, w, h;
 
     int normal_x, normal_y, normal_w, normal_h;
+    int nonhidden_x;
     char floating;
     char fullscreen;
     char hidden;
@@ -745,20 +746,10 @@ handle_configurerequest(XEvent *e)
         ce.display = dpy;
         ce.event = c->win;
         ce.window = c->win;
-        if (c->fullscreen)
-        {
-            ce.x = c->mon->mx;
-            ce.y = c->mon->my;
-            ce.width = c->mon->mw;
-            ce.height = c->mon->mh;
-        }
-        else
-        {
-            ce.x = c->x;
-            ce.y = c->y;
-            ce.width = c->w;
-            ce.height = c->h;
-        }
+        ce.x = c->x;
+        ce.y = c->y;
+        ce.width = c->w;
+        ce.height = c->h;
         ce.border_width = 0;
         ce.above = None;
         ce.override_redirect = False;
@@ -1406,7 +1397,7 @@ layout_monocle(struct Monitor *m)
 
     for (c = clients; c; c = c->next)
     {
-        if (VIS_ON_M(c, m) && !c->floating)
+        if (VIS_ON_M(c, m) && !c->floating && !c->fullscreen)
         {
             c->x = c->mon->wx + dgeo.left_width;
             c->y = c->mon->wy + dgeo.top_height;
@@ -1430,12 +1421,12 @@ layout_tile(struct Monitor *m)
     at_y = m->wy;
 
     for (c = clients; c; c = c->next)
-        if (VIS_ON_M(c, m) && !c->floating)
+        if (VIS_ON_M(c, m) && !c->floating && !c->fullscreen)
             num_clients++;
 
     for (c = clients; c; c = c->next)
     {
-        if (VIS_ON_M(c, m) && !c->floating)
+        if (VIS_ON_M(c, m) && !c->floating && !c->fullscreen)
         {
             if (i == 0)
             {
@@ -1637,6 +1628,9 @@ manage_fit_on_monitor(struct Client *c)
         return;
     }
 
+    if (c->fullscreen)
+        return;
+
     if (c->x - dgeo.left_width < c->mon->wx)
         c->x = c->mon->wx + dgeo.left_width;
     if (c->y - dgeo.top_height < c->mon->wy)
@@ -1741,6 +1735,11 @@ manage_fullscreen(struct Client *c, char fs)
         c->normal_y = c->y;
         c->normal_w = c->w;
         c->normal_h = c->h;
+
+        c->x = c->mon->mx;
+        c->y = c->mon->my;
+        c->w = c->mon->mw;
+        c->h = c->mon->mh;
 
         /* We only support the state "fullscreen", so it's okay-ish to
          * only ever set this property (and kill all others) */
@@ -1857,9 +1856,7 @@ manage_showhide(struct Client *c, char hide)
 {
     if (hide && !c->hidden)
     {
-        if (!c->fullscreen)
-            c->normal_x = c->x;
-
+        c->nonhidden_x = c->x;
         c->x = -2 * c->w;
         c->hidden = 1;
 
@@ -1868,11 +1865,7 @@ manage_showhide(struct Client *c, char hide)
 
     if (!hide)
     {
-        if (!c->fullscreen)
-            c->x = c->normal_x;
-        else
-            c->x = c->mon->mx;
-
+        c->x = c->nonhidden_x;
         c->hidden = 0;
 
         manage_setsize(c);
@@ -1895,9 +1888,6 @@ manage_setsize(struct Client *c)
         XMoveResizeWindow(dpy, c->decwin[DecWinLeft], -15, 0, 10, 10);
         XMoveResizeWindow(dpy, c->decwin[DecWinRight], -15, 0, 10, 10);
         XMoveResizeWindow(dpy, c->decwin[DecWinBottom], -15, 0, 10, 10);
-
-        XMoveResizeWindow(dpy, c->win, c->mon->mx, c->mon->my,
-                          c->mon->mw, c->mon->mh);
     }
     else
     {
@@ -1918,9 +1908,9 @@ manage_setsize(struct Client *c)
                           c->x - dgeo.left_width, c->y + c->h,
                           dgeo.left_width + c->w + dgeo.right_width,
                           dgeo.bottom_height);
-
-        XMoveResizeWindow(dpy, c->win, c->x, c->y, c->w, c->h);
     }
+
+    XMoveResizeWindow(dpy, c->win, c->x, c->y, c->w, c->h);
 }
 
 void

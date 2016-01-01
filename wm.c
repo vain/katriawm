@@ -745,10 +745,20 @@ handle_configurerequest(XEvent *e)
         ce.display = dpy;
         ce.event = c->win;
         ce.window = c->win;
-        ce.x = c->x;
-        ce.y = c->y;
-        ce.width = c->w;
-        ce.height = c->h;
+        if (c->fullscreen)
+        {
+            ce.x = c->mon->mx;
+            ce.y = c->mon->my;
+            ce.width = c->mon->mw;
+            ce.height = c->mon->mh;
+        }
+        else
+        {
+            ce.x = c->x;
+            ce.y = c->y;
+            ce.width = c->w;
+            ce.height = c->h;
+        }
         ce.border_width = 0;
         ce.above = None;
         ce.override_redirect = False;

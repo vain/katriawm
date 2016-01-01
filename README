@@ -3,7 +3,17 @@
                                 ========
 
 
-A simple, themeable X11 window manager with title bars and workspaces.
+A rather simple X11 window manager. Core features:
+
+    - Tiling and floating
+    - Title bars and theming
+    - Per-screen workspaces, per-workspace layouts
+    - Application rules, layout save slots (during runtime)
+    - No sloppy focus
+    - Basic EWMH support
+    - Non-reparenting
+
+Looking for screenshots? https://www.uninformativ.de/desktop/
 
 
 Installation

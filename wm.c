@@ -1929,7 +1929,7 @@ manage_xfocus(struct Client *c)
         }
         publish_state();
 
-        XSetInputFocus(dpy, c->win, RevertToPointerRoot, CurrentTime);
+        XSetInputFocus(dpy, c->win, RevertToParent, CurrentTime);
     }
     else
         XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);

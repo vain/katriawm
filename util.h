@@ -4,7 +4,7 @@
 #ifdef DEBUG
 #define DPRINTF(...) fprintf(stderr, __VA_ARGS__)
 #else
-#define DPRINTF(...)
+#define DPRINTF(...) (void)0
 #endif
 
 #endif /* _WM_UTIL_H */

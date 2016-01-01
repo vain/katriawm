@@ -22,7 +22,7 @@
 #include "theme_types.h"
 #include "theme.h"
 
-#define WORKSPACE_MIN 1
+#define WORKSPACE_MIN 0
 #define WORKSPACE_MAX 127
 #define WM_NAME_UNKNOWN "<name unknown>"
 #define VIS_ON_SELMON(c) ((c)->mon == selmon && \
@@ -2114,8 +2114,8 @@ publish_state(void)
     {
         /* Calculate which byte to alter and then which bit to set */
 
-        byte_i = (c->workspace - 1) / 8;
-        shifts_needed = (c->workspace - 1) % 8;
+        byte_i = c->workspace / 8;
+        shifts_needed = c->workspace % 8;
 
         mask = 1;
         for (i = 0; i < shifts_needed; i++)
@@ -2363,7 +2363,7 @@ setup_monitors_read(void)
         m->wh -= wai.top + wai.bottom;
 
         m->index = monitors_num++;
-        m->active_workspace = m->recent_workspace = 1;
+        m->active_workspace = m->recent_workspace = WORKSPACE_MIN;
         m->next = monitors;
         monitors = m;
         DPRINTF(__NAME_WM__": monitor: %d %d %d %d\n",

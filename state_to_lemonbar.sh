@@ -52,7 +52,7 @@ do
         active_workspace=${info[1 + i]}
 
         offset_ws=$((1 + mn + mn + i * size_monws))
-        ws_num=1
+        ws_num=0
         for (( byte_i = 0; byte_i < size_monws; byte_i++ ))
         do
             byte=${info[offset_ws + byte_i]}

@@ -172,6 +172,7 @@ static void ipc_client_switch_workspace_adjacent(char arg);
 static void ipc_layout_set(char arg);
 static void ipc_monitor_select_adjacent(char arg);
 static void ipc_monitor_select_recent(char arg);
+static void ipc_urgency_clear_visible(char arg);
 static void ipc_wm_quit(char arg);
 static void ipc_wm_restart(char arg);
 static void ipc_workspace_select(char arg);
@@ -227,6 +228,7 @@ static void (*ipc_handler[IPCLast]) (char arg) = {
     [IPCLayoutSet] = ipc_layout_set,
     [IPCMonitorSelectAdjacent] = ipc_monitor_select_adjacent,
     [IPCMonitorSelectRecent] = ipc_monitor_select_recent,
+    [IPCUrgencyClearVisible] = ipc_urgency_clear_visible,
     [IPCWMQuit] = ipc_wm_quit,
     [IPCWMRestart] = ipc_wm_restart,
     [IPCWorkspaceSelect] = ipc_workspace_select,
@@ -1349,6 +1351,42 @@ ipc_monitor_select_recent(char arg)
     (void)arg;
 
     manage_goto_monitor(prevmon_i);
+}
+
+void
+ipc_urgency_clear_visible(char arg)
+{
+    struct Client *c;
+    struct Monitor *m;
+    XWMHints *wmh;
+    char visible;
+
+    (void)arg;
+
+    /* Reset urgency hint on all currently visible clients */
+
+    for (c = clients; c; c = c->next)
+    {
+        visible = 0;
+
+        for (m = monitors; !visible && m; m = m->next)
+            if (VIS_ON_M(c, m))
+                visible = 1;
+
+        if (visible)
+        {
+            c->urgent = 0;
+            if ((wmh = XGetWMHints(dpy, c->win)))
+            {
+                wmh->flags &= ~XUrgencyHint;
+                XSetWMHints(dpy, c->win, wmh);
+                XFree(wmh);
+            }
+            decorations_draw_for_client(c, DecWinLAST);
+        }
+    }
+
+    publish_state();
 }
 
 void

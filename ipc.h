@@ -37,6 +37,8 @@ enum IPCCommand
     IPCLayoutSet,
     IPCMonitorSelectAdjacent,
     IPCMonitorSelectRecent,
+    IPCPlacementStore,
+    IPCPlacementUse,
     IPCUrgencyClearVisible,
     IPCWMQuit,
     IPCWMRestart,

@@ -67,6 +67,21 @@ monitor. \fItarget\fP must be one of \fBleft\fP, \fBright\fP,
 \fBrecent\fP, which will navigate to the montior left/right of the
 currently active monitor or to the previously selected monitor.
 .TP
+\fBplacement_store\fP \fIslot\fP
+The current window placement can be saved in one of ten slots.
+\(lqPlacement\(lq means a client's workspace, a client's monitor, the
+currently active layouts, and the currently active workspace on each
+monitor. In other words, this operation does not save a client's pixel
+coordinates. \fIslot\fP must be an integer \fIi\fP where \fI0 <= i <=
+10\fP.
+.TP
+\fBplacement_use\fP \fIslot\fP
+Restores a previously saved layout. See \fBplacement_store\fP. Note that
+this is a \(lqbest effort\(rq operation. For example, if you store a
+layout that comprises three monitors, you can restore it later on even
+when there are only two monitors connected. Clients on the
+\(lqmissing\(rq monitor will be moved to the very first monitor.
+.TP
 \fBurgency_clear_visible\fP
 Clears the urgency hint on all currently visible windows.
 .TP

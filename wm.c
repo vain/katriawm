@@ -8,6 +8,7 @@
 #include <locale.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <X11/cursorfont.h>
 #include <X11/extensions/Xrandr.h>
@@ -22,6 +23,7 @@
 #include "theme_types.h"
 #include "theme.h"
 
+#define SAVE_SLOTS 10
 #define WORKSPACE_DEFAULT 1
 #define WORKSPACE_MIN 0
 #define WORKSPACE_MAX 127
@@ -50,6 +52,8 @@ struct Client
 
     struct Monitor *mon;
     int workspace;
+
+    int saved_monitor[SAVE_SLOTS], saved_workspace[SAVE_SLOTS];
 
     Window decwin[DecWinLAST];
 
@@ -116,6 +120,7 @@ enum AtomsWM
 static struct Client *clients = NULL, *selc = NULL;
 static struct Client *mouse_dc = NULL;
 static struct Monitor *monitors = NULL, *selmon = NULL;
+static struct Monitor *saved_monitor[SAVE_SLOTS] = { 0 };
 static int screen_w = -1, screen_h = -1;
 static int mouse_dx, mouse_dy, mouse_ocx, mouse_ocy, mouse_ocw, mouse_och;
 static Atom atom_net[AtomNetLAST], atom_wm[AtomWMLAST], atom_state, atom_ipc;
@@ -173,6 +178,8 @@ static void ipc_client_switch_workspace_adjacent(char arg);
 static void ipc_layout_set(char arg);
 static void ipc_monitor_select_adjacent(char arg);
 static void ipc_monitor_select_recent(char arg);
+static void ipc_placement_store(char arg);
+static void ipc_placement_use(char arg);
 static void ipc_urgency_clear_visible(char arg);
 static void ipc_wm_quit(char arg);
 static void ipc_wm_restart(char arg);
@@ -230,6 +237,8 @@ static void (*ipc_handler[IPCLast]) (char arg) = {
     [IPCLayoutSet] = ipc_layout_set,
     [IPCMonitorSelectAdjacent] = ipc_monitor_select_adjacent,
     [IPCMonitorSelectRecent] = ipc_monitor_select_recent,
+    [IPCPlacementStore] = ipc_placement_store,
+    [IPCPlacementUse] = ipc_placement_use,
     [IPCUrgencyClearVisible] = ipc_urgency_clear_visible,
     [IPCWMQuit] = ipc_wm_quit,
     [IPCWMRestart] = ipc_wm_restart,
@@ -1404,6 +1413,112 @@ ipc_urgency_clear_visible(char arg)
 }
 
 void
+ipc_placement_store(char arg)
+{
+    struct Client *c;
+    struct Monitor *m, *nm;
+    size_t ai;
+
+    /* Things to save:
+     *
+     * - Placement (workspace and monitor) of each client
+     * - Active workspace on each monitor
+     * - Active layouts on each monitor
+     *
+     * We store monitor info by copying the whole "monitors" list. */
+
+    if (arg < 0 || arg >= SAVE_SLOTS)
+    {
+        fprintf(stderr, __NAME_WM__": Slot %d is invalid\n", arg);
+        return;
+    }
+
+    ai = arg;
+
+    for (c = clients; c; c = c->next)
+    {
+        c->saved_monitor[ai] = c->mon->index;
+        c->saved_workspace[ai] = c->workspace;
+    }
+
+    if (saved_monitor[ai])
+    {
+        for (m = saved_monitor[ai]; m; /* nop */)
+        {
+            nm = m->next;
+            free(m);
+            m = nm;
+        }
+    }
+    saved_monitor[ai] = NULL;
+
+    /* Note: This results in saved_monitor[ai] being reversed */
+    for (m = monitors; m; m = m->next)
+    {
+        nm = calloc(1, sizeof (struct Monitor));
+        memcpy(nm, m, sizeof (struct Monitor));
+        nm->next = saved_monitor[ai];
+        saved_monitor[ai] = nm;
+    }
+}
+
+void
+ipc_placement_use(char arg)
+{
+    struct Client *c;
+    struct Monitor *m, *sm;
+    size_t ai;
+
+    /* The opposite of ipc_placement_store(): Restore clients'
+     * workspaces and monitors (if applicable), plus active workspaces
+     * and layouts on each monitor (if applicable) */
+
+    if (arg < 0 || arg >= SAVE_SLOTS)
+    {
+        fprintf(stderr, __NAME_WM__": Slot %d is invalid\n", arg);
+        return;
+    }
+
+    ai = arg;
+
+    /* Note that we do not explicitly check whether this slot has
+     * actually been filled. That's okay. Everything still works even if
+     * the slot is empty. */
+
+    for (c = clients; c; c = c->next)
+    {
+        for (m = monitors; m; m = m->next)
+            if (m->index == c->saved_monitor[ai])
+                c->mon = m;
+
+        if (c->saved_workspace[ai] >= WORKSPACE_MIN)
+            c->workspace = c->saved_workspace[ai];
+    }
+
+    for (m = monitors; m; m = m->next)
+    {
+        /* Try to find a saved monitor with matching index. It's okay if
+         * we can't find one. */
+
+        for (sm = saved_monitor[ai]; sm && sm->index != m->index; sm = sm->next)
+            /* nop */;
+
+        if (sm)
+        {
+            memcpy(m->layouts, sm->layouts, sizeof m->layouts);
+            m->active_workspace = sm->active_workspace;
+            m->recent_workspace = sm->recent_workspace;
+        }
+    }
+
+    for (m = monitors; m; m = m->next)
+    {
+        manage_goto_monitor(m->index);
+        manage_goto_workspace(m->active_workspace);
+    }
+}
+
+void
 ipc_wm_quit(char arg)
 {
     (void)arg;
@@ -1564,6 +1679,7 @@ manage(Window win, XWindowAttributes *wa)
     int di;
     unsigned long dl;
     char *an;
+    size_t i;
 
     if (client_get_for_window(win))
     {
@@ -1577,6 +1693,12 @@ manage(Window win, XWindowAttributes *wa)
     c->win = win;
     c->mon = selmon;
     c->workspace = selmon->active_workspace;
+
+    for (i = 0; i < SAVE_SLOTS; i++)
+    {
+        c->saved_monitor[i] = -1;
+        c->saved_workspace[i] = -1;
+    }
 
     c->x = wa->x;
     c->y = wa->y;

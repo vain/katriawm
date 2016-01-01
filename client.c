@@ -49,6 +49,8 @@ static struct Command c[] = {
     {  {  "monitor_select",            "left"     },  IPCMonitorSelectAdjacent,          fn_int,   -1         },
     {  {  "monitor_select",            "recent"   },  IPCMonitorSelectRecent,            NULL,     0          },
     {  {  "monitor_select",            "right"    },  IPCMonitorSelectAdjacent,          fn_int,   +1         },
+    {  {  "placement_store",           ANY        },  IPCPlacementStore,                 fn_atoi,  0          },
+    {  {  "placement_use",             ANY        },  IPCPlacementUse,                   fn_atoi,  0          },
     {  {  "urgency_clear_visible",     ANY        },  IPCUrgencyClearVisible,            NULL,     0          },
     {  {  "wm_quit",                   ANY        },  IPCWMQuit,                         NULL,     0          },
     {  {  "wm_restart",                ANY        },  IPCWMRestart,                      NULL,     0          },

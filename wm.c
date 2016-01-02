@@ -1499,7 +1499,8 @@ ipc_placement_use(char arg)
             if (m->index == c->saved_monitor[ai])
                 c->mon = m;
 
-        if (c->saved_workspace[ai] >= WORKSPACE_MIN)
+        if (c->saved_workspace[ai] >= WORKSPACE_MIN
+            && c->saved_workspace[ai] <= WORKSPACE_MAX)
             c->workspace = c->saved_workspace[ai];
     }
 

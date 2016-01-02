@@ -662,7 +662,7 @@ handle_clientmessage(XEvent *e)
     if (cme->message_type == atom_ipc)
     {
         cmd = (enum IPCCommand)cme->data.b[0];
-        arg = (char)cme->data.b[1];
+        arg = cme->data.b[1];
 
         if (ipc_handler[cmd])
             ipc_handler[cmd](arg);

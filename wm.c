@@ -1953,6 +1953,10 @@ manage_client_gone(struct Client *c)
 void
 manage_fit_on_monitor(struct Client *c)
 {
+    /* Fit monitor on its screen. Caution: This function is not only
+     * called by manage(), so don't make assumptions specific to
+     * manage(). */
+
     if (c->mon == NULL)
     {
         fprintf(stderr, __NAME_WM__": No monitor assigned to %lu (%p)\n",
@@ -1973,8 +1977,7 @@ manage_fit_on_monitor(struct Client *c)
         c->y = c->mon->wy + c->mon->wh - c->h - dgeo.bottom_height - gap_pixels;
 
     /* When a window spawns "in the background", we put it into hidden
-     * state. Caution: This function is also called by
-     * ipc_client_switch_monitor_adjacent(), not only by manage(). */
+     * state */
     if (c->workspace != c->mon->active_workspace)
     {
         DPRINTF(__NAME_WM__": Client %p spawned in background, hiding\n",

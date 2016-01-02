@@ -78,8 +78,8 @@ do
                         out+=" $ws_num "
                     fi
                 fi
-                ((ws_num++))
-                ((mask <<= 1))
+                (( ws_num++ ))
+                (( mask <<= 1 ))
             done
         done
     done

@@ -1,8 +1,5 @@
 It's bug hunting time!
 
-- Should dialog boxes be able to resize themselves? See GIMP's "resize
-  canvas" dialog
-
 
 --- Future ---
 
@@ -30,8 +27,8 @@ Next "sprint":
         - Active window
         - Client list on root window
     - ICCCM
-        - Aspect hints? I never use them, though
         - WM_NORMAL_HINTS
+            - should fix GIMP dialogs not resizing themselves
         - InputOnly, see WM_TAKE_FOCUS above
     - Learn about "withdrawn" state. How should the WM handle that? See
       also dwm's UnmapNotify handler.

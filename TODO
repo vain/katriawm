@@ -20,13 +20,13 @@ Next "sprint":
 
 Next "sprint":
 
-    - std types
+    - std types / go for C99
         - Images: We need 32 bit integers, not just integers!
     - EWMH
         - Active window
         - Client list on root window
         - Hints on decoration windows so stuff like compton can ignore
-          them
+          them (also set their WM_CLASS)
     - ICCCM
         - WM_NORMAL_HINTS
             - should fix GIMP dialogs not resizing themselves

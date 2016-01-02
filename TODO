@@ -1,0 +1,42 @@
+It's bug hunting time!
+
+- Should dialog boxes be able to resize themselves? See GIMP's "resize
+  canvas" dialog
+
+
+--- Future ---
+
+Next "sprint":
+
+    - WM_TAKE_FOCUS:
+        http://lists.suckless.org/dev/1104/7548.html#replies
+    - WM_STATE
+    - Don't switch workspace if it hasn't actually changed?
+    - Merge unmanage() and manage_client_gone()
+    - IPC
+        - Center floaters
+        - Maximize floaters
+        - Collect floaters, i.e. fit them to current monitor
+    - publish_state():
+        - Save slots
+        - Selected monitor
+
+Next "sprint":
+
+    - std types
+        - Images: We need 32 bit integers, not just integers!
+        - char vs. int in many places
+    - EWMH
+        - Active window
+        - Client list on root window
+    - ICCCM
+        - Aspect hints? I never use them, though
+        - WM_NORMAL_HINTS
+        - InputOnly, see WM_TAKE_FOCUS above
+    - Learn about "withdrawn" state. How should the WM handle that? See
+      also dwm's UnmapNotify handler.
+
+Next "sprint":
+
+    - Test on BSD
+    - Test on different architectures

@@ -664,7 +664,7 @@ handle_clientmessage(XEvent *e)
         cmd = (enum IPCCommand)cme->data.b[0];
         arg = cme->data.b[1];
 
-        if (ipc_handler[cmd])
+        if (cmd >= 0 && cmd < IPCLast && ipc_handler[cmd])
             ipc_handler[cmd](arg);
     }
     else if (cme->message_type == atom_net[AtomNetWMState])

@@ -701,7 +701,7 @@ handle_clientmessage(XEvent *e)
             {
                 an = XGetAtomName(dpy, cme->message_type);
                 DPRINTF(__NAME_WM__": Received EWMH message with unknown "
-                        "action: %lu, %s\n", cme->data.l[0], an ? an : "(nil)");
+                        "action: %lu, %s\n", cme->data.l[0], an);
                 if (an)
                     XFree(an);
             }
@@ -711,7 +711,7 @@ handle_clientmessage(XEvent *e)
     {
         an = XGetAtomName(dpy, cme->message_type);
         DPRINTF(__NAME_WM__": Received client message with unknown type: %lu"
-                ", %s\n", cme->message_type, an ? an : "(nil)");
+                ", %s\n", cme->message_type, an);
         if (an)
             XFree(an);
     }
@@ -918,7 +918,7 @@ handle_propertynotify(XEvent *e)
         {
             an = XGetAtomName(dpy, ev->atom);
             DPRINTF(__NAME_WM__": PropertyNotify about unhandled atom '%s'\n",
-                    an ? an : "(nil)");
+                    an);
             if (an)
                 XFree(an);
         }
@@ -1759,7 +1759,7 @@ manage(Window win, XWindowAttributes *wa)
                 c->floating = 1;
                 an = XGetAtomName(dpy, prop);
                 DPRINTF(__NAME_WM__": Client %p should be floating, says EWMH"
-                        " (has type %s)\n", (void *)c, an ? an : "(nil)");
+                        " (has type %s)\n", (void *)c, an);
                 if (an)
                     XFree(an);
             }

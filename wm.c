@@ -320,12 +320,12 @@ client_update_title(struct Client *c)
 
     if (!XGetTextProperty(dpy, c->win, &tp, atom_net[AtomNetWMName]))
     {
-        DPRINTF(__NAME_WM__": Title of client %p could not be read from EWMH\n",
-                (void *)c);
+        D fprintf(stderr, __NAME_WM__": Title of client %p could not be read "
+                  "from EWMH\n", (void *)c);
         if (!XGetTextProperty(dpy, c->win, &tp, XA_WM_NAME))
         {
-            DPRINTF(__NAME_WM__": Title of client %p could not be read from X\n",
-                    (void *)c);
+            D fprintf(stderr, __NAME_WM__": Title of client %p could not be "
+                      "read from X\n", (void *)c);
             strncpy(c->title, WM_NAME_UNKNOWN, sizeof c->title);
             return;
         }
@@ -340,8 +340,8 @@ client_update_title(struct Client *c)
     if (tp.encoding == XA_STRING)
     {
         strncpy(c->title, (char *)tp.value, sizeof c->title);
-        DPRINTF(__NAME_WM__": Title of client %p read as verbatim string\n",
-                (void *)c);
+        D fprintf(stderr, __NAME_WM__": Title of client %p read as verbatim "
+                  "string\n", (void *)c);
     }
     else
     {
@@ -352,8 +352,8 @@ client_update_title(struct Client *c)
         {
             strncpy(c->title, slist[0], sizeof c->title - 1);
             XFreeStringList(slist);
-            DPRINTF(__NAME_WM__": Title of client %p read as XmbText\n",
-                    (void *)c);
+            D fprintf(stderr, __NAME_WM__": Title of client %p read as "
+                      "XmbText\n", (void *)c);
         }
     }
 
@@ -361,8 +361,8 @@ client_update_title(struct Client *c)
 
     XFree(tp.value);
 
-    DPRINTF(__NAME_WM__": Title of client %p is now '%s'\n", (void *)c,
-            c->title);
+    D fprintf(stderr, __NAME_WM__": Title of client %p is now '%s'\n", (void *)c,
+              c->title);
 }
 
 void
@@ -671,8 +671,8 @@ handle_clientmessage(XEvent *e)
     {
         if ((c = client_get_for_window(cme->window)) == NULL)
         {
-            DPRINTF(__NAME_WM__": Window %lu sent EWMH message, but we don't "
-                    "manage this window\n", cme->window);
+            D fprintf(stderr, __NAME_WM__": Window %lu sent EWMH message, but "
+                      "we don't manage this window\n", cme->window);
         }
 
         if (c)
@@ -682,8 +682,8 @@ handle_clientmessage(XEvent *e)
             if ((Atom)cme->data.l[1] == atom_net[AtomNetWMStateFullscreen]
                 || (Atom)cme->data.l[2] == atom_net[AtomNetWMStateFullscreen])
             {
-                DPRINTF(__NAME_WM__": Client %p requested EWMH fullscreen\n",
-                        (void *)c);
+                D fprintf(stderr, __NAME_WM__": Client %p requested EWMH "
+                          "fullscreen\n", (void *)c);
 
                 /* 0 = remove, 1 = add, 2 = toggle */
                 if (c->fullscreen && (cme->data.l[0] == 0
@@ -700,8 +700,8 @@ handle_clientmessage(XEvent *e)
             else
             {
                 an = XGetAtomName(dpy, cme->message_type);
-                DPRINTF(__NAME_WM__": Received EWMH message with unknown "
-                        "action: %lu, %s\n", cme->data.l[0], an);
+                D fprintf(stderr, __NAME_WM__": Received EWMH message with "
+                          "unknown action: %lu, %s\n", cme->data.l[0], an);
                 if (an)
                     XFree(an);
             }
@@ -710,8 +710,8 @@ handle_clientmessage(XEvent *e)
     else
     {
         an = XGetAtomName(dpy, cme->message_type);
-        DPRINTF(__NAME_WM__": Received client message with unknown type: %lu"
-                ", %s\n", cme->message_type, an);
+        D fprintf(stderr, __NAME_WM__": Received client message with "
+                  "unknown type: %lu, %s\n", cme->message_type, an);
         if (an)
             XFree(an);
     }
@@ -733,7 +733,8 @@ handle_configurenotify(XEvent *e)
     if (ev->width == screen_w && ev->height == screen_h)
         return;
 
-    DPRINTF(__NAME_WM__": ConfigureNotify received, reconfiguring monitors \n");
+    D fprintf(stderr, __NAME_WM__": ConfigureNotify received, reconfiguring "
+              "monitors \n");
 
     shutdown_monitors_free();
     setup_monitors_read();
@@ -885,15 +886,15 @@ handle_propertynotify(XEvent *e)
                          * selected window shall have no effect */
                         wmh->flags &= ~XUrgencyHint;
                         XSetWMHints(dpy, c->win, wmh);
-                        DPRINTF(__NAME_WM__": Urgency hint on client %p "
-                                "ignored because selected\n", (void *)c);
+                        D fprintf(stderr, __NAME_WM__": Urgency hint on client "
+                                  "%p ignored because selected\n", (void *)c);
                     }
                     else
                     {
                         c->urgent = 1;
                         decorations_draw_for_client(c, DecWinLAST);
-                        DPRINTF(__NAME_WM__": Urgency hint on client %p set\n",
-                                (void *)c);
+                        D fprintf(stderr, __NAME_WM__": Urgency hint on client "
+                                  "%p set\n", (void *)c);
                     }
                 }
                 else if (c->urgent)
@@ -901,8 +902,8 @@ handle_propertynotify(XEvent *e)
                     /* Urgency hint has been cleared by the application */
                     c->urgent = 0;
                     decorations_draw_for_client(c, DecWinLAST);
-                    DPRINTF(__NAME_WM__": Urgency hint on client %p cleared\n",
-                            (void *)c);
+                    D fprintf(stderr, __NAME_WM__": Urgency hint on client %p "
+                              "cleared\n", (void *)c);
                 }
                 publish_state();
                 XFree(wmh);
@@ -917,8 +918,8 @@ handle_propertynotify(XEvent *e)
         else
         {
             an = XGetAtomName(dpy, ev->atom);
-            DPRINTF(__NAME_WM__": PropertyNotify about unhandled atom '%s'\n",
-                    an);
+            D fprintf(stderr, __NAME_WM__": PropertyNotify about unhandled "
+                      "atom '%s'\n", an);
             if (an)
                 XFree(an);
         }
@@ -1042,7 +1043,8 @@ ipc_client_move_list(char arg)
         }
     }
 
-    DPRINTF(__NAME_WM__": Found partners: %p, %p\n", (void *)one, (void *)two);
+    D fprintf(stderr, __NAME_WM__": Found partners: %p, %p\n",
+              (void *)one, (void *)two);
 
     if (one == NULL || two == NULL)
         return;
@@ -1099,8 +1101,8 @@ ipc_client_move_mouse(char arg)
 
     if (arg == 0)
     {
-        DPRINTF(__NAME_WM__": Mouse move: down at %d, %d over %lu\n",
-                x, y, child);
+        D fprintf(stderr, __NAME_WM__": Mouse move: down at %d, %d over %lu\n",
+                  x, y, child);
 
         mouse_dc = NULL;
 
@@ -1123,7 +1125,7 @@ ipc_client_move_mouse(char arg)
     }
     else if (arg == 1)
     {
-        DPRINTF(__NAME_WM__": Mouse move: motion to %d, %d\n", x, y);
+        D fprintf(stderr, __NAME_WM__": Mouse move: motion to %d, %d\n", x, y);
 
         if (mouse_dc)
         {
@@ -1152,8 +1154,8 @@ ipc_client_resize_mouse(char arg)
 
     if (arg == 0)
     {
-        DPRINTF( __NAME_WM__": Mouse resize: down at %d, %d over %lu\n",
-                x, y, child);
+        D fprintf(stderr,  __NAME_WM__": Mouse resize: down at %d, %d over %lu\n",
+                  x, y, child);
 
         mouse_dc = NULL;
 
@@ -1176,7 +1178,7 @@ ipc_client_resize_mouse(char arg)
     }
     else if (arg == 1)
     {
-        DPRINTF(__NAME_WM__": Mouse resize: motion to %d, %d\n", x, y);
+        D fprintf(stderr, __NAME_WM__": Mouse resize: motion to %d, %d\n", x, y);
 
         if (mouse_dc)
         {
@@ -1532,7 +1534,7 @@ ipc_wm_quit(char arg)
 
     running = 0;
 
-    DPRINTF(__NAME_WM__": Quitting\n");
+    D fprintf(stderr, __NAME_WM__": Quitting\n");
 }
 
 void
@@ -1543,7 +1545,7 @@ ipc_wm_restart(char arg)
     restart = 1;
     running = 0;
 
-    DPRINTF(__NAME_WM__": Quitting for restart\n");
+    D fprintf(stderr, __NAME_WM__": Quitting for restart\n");
 }
 
 void
@@ -1762,26 +1764,27 @@ manage(Window win, XWindowAttributes *wa)
             {
                 c->floating = 1;
                 an = XGetAtomName(dpy, prop);
-                DPRINTF(__NAME_WM__": Client %p should be floating, says EWMH"
-                        " (has type %s)\n", (void *)c, an);
+                D fprintf(stderr, __NAME_WM__": Client %p should be floating, "
+                          "says EWMH (has type %s)\n", (void *)c, an);
                 if (an)
                     XFree(an);
             }
             else
-                DPRINTF(__NAME_WM__": Client %p has EWMH type, but we don't "
-                        "know that type\n", (void *)c);
+                D fprintf(stderr, __NAME_WM__": Client %p has EWMH type, but "
+                          "we don't know that type\n", (void *)c);
         }
         else
-            DPRINTF(__NAME_WM__": Client %p has EWMH type, but pointer NULL\n",
-                    (void *)c);
+            D fprintf(stderr, __NAME_WM__": Client %p has EWMH type, but "
+                      "pointer NULL\n", (void *)c);
     }
     else
-        DPRINTF(__NAME_WM__": Client %p has no EWMH window type\n", (void *)c);
+        D fprintf(stderr, __NAME_WM__": Client %p has no EWMH window type\n",
+                  (void *)c);
 
     manage_apply_rules(c);
 
-    DPRINTF(__NAME_WM__": Client %p lives on WS %d on monitor %d\n", (void *)c,
-            c->workspace, c->mon->index);
+    D fprintf(stderr, __NAME_WM__": Client %p lives on WS %d on monitor %d\n",
+              (void *)c, c->workspace, c->mon->index);
 
     manage_fit_on_monitor(c);
     manage_apply_size(c);
@@ -1793,8 +1796,8 @@ manage(Window win, XWindowAttributes *wa)
      * find the client when the user finally wants to select it. */
     manage_focus_add_tail(c);
 
-    DPRINTF(__NAME_WM__": Managing window %lu (%p) at %dx%d+%d+%d\n",
-            c->win, (void *)c, c->w, c->h, c->x, c->y);
+    D fprintf(stderr, __NAME_WM__": Managing window %lu (%p) at %dx%d+%d+%d\n",
+              c->win, (void *)c, c->w, c->h, c->x, c->y);
 
     manage_arrange(c->mon);
     XMapWindow(dpy, c->win);
@@ -1818,19 +1821,20 @@ manage_apply_rules(struct Client *c)
     struct Monitor *m;
     char match_class, match_instance;
 
-    DPRINTF(__NAME_WM__": rules: Testing client %p\n", (void *)c);
+    D fprintf(stderr, __NAME_WM__": rules: Testing client %p\n", (void *)c);
 
     if (XGetClassHint(dpy, c->win, &ch))
     {
-        DPRINTF(__NAME_WM__": rules: Looking at class hints of client %p\n",
-                (void *)c);
+        D fprintf(stderr, __NAME_WM__": rules: Looking at class hints of "
+                  "client %p\n", (void *)c);
 
         for (i = 0; i < sizeof rules / sizeof rules[0]; i++)
         {
-            DPRINTF(__NAME_WM__": rules: Testing %lu for %p\n", i, (void *)c);
-            DPRINTF(__NAME_WM__": rules: '%s', '%s' vs. '%s', '%s'\n",
-                    ch.res_class, ch.res_name,
-                    rules[i].class, rules[i].instance);
+            D fprintf(stderr, __NAME_WM__": rules: Testing %lu for %p\n", i,
+                      (void *)c);
+            D fprintf(stderr, __NAME_WM__": rules: '%s', '%s' vs. '%s', '%s'\n",
+                      ch.res_class, ch.res_name,
+                      rules[i].class, rules[i].instance);
 
             /* A window matches a rule if class and instance match. If
              * the rule's class or instance is NULL, then this field
@@ -1852,8 +1856,8 @@ manage_apply_rules(struct Client *c)
 
             if (match_class && match_instance)
             {
-                DPRINTF(__NAME_WM__": rules: %lu matches for %p\n", i,
-                        (void *)c);
+                D fprintf(stderr, __NAME_WM__": rules: %lu matches for %p\n", i,
+                          (void *)c);
 
                 if (rules[i].workspace != -1)
                     c->workspace = rules[i].workspace;
@@ -1886,7 +1890,7 @@ manage_apply_size(struct Client *c)
 
     if (c->fullscreen && !c->hidden)
     {
-        DPRINTF(__NAME_WM__": Fullscreening client %p\n", (void *)c);
+        D fprintf(stderr, __NAME_WM__": Fullscreening client %p\n", (void *)c);
 
         XMoveResizeWindow(dpy, c->decwin[DecWinTop], -15, 0, 10, 10);
         XMoveResizeWindow(dpy, c->decwin[DecWinLeft], -15, 0, 10, 10);
@@ -1895,8 +1899,8 @@ manage_apply_size(struct Client *c)
     }
     else
     {
-        DPRINTF(__NAME_WM__": Moving client %p to %d, %d with size %d, %d\n",
-                (void *)c, c->x, c->y, c->w, c->h);
+        D fprintf(stderr, __NAME_WM__": Moving client %p to %d, %d with size "
+                  "%d, %d\n", (void *)c, c->x, c->y, c->w, c->h);
 
         XMoveResizeWindow(dpy, c->decwin[DecWinTop],
                           c->x - dgeo.left_width, c->y - dgeo.top_height,
@@ -1920,7 +1924,7 @@ manage_apply_size(struct Client *c)
 void
 manage_arrange(struct Monitor *m)
 {
-    DPRINTF(__NAME_WM__": Arranging monitor %p\n", (void *)m);
+    D fprintf(stderr, __NAME_WM__": Arranging monitor %p\n", (void *)m);
     layouts[m->layouts[m->active_workspace]](m);
 
     publish_state();
@@ -1931,7 +1935,7 @@ manage_client_gone(struct Client *c)
 {
     struct Client *old_selc;
 
-    DPRINTF(__NAME_WM__": Client %p gone\n", (void *)c);
+    D fprintf(stderr, __NAME_WM__": Client %p gone\n", (void *)c);
 
     old_selc = selc;
 
@@ -1978,8 +1982,8 @@ manage_fit_on_monitor(struct Client *c)
      * state */
     if (c->workspace != c->mon->active_workspace)
     {
-        DPRINTF(__NAME_WM__": Client %p spawned in background, hiding\n",
-                (void *)c);
+        D fprintf(stderr, __NAME_WM__": Client %p spawned in background, hiding\n",
+                  (void *)c);
         manage_showhide(c, 1);
     }
 }
@@ -2000,15 +2004,20 @@ manage_focus_add_tail(struct Client *nc)
 
     /* Add client to tail of the focus list */
 
-    DPRINTF(__NAME_WM__": Focus list (pre tail-add): ");
-    for (c = selc; c; c = c->focus_next)
-        DPRINTF("%p (%p) ", (void *)c, (void *)(c ? c->focus_next : NULL));
-    DPRINTF("\n");
+    D
+    {
+        fprintf(stderr, __NAME_WM__": Focus list (pre tail-add): ");
+        for (c = selc; c; c = c->focus_next)
+            fprintf(stderr, "%p (%p) ", (void *)c,
+                    (void *)(c ? c->focus_next : NULL));
+        fprintf(stderr, "\n");
+    }
 
     for (c = selc; c; c = c->focus_next)
         last = c;
 
-    DPRINTF(__NAME_WM__": Last client in focus list: %p\n", (void *)c);
+    D fprintf(stderr, __NAME_WM__": Last client in focus list: %p\n",
+              (void *)c);
 
     /* If this is the very first client added to the list, then we must
      * also set selc */
@@ -2019,10 +2028,14 @@ manage_focus_add_tail(struct Client *nc)
 
     nc->focus_next = NULL;
 
-    DPRINTF(__NAME_WM__": Focus list (post tail-add): ");
-    for (c = selc; c; c = c->focus_next)
-        DPRINTF("%p (%p) ", (void *)c, (void *)(c ? c->focus_next : NULL));
-    DPRINTF("\n");
+    D
+    {
+        fprintf(stderr, __NAME_WM__": Focus list (post tail-add): ");
+        for (c = selc; c; c = c->focus_next)
+            fprintf(stderr, "%p (%p) ", (void *)c,
+                    (void *)(c ? c->focus_next : NULL));
+        fprintf(stderr, "\n");
+    }
 }
 
 void
@@ -2049,10 +2062,10 @@ manage_focus_set(struct Client *new_selc)
 {
     struct Client *c, *old_selc;
 
-    DPRINTF(__NAME_WM__": selc before list manipulation: %p (%p)\n",
-            (void *)selc, (void *)(selc ? selc->focus_next : NULL));
-    DPRINTF(__NAME_WM__": new_selc before list manipulation: %p (%p)\n",
-            (void *)new_selc, (void *)(new_selc ? new_selc->focus_next : NULL));
+    D fprintf(stderr, __NAME_WM__": selc before list manipulation: %p (%p)\n",
+              (void *)selc, (void *)(selc ? selc->focus_next : NULL));
+    D fprintf(stderr, __NAME_WM__": new_selc before list manipulation: %p (%p)\n",
+              (void *)new_selc, (void *)(new_selc ? new_selc->focus_next : NULL));
 
     old_selc = selc;
 
@@ -2061,25 +2074,37 @@ manage_focus_set(struct Client *new_selc)
         /* Move newly selected client to head of focus list, thus
          * changing selc */
 
-        DPRINTF(__NAME_WM__": Focus list (pre remove): ");
-        for (c = selc; c; c = c->focus_next)
-            DPRINTF("%p (%p) ", (void *)c, (void *)(c ? c->focus_next : NULL));
-        DPRINTF("\n");
+        D
+        {
+            fprintf(stderr, __NAME_WM__": Focus list (pre remove): ");
+            for (c = selc; c; c = c->focus_next)
+                fprintf(stderr, "%p (%p) ", (void *)c,
+                        (void *)(c ? c->focus_next : NULL));
+            fprintf(stderr, "\n");
+        }
 
         manage_focus_remove(new_selc);
 
-        DPRINTF(__NAME_WM__": Focus list (pre add): ");
-        for (c = selc; c; c = c->focus_next)
-            DPRINTF("%p (%p) ", (void *)c, (void *)(c ? c->focus_next : NULL));
-        DPRINTF("\n");
+        D
+        {
+            fprintf(stderr, __NAME_WM__": Focus list (pre add): ");
+            for (c = selc; c; c = c->focus_next)
+                fprintf(stderr, "%p (%p) ", (void *)c,
+                        (void *)(c ? c->focus_next : NULL));
+            fprintf(stderr, "\n");
+        }
 
         manage_focus_add_head(new_selc);
     }
 
-    DPRINTF(__NAME_WM__": Focus list: ");
-    for (c = selc; c; c = c->focus_next)
-        DPRINTF("%p (%p) ", (void *)c, (void *)(c ? c->focus_next : NULL));
-    DPRINTF("\n");
+    D
+    {
+        fprintf(stderr, __NAME_WM__": Focus list: ");
+        for (c = selc; c; c = c->focus_next)
+            fprintf(stderr, "%p (%p) ", (void *)c,
+                    (void *)(c ? c->focus_next : NULL));
+        fprintf(stderr, "\n");
+    }
 
     /* Unfocus previous client, focus new client */
     if (old_selc)
@@ -2164,7 +2189,7 @@ manage_goto_workspace(int i)
     i = i < WORKSPACE_MIN ? WORKSPACE_MIN : i;
     i = i > WORKSPACE_MAX ? WORKSPACE_MAX : i;
 
-    DPRINTF(__NAME_WM__": Changing to workspace %d\n", i);
+    D fprintf(stderr, __NAME_WM__": Changing to workspace %d\n", i);
 
     for (c = clients; c; c = c->next)
         if (c->mon == selmon)
@@ -2186,8 +2211,9 @@ manage_raisefocus(struct Client *c)
 {
     if (c && !VIS_ON_SELMON(c))
     {
-        DPRINTF(__NAME_WM__": Client %p should have been focused/raised, "
-                "but it's not currently visible. Ignoring.\n", (void *)c);
+        D fprintf(stderr, __NAME_WM__": Client %p should have been "
+                  "focused/raised, but it's not currently visible. Ignoring.\n",
+                  (void *)c);
         return;
     }
 
@@ -2347,11 +2373,15 @@ publish_state(void)
 
     XChangeProperty(dpy, root, atom_state, XA_INTEGER, 8, PropModeReplace,
                     state, size);
-    DPRINTF(__NAME_WM__": Published internal state in root property %s: ",
-            IPC_ATOM_STATE);
-    for (i = 0; i < size; i++)
-        DPRINTF("%d ", state[i]);
-    DPRINTF("\n");
+
+    D
+    {
+        fprintf(stderr, __NAME_WM__": Published internal state in root property "
+                "%s: ", IPC_ATOM_STATE);
+        for (i = 0; i < size; i++)
+            fprintf(stderr, "%d ", state[i]);
+        fprintf(stderr, "\n");
+    }
 }
 
 void
@@ -2362,7 +2392,7 @@ run(void)
     while (running)
     {
         XNextEvent(dpy, &ev);
-        DPRINTF(__NAME_WM__": Event %d\n", ev.type);
+        D fprintf(stderr, __NAME_WM__": Event %d\n", ev.type);
         if (x11_handler[ev.type])
             x11_handler[ev.type](&ev);
     }
@@ -2402,7 +2432,7 @@ setup(void)
             fprintf(stderr, __NAME_WM__": Cannot open font '%s'\n", dec_fonts[i]);
             exit(EXIT_FAILURE);
         }
-        DPRINTF(__NAME_WM__": Loaded font '%s'\n", dec_fonts[i]);
+        D fprintf(stderr, __NAME_WM__": Loaded font '%s'\n", dec_fonts[i]);
     }
     for (i = DecTintNormal; i <= DecTintUrgent; i++)
     {
@@ -2414,7 +2444,7 @@ setup(void)
                     dec_font_colors[i]);
             exit(EXIT_FAILURE);
         }
-        DPRINTF(__NAME_WM__": Loaded color '%s'\n", dec_font_colors[i]);
+        D fprintf(stderr, __NAME_WM__": Loaded color '%s'\n", dec_font_colors[i]);
     }
 
     setup_monitors_read();
@@ -2530,7 +2560,8 @@ setup_monitors_read(void)
      * locally. */
 
     sr = XRRGetScreenResources(dpy, root);
-    DPRINTF(__NAME_WM__": XRandR reported %d monitors/CRTCs\n", sr->ncrtc);
+    D fprintf(stderr, __NAME_WM__": XRandR reported %d monitors/CRTCs\n",
+              sr->ncrtc);
     assert(sr->ncrtc > 0);
     chosen = calloc(sr->ncrtc, sizeof (char));
     for (c = 0; c < sr->ncrtc; c++)
@@ -2576,11 +2607,11 @@ setup_monitors_read(void)
         m->active_workspace = m->recent_workspace = WORKSPACE_DEFAULT;
         m->next = monitors;
         monitors = m;
-        DPRINTF(__NAME_WM__": monitor: %d %d %d %d\n",
-                ci->x, ci->y, ci->width, ci->height);
+        D fprintf(stderr, __NAME_WM__": monitor: %d %d %d %d\n",
+                  ci->x, ci->y, ci->width, ci->height);
     }
     free(chosen);
-    DPRINTF(__NAME_WM__": We found %d usable monitors\n", monitors_num);
+    D fprintf(stderr, __NAME_WM__": We found %d usable monitors\n", monitors_num);
 }
 
 void
@@ -2592,7 +2623,7 @@ scan(void)
 
     if (XQueryTree(dpy, root, &d1, &d2, &wins, &num))
     {
-        DPRINTF(__NAME_WM__": scan() saw %d windows\n", num);
+        D fprintf(stderr, __NAME_WM__": scan() saw %d windows\n", num);
 
         /* First, manage all top-level windows. Then manage transient
          * windows. This is required because the windows pointed to by
@@ -2670,8 +2701,8 @@ unmanage(struct Client *c)
 
     decorations_destroy(c);
 
-    DPRINTF(__NAME_WM__": No longer managing window %lu (%p)\n",
-            c->win, (void *)c);
+    D fprintf(stderr, __NAME_WM__": No longer managing window %lu (%p)\n",
+              c->win, (void *)c);
 
     free(c);
 }

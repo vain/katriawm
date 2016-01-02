@@ -85,7 +85,7 @@ send_command(enum IPCCommand cmd, char arg)
     /* Send this message to all clients which have selected for
      * "SubstructureRedirectMask" on the root window. By definition,
      * this is the window manager. */
-    DPRINTF(__NAME_C__": Sending cmd %d, arg %d\n", cmd, arg);
+    D fprintf(stderr, __NAME_C__": Sending cmd %d, arg %d\n", cmd, arg);
     XSendEvent(dpy, root, False, SubstructureRedirectMask, &ev);
     XSync(dpy, False);
 

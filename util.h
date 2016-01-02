@@ -2,9 +2,9 @@
 #define _WM_UTIL_H
 
 #ifdef DEBUG
-#define DPRINTF(...) fprintf(stderr, __VA_ARGS__)
+#define D if (1)
 #else
-#define DPRINTF(...) (void)0
+#define D if (0)
 #endif
 
 #endif /* _WM_UTIL_H */

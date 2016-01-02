@@ -2173,6 +2173,11 @@ manage_goto_monitor(int i)
     if (new_selmon == NULL)
         return;
 
+    /* XXX Quirk for suckless tabbed
+     * Without this call, tabbed sometimes does not recognize that it
+     * has focus after changing workspaces or monitors. */
+    manage_xfocus(NULL);
+
     prevmon_i = selmon->index;
     selmon = new_selmon;
 
@@ -2190,6 +2195,11 @@ manage_goto_workspace(int i)
     i = i > WORKSPACE_MAX ? WORKSPACE_MAX : i;
 
     D fprintf(stderr, __NAME_WM__": Changing to workspace %d\n", i);
+
+    /* XXX Quirk for suckless tabbed
+     * Without this call, tabbed sometimes does not recognize that it
+     * has focus after changing workspaces or monitors. */
+    manage_xfocus(NULL);
 
     for (c = clients; c; c = c->next)
         if (c->mon == selmon)

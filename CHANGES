@@ -2,6 +2,8 @@ next
   [Fixed]
   - More robust against nonsensical data received from the IPC client.
     In other words: Added various out-of-bounds checks.
+  - Fix focus issues with suckless tabbed after changing workspaces or
+    monitors.
 
   [Changed]
   - On startup, the pointer is now warped to the selected monitor.

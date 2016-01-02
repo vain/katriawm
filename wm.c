@@ -1881,10 +1881,10 @@ manage_apply_rules(struct Client *c)
 void
 manage_apply_size(struct Client *c)
 {
-    if (c->w <= 0)
-        c->w = 1;
-    if (c->h <= 0)
-        c->h = 1;
+    if (c->w <= 0 || c->h <= 0)
+        fprintf(stderr, __NAME_WM__": manage_apply_size(): w or h <= 0\n");
+    c->w = c->w <= 0 ? 10 : c->w;
+    c->h = c->h <= 0 ? 10 : c->h;
 
     if (c->fullscreen && !c->hidden)
     {

@@ -1143,8 +1143,6 @@ ipc_client_move_mouse(char arg)
 void
 ipc_client_resize_mouse(char arg)
 {
-    /* TODO lots of code duplication from ipc_client_move_mouse() */
-
     int x, y, di, dx, dy;
     unsigned int dui;
     Window child, dummy;
@@ -2591,10 +2589,6 @@ scan(void)
     unsigned int i, num;
     Window d1, d2, *wins = NULL;
     XWindowAttributes wa;
-
-    /* TODO grab the server while doing this. */
-
-    /* TODO We ignore iconified windows for now. */
 
     if (XQueryTree(dpy, root, &d1, &d2, &wins, &num))
     {

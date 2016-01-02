@@ -2213,8 +2213,9 @@ manage_raisefocus_first_matching(void)
     }
 
     /* If we end up here, then no client has been found on the target
-     * monitor. Still, due to the fact that we changed the monitor, we
-     * must now unfocus the previously selected client. */
+     * monitor. Still, due to the fact that we changed the monitor (or
+     * workspace or ...), we must now unfocus the previously selected
+     * client. */
     manage_raisefocus(NULL);
 }
 

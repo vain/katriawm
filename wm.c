@@ -1350,7 +1350,7 @@ ipc_layout_set(char arg)
 
     i = arg;
 
-    if (layouts[i] == NULL)
+    if (i < 0 || i >= LALast || layouts[i] == NULL)
     {
         fprintf(stderr, __NAME_WM__": Invalid layout requested: %d\n", i);
         return;

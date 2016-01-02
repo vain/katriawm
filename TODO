@@ -22,7 +22,6 @@ Next "sprint":
 
     - std types
         - Images: We need 32 bit integers, not just integers!
-        - char vs. int in many places
     - EWMH
         - Active window
         - Client list on root window
@@ -32,8 +31,24 @@ Next "sprint":
         - InputOnly, see WM_TAKE_FOCUS above
     - Learn about "withdrawn" state. How should the WM handle that? See
       also dwm's UnmapNotify handler.
+    - scan():
+        - Grab server?
+        - Pick up iconified windows?
 
 Next "sprint":
 
     - Test on BSD
     - Test on different architectures
+    - Refactor: There is no need for "monitors" being a list. It's just
+      a dwm-ism that complicates things for us. Monitors aren't
+      added/removed all the time like clients. We should make "monitors"
+      a calloc'd array.
+    - Refactor: manage_apply_rules() is bad. This can be shortened and
+      simplified.
+    - Refactor: Rename "selc" to something like "focus_head". "selc" is
+      not only "the currently selected client" but refers to the focus
+      list.
+    - Refactor: Add one function to clear urgency hints, kill code
+      duplication.
+    - Refactor: ipc_client_resize_mouse() duplicates a lot of code from
+      ipc_client_move_mouse().

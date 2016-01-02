@@ -1457,7 +1457,10 @@ ipc_placement_store(char arg)
     }
     saved_monitor[ai] = NULL;
 
-    /* Note: This results in saved_monitor[ai] being reversed */
+    /* Note: This results in saved_monitor[ai] being reversed. This has
+     * a nice side effect: When restoring layout, it'll be restored
+     * last-to-first, resulting in the very first monitor being selected
+     * automatically when finished. */
     for (m = monitors; m; m = m->next)
     {
         nm = calloc(1, sizeof (struct Monitor));

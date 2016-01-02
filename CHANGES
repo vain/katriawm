@@ -1,0 +1,46 @@
+next
+  [Fixed]
+  - More robust against nonsensical data received from the IPC client.
+    In other words: Added various out-of-bounds checks.
+
+  [Changed]
+  - On startup, the pointer is now warped to the selected monitor.
+
+Milestone 2  2016-01-01
+  [Fixed]
+  - Moving and resizing works when pointer over decorations.
+  - Floating windows don't appear on the wrong monitor after XRandR
+    changes.
+  - Fix focus issues: Kick last remains of sloppy focus.
+  - Fullscreen mode now works properly.
+  - Duplicate monitors (i.e., monitors with the same x, y offset and
+    same width, height) are now ignored. These areas act like they are
+    one single monitor.
+  - Fix: When clients spawn on an invisible workspace, they are now
+    focus-able.
+
+  [Changed]
+  - Motif theme is "lighter".
+  - Workspace indexes begin at 0, default workspace is 1.
+  - Selecting monitors wraps around.
+  - Tiling layout has "useless gaps" by default and acts more like a
+    grid than traditional master/slave tiling.
+
+  [Added]
+  - Application rule matching in config.h.
+  - IPC calls: "Toggle floating" and "clear all visible urgency hints".
+  - Save slots.
+
+Milestone 1  2015-12-30
+  [Added]
+  - Tiling, floating.
+  - Workspaces.
+  - Window decorations including title bars.
+  - Focus history, click-to-focus and click-to-raise.
+  - XRandR support including detection of changes at runtime.
+  - Master (the actual WM) and client with a lot of basic IPC calls.
+  - Publishing the internal state for external bars/pagers.
+  - EWMH: Fullscreen and some window types.
+  - Handle transients.
+  - Non-reparenting.
+  - Manpages.

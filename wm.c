@@ -1346,7 +1346,9 @@ ipc_client_switch_workspace_adjacent(char arg)
 void
 ipc_layout_set(char arg)
 {
-    int i = arg;
+    int i;
+
+    i = arg;
 
     if (layouts[i] == NULL)
     {

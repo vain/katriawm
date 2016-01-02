@@ -1792,9 +1792,8 @@ manage(Window win, XWindowAttributes *wa)
     DPRINTF(__NAME_WM__": Managing window %lu (%p) at %dx%d+%d+%d\n",
             c->win, (void *)c, c->w, c->h, c->x, c->y);
 
-    /* XXX why arrange after mapping the window? */
-    XMapWindow(dpy, c->win);
     manage_arrange(c->mon);
+    XMapWindow(dpy, c->win);
     manage_raisefocus(c);
 }
 

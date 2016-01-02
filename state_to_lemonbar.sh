@@ -20,6 +20,9 @@ do
     esac
 done
 
+# "$atom_name" is, of course, a non-standard atom. Thus, it's not
+# allocated before katriawm has started. This makes xprop fail instead
+# of waiting until the atom is present. So, it's our job to wait.
 for (( i = 0; i < 100; i++ ))
 do
     if (( i == 99 ))

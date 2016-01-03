@@ -1,6 +1,5 @@
 Active "sprint":
 
-    - Don't switch workspace if it hasn't actually changed?
     - IPC
         - Center floaters
         - Maximize floaters

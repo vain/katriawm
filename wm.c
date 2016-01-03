@@ -204,8 +204,8 @@ static void manage_focus_add_tail(struct Client *c);
 static void manage_focus_remove(struct Client *c);
 static void manage_focus_set(struct Client *c);
 static void manage_fullscreen(struct Client *c, char fs);
-static void manage_goto_monitor(int i);
-static void manage_goto_workspace(int i);
+static void manage_goto_monitor(int i, char force);
+static void manage_goto_workspace(int i, char force);
 static void manage_icccm_evaluate_hints(struct Client *c);
 static void manage_raisefocus(struct Client *c);
 static void manage_raisefocus_first_matching(void);
@@ -1276,7 +1276,10 @@ ipc_client_switch_workspace(char arg)
     i = i > WORKSPACE_MAX ? WORKSPACE_MAX : i;
 
     selc->workspace = i;
-    manage_goto_workspace(selmon->active_workspace);
+
+    /* Note: This call is not meant to switch the workspace but to force
+     * rearrangement of the current workspace */
+    manage_goto_workspace(selmon->active_workspace, 1);
 }
 
 void
@@ -1295,7 +1298,10 @@ ipc_client_switch_workspace_adjacent(char arg)
     i = i > WORKSPACE_MAX ? WORKSPACE_MAX : i;
 
     selc->workspace = i;
-    manage_goto_workspace(selmon->active_workspace);
+
+    /* Note: This call is not meant to switch the workspace but to force
+     * rearrangement of the current workspace */
+    manage_goto_workspace(selmon->active_workspace, 1);
 }
 
 void
@@ -1325,7 +1331,7 @@ ipc_monitor_select_adjacent(char arg)
     i %= monitors_num;
     i = i < 0 ? monitors_num + i : i;
 
-    manage_goto_monitor(i);
+    manage_goto_monitor(i, 0);
 }
 
 void
@@ -1333,7 +1339,7 @@ ipc_monitor_select_recent(char arg)
 {
     (void)arg;
 
-    manage_goto_monitor(prevmon_i);
+    manage_goto_monitor(prevmon_i, 0);
 }
 
 void
@@ -1477,8 +1483,8 @@ ipc_placement_use(char arg)
 
     for (m = monitors; m; m = m->next)
     {
-        manage_goto_monitor(m->index);
-        manage_goto_workspace(m->active_workspace);
+        manage_goto_monitor(m->index, 1);
+        manage_goto_workspace(m->active_workspace, 1);
     }
 }
 
@@ -1509,7 +1515,7 @@ ipc_workspace_select(char arg)
     int i;
 
     i = arg;
-    manage_goto_workspace(i);
+    manage_goto_workspace(i, 0);
 }
 
 void
@@ -1519,7 +1525,7 @@ ipc_workspace_select_adjacent(char arg)
 
     i = selmon->active_workspace;
     i += arg;
-    manage_goto_workspace(i);
+    manage_goto_workspace(i, 0);
 }
 
 void
@@ -1527,7 +1533,7 @@ ipc_workspace_select_recent(char arg)
 {
     (void)arg;
 
-    manage_goto_workspace(selmon->recent_workspace);
+    manage_goto_workspace(selmon->recent_workspace, 0);
 }
 
 void
@@ -2149,9 +2155,12 @@ manage_fullscreen(struct Client *c, char fs)
 }
 
 void
-manage_goto_monitor(int i)
+manage_goto_monitor(int i, char force)
 {
     struct Monitor *m, *new_selmon = NULL;
+
+    if (!force && selmon->index == i)
+        return;
 
     for (m = monitors; m; m = m->next)
     {
@@ -2179,12 +2188,15 @@ manage_goto_monitor(int i)
 }
 
 void
-manage_goto_workspace(int i)
+manage_goto_workspace(int i, char force)
 {
     struct Client *c;
 
     i = i < WORKSPACE_MIN ? WORKSPACE_MIN : i;
     i = i > WORKSPACE_MAX ? WORKSPACE_MAX : i;
+
+    if (!force && selmon->active_workspace == i)
+        return;
 
     D fprintf(stderr, __NAME_WM__": Changing to workspace %d\n", i);
 

@@ -2254,6 +2254,8 @@ manage_goto_monitor(int i, char force)
     XWarpPointer(dpy, None, root, 0, 0, 0, 0,
                  selmon->wx + selmon->ww / 2, selmon->wy + selmon->wh / 2);
     manage_raisefocus_first_matching();
+
+    publish_state();
 }
 
 void

@@ -66,7 +66,7 @@ the very first monitor it can find. It does in no way try to preserve
 your current layout.
 
 However, you can manually save the current layout at any given time. You
-can use up to ten save slots. Later on, you can of course restore a
+can use up to eight save slots. Later on, you can of course restore a
 layout. Exemplary workflow:
 
 -   You connect your laptop to some external screens and work like that

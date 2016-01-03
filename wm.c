@@ -23,7 +23,7 @@
 #include "theme_types.h"
 #include "theme.h"
 
-#define SAVE_SLOTS 10
+#define SAVE_SLOTS 8
 #define WORKSPACE_DEFAULT 1
 #define WORKSPACE_MIN 0
 #define WORKSPACE_MAX 127

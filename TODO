@@ -1,8 +1,6 @@
 Active "sprint":
 
     - IPC
-        - Center floaters
-        - Maximize floaters
         - Collect floaters, i.e. fit them to current monitor
     - publish_state():
         - Save slots

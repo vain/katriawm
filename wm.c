@@ -165,10 +165,12 @@ static void handle_focusin(XEvent *e);
 static void handle_maprequest(XEvent *e);
 static void handle_propertynotify(XEvent *e);
 static void handle_unmapnotify(XEvent *e);
+static void ipc_client_center_floating(char arg);
 static void ipc_client_close(char arg);
 static void ipc_client_floating_toggle(char arg);
 static void ipc_client_fullscreen_toggle(char arg);
 static void ipc_client_kill(char arg);
+static void ipc_client_maximize_floating(char arg);
 static void ipc_client_move_list(char arg);
 static void ipc_client_move_mouse(char arg);
 static void ipc_client_resize_mouse(char arg);
@@ -226,10 +228,12 @@ static void shutdown_monitors_free(void);
 static int xerror(Display *dpy, XErrorEvent *ee);
 
 static void (*ipc_handler[IPCLast]) (char arg) = {
+    [IPCClientCenterFloating] = ipc_client_center_floating,
     [IPCClientClose] = ipc_client_close,
     [IPCClientFloatingToggle] = ipc_client_floating_toggle,
     [IPCClientFullscreenToggle] = ipc_client_fullscreen_toggle,
     [IPCClientKill] = ipc_client_kill,
+    [IPCClientMaximizeFloating] = ipc_client_maximize_floating,
     [IPCClientMoveList] = ipc_client_move_list,
     [IPCClientMoveMouse] = ipc_client_move_mouse,
     [IPCClientResizeMouse] = ipc_client_resize_mouse,
@@ -904,6 +908,25 @@ handle_unmapnotify(XEvent *e)
 }
 
 void
+ipc_client_center_floating(char arg)
+{
+    (void)arg;
+
+    if (!selc || !selc->floating)
+        return;
+
+    selc->x = selc->mon->wx + 0.5 * (selc->mon->ww - selc->w
+                                     - dgeo.left_width - dgeo.right_width);
+    selc->y = selc->mon->wy + 0.5 * (selc->mon->wh - selc->h
+                                     - dgeo.top_height - dgeo.bottom_height);
+
+    selc->x += dgeo.left_width;
+    selc->y += dgeo.top_height;
+
+    manage_apply_size(selc);
+}
+
+void
 ipc_client_close(char arg)
 {
     (void)arg;
@@ -946,6 +969,28 @@ ipc_client_kill(char arg)
         return;
 
     XKillClient(dpy, selc->win);
+}
+
+void
+ipc_client_maximize_floating(char arg)
+{
+    (void)arg;
+
+    if (!selc || !selc->floating)
+        return;
+
+    selc->x = selc->mon->wx;
+    selc->y = selc->mon->wy;
+    selc->w = selc->mon->ww;
+    selc->h = selc->mon->wh;
+
+    selc->x += dgeo.left_width;
+    selc->y += dgeo.top_height;
+    selc->w -= dgeo.left_width + dgeo.right_width;
+    selc->h -= dgeo.top_height + dgeo.bottom_height;
+
+    manage_apply_gaps(selc);
+    manage_apply_size(selc);
 }
 
 void

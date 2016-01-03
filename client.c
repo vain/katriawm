@@ -23,10 +23,12 @@ static struct Command c[] = {
     /* If you sort this list, make sure to sort in asciibetical order,
      * i.e. set LANG=C. Order matters, ANY would also match "next", for
      * example. */
+    {  {  "client_center_floating",    ANY        },  IPCClientCenterFloating,           NULL,     0          },
     {  {  "client_close",              ANY        },  IPCClientClose,                    NULL,     0          },
     {  {  "client_floating_toggle",    ANY        },  IPCClientFloatingToggle,           NULL,     0          },
     {  {  "client_fullscreen_toggle",  ANY        },  IPCClientFullscreenToggle,         NULL,     0          },
     {  {  "client_kill",               ANY        },  IPCClientKill,                     NULL,     0          },
+    {  {  "client_maximize_floating",  ANY        },  IPCClientMaximizeFloating,         NULL,     0          },
     {  {  "client_move_list",          "next"     },  IPCClientMoveList,                 fn_int,   +1         },
     {  {  "client_move_list",          "prev"     },  IPCClientMoveList,                 fn_int,   -1         },
     {  {  "client_move_mouse",         "down"     },  IPCClientMoveMouse,                fn_int,   0          },

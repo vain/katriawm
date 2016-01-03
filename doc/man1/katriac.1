@@ -15,6 +15,10 @@ can instruct the WM to move windows, switch workspaces, and so on.
 \fBkatriac\fP expects exactly one command, likely to be followed by some
 arguments. The following commands are available:
 .TP
+\fBclient_center_floating\fP
+If the currently selected client is floating, center it on the currently
+selected monitor.
+.TP
 \fBclient_close\fP
 Ask the currently selected client to gracefully close itself.
 .TP
@@ -26,6 +30,10 @@ Toggle fullscreen mode of currently selected client.
 .TP
 \fBclient_kill\fP
 Kill the currently selected client. No questions asked.
+.TP
+\fBclient_maximize_floating\fP
+If the currently selected client is floating, maximize it on the
+currently selected monitor.
 .TP
 \fBclient_move_list\fP \fItarget\fP
 Move the currently selected client in the internal list of clients. This

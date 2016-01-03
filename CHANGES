@@ -15,6 +15,9 @@ next
   [Added]
   - Support for ICCCM input focus models and WM_TAKE_FOCUS.
   - Support for ICCCM WM_STATE.
+  - IPC calls:
+    - Center currently selected floating client
+    - Maximize currently selected floating client
 
 Milestone 2  2016-01-01
   [Fixed]

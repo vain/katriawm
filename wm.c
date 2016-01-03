@@ -914,7 +914,8 @@ ipc_client_center_floating(char arg)
 {
     (void)arg;
 
-    if (!selc || !selc->floating)
+    if (!selc
+        || (!selc->floating && selmon->layouts[selmon->active_workspace] != LAFloat))
         return;
 
     selc->x = selc->mon->wx + 0.5 * (selc->mon->ww - selc->w
@@ -978,7 +979,8 @@ ipc_client_maximize_floating(char arg)
 {
     (void)arg;
 
-    if (!selc || !selc->floating)
+    if (!selc
+        || (!selc->floating && selmon->layouts[selmon->active_workspace] != LAFloat))
         return;
 
     selc->x = selc->mon->wx;
@@ -1360,7 +1362,8 @@ ipc_floaters_collect(char arg)
 
     for (c = clients; c; c = c->next)
     {
-        if (c->floating && VIS_ON_SELMON(c))
+        if ((c->floating || selmon->layouts[selmon->active_workspace] == LAFloat)
+            && VIS_ON_SELMON(c))
         {
             manage_fit_on_monitor(c);
             manage_apply_size(c);

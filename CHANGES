@@ -1,4 +1,4 @@
-next
+Milestone 3  2016-01-03
   [Fixed]
   - Critical: Fix "use after free" when a client terminates or unmaps.
   - More robust against nonsensical data received from the IPC client.

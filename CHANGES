@@ -22,6 +22,8 @@ next
     - Collect floating clients, i.e. fit them to current monitor
   - Currently selected monitor index is published in the root window
     property _KATRIA_STATE and will be displayed in lemonbar.
+  - Occupied save slots are published in t he root window property
+    _KATRIA_STATE and will be displayed in lemonbar.
 
 Milestone 2  2016-01-01
   [Fixed]

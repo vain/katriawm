@@ -46,17 +46,19 @@ do
     info=($line)
     mn=${info[0]}
     smon=${info[1]}
+    slots=${info[2]}
     (( smon < 0 )) && (( smon += 256 ))
+    (( slots < 0 )) && (( slots += 256 ))
 
     out=
     for (( i = 0; i < mn; i++ ))
     do
         out+="%{S$i}%{l} "
-        out+="${layout_names[${info[2 + i + mn]}]} "
+        out+="${layout_names[${info[3 + i + mn]}]} "
 
-        active_workspace=${info[2 + i]}
+        active_workspace=${info[3 + i]}
 
-        offset_ws=$((2 + mn + mn + i * size_monws))
+        offset_ws=$((3 + mn + mn + i * size_monws))
         ws_num=0
         for (( byte_i = 0; byte_i < size_monws; byte_i++ ))
         do
@@ -88,8 +90,20 @@ do
             done
         done
 
-        out+='%{r}'
+        out+='%{c}'
         (( i == smon )) && out+="${style_sel} SELECTED ${style_nor}"
+
+        out+='%{r}'
+        mask=1
+        for (( bit = 0; bit < 8; bit++ ))
+        do
+            if (( slots & mask ))
+            then
+                out+="$bit"
+            fi
+            (( mask <<= 1 ))
+        done
+        out+=' '
     done
     echo "$out"
 done

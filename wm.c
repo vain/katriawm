@@ -1496,6 +1496,8 @@ ipc_placement_store(char arg)
         nm->next = saved_monitor[ai];
         saved_monitor[ai] = nm;
     }
+
+    publish_state();
 }
 
 void
@@ -2486,18 +2488,20 @@ publish_state(void)
 
     /* The very first byte indicates the number of monitors detected by
      * us. The second byte indicates the index of the currently selected
-     * monitor. Then, the next monitors_num bytes indicate the active
-     * workspace on each monitor. The next monitors_num bytes indicate
-     * the active layout on each monitor (note: different layouts might
-     * be active on different workspaces on each monitor, but they are
-     * not visible anyway, so they're not included). Following that, we
-     * need WORKSPACE_MAX / 8 = ~16 bytes per monitor to indicate
-     * whether that workspace is occupied. We need the same amount of
-     * data to indicate whether a workspace has the urgency hint set. */
+     * monitor. The third byte is a bitmask where each bit indicates
+     * whether the corresponding save slot is occupied. Then, the next
+     * monitors_num bytes indicate the active workspace on each monitor.
+     * The next monitors_num bytes indicate the active layout on each
+     * monitor (note: different layouts might be active on different
+     * workspaces on each monitor, but they are not visible anyway, so
+     * they're not included). Following that, we need WORKSPACE_MAX / 8
+     * = ~16 bytes per monitor to indicate whether that workspace is
+     * occupied. We need the same amount of data to indicate whether a
+     * workspace has the urgency hint set. */
 
     size_monws = 16;
 
-    size = 1 + 1 + monitors_num * 2 + monitors_num * size_monws * 2;
+    size = 1 + 1 + 1 + monitors_num * 2 + monitors_num * size_monws * 2;
     state = calloc(size, sizeof (unsigned char));
     if (state == NULL)
     {
@@ -2509,6 +2513,16 @@ publish_state(void)
     state[0] = monitors_num;
     state[1] = selmon ? selmon->index : 0;
     off = 2;
+
+    /* Bitmask of occupied save slots */
+    mask = 1;
+    for (i = 0; i < SAVE_SLOTS; i++)
+    {
+        if (saved_monitor[i])
+            state[off] |= mask;
+        mask <<= 1;
+    }
+    off++;
 
     /* Active workspace on each monitor (int) */
     for (m = monitors; m; m = m->next)

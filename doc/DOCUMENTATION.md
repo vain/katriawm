@@ -176,6 +176,8 @@ katriawm introduces a new property on the root window called
     this `N`.
 -   Index 1 indicates the currently selected monitor. It's an integer
     `m` where `0 <= m < N`.
+-   Index 2 is a bitmask. If the `n`-th bit is set, then the `n`-th save
+    slot is occupied.
 -   The next `N` bytes indicate the active workspace on each monitor. A
     workspace is an integer `w` where `0 <= w <= 127`.
 -   The next `N` bytes indicate the visible layout algorithm on each

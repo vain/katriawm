@@ -194,7 +194,7 @@ static void manage_apply_gaps(struct Client *c);
 static void manage_apply_rules(struct Client *c);
 static void manage_apply_size(struct Client *c);
 static void manage_arrange(struct Monitor *m);
-static void manage_client_gone(struct Client *c);
+static void manage_client_gone(struct Client *c, char rearrange);
 static void manage_fit_on_monitor(struct Client *c);
 static void manage_focus_add_head(struct Client *c);
 static void manage_focus_add_tail(struct Client *c);
@@ -218,7 +218,6 @@ static int setup_monitors_is_duplicate(XRRCrtcInfo *ci, char *chosen,
 static void setup_monitors_read(void);
 static void shutdown(void);
 static void shutdown_monitors_free(void);
-static void unmanage(struct Client *c);
 static int xerror(Display *dpy, XErrorEvent *ee);
 
 static void (*ipc_handler[IPCLast]) (char arg) = {
@@ -809,10 +808,7 @@ handle_destroynotify(XEvent *e)
     struct Client *c;
 
     if ((c = client_get_for_window(ev->window)))
-    {
-        unmanage(c);
-        manage_client_gone(c);
-    }
+        manage_client_gone(c, 1);
 }
 
 void
@@ -933,10 +929,7 @@ handle_unmapnotify(XEvent *e)
     struct Client *c;
 
     if ((c = client_get_for_window(ev->window)))
-    {
-        unmanage(c);
-        manage_client_gone(c);
-    }
+        manage_client_gone(c, 1);
 }
 
 void
@@ -1931,23 +1924,38 @@ manage_arrange(struct Monitor *m)
 }
 
 void
-manage_client_gone(struct Client *c)
+manage_client_gone(struct Client *c, char rearrange)
 {
-    struct Client *old_selc;
+    struct Client *old_selc, **tc;
 
-    D fprintf(stderr, __NAME_WM__": Client %p gone\n", (void *)c);
+    D fprintf(stderr, __NAME_WM__": No longer managing window %lu (%p)\n",
+              c->win, (void *)c);
 
+    /* Remove client from "clients" list, props for this neat little
+     * loop go to dwm */
+    for (tc = &clients; *tc && *tc != c; tc = &(*tc)->next);
+    *tc = c->next;
+
+    decorations_destroy(c);
+
+    /* Remove client from focus list. Note that manage_focus_remove()
+     * changes selc. */
     old_selc = selc;
-
-    manage_arrange(c->mon);
     manage_focus_remove(c);
 
-    /* If c was the focused/selected client (this implies "selmon ==
-     * c->mon"), then we have to select a new client: We choose the
-     * first matching client in the focus list -- "matching" means it's
-     * the correct workspace and monitor */
-    if (c == old_selc)
-        manage_raisefocus_first_matching();
+    if (rearrange)
+    {
+        manage_arrange(c->mon);
+
+        /* If c was the focused/selected client (this implies "selmon ==
+         * c->mon"), then we have to select a new client: We choose the
+         * first matching client in the focus list -- "matching" means
+         * it's the correct workspace and monitor */
+        if (c == old_selc)
+            manage_raisefocus_first_matching();
+    }
+
+    free(c);
 
     publish_state();
 }
@@ -2669,7 +2677,7 @@ shutdown(void)
     size_t i, j;
 
     while (clients != NULL)
-        unmanage(clients);
+        manage_client_gone(clients, 0);
 
     for (i = DecTintNormal; i <= DecTintUrgent; i++)
         for (j = DecTopLeft; j <= DecBottomRight; j++)
@@ -2697,24 +2705,6 @@ shutdown_monitors_free(void)
     monitors = NULL;
     monitors_num = 0;
     selmon = NULL;
-}
-
-void
-unmanage(struct Client *c)
-{
-    struct Client **tc;
-
-    /* Remove client from "clients" list, props for this neat little
-     * loop go to dwm */
-    for (tc = &clients; *tc && *tc != c; tc = &(*tc)->next);
-    *tc = c->next;
-
-    decorations_destroy(c);
-
-    D fprintf(stderr, __NAME_WM__": No longer managing window %lu (%p)\n",
-              c->win, (void *)c);
-
-    free(c);
 }
 
 int

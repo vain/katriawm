@@ -9,7 +9,6 @@ Next "sprint":
         http://lists.suckless.org/dev/1104/7548.html#replies
     - WM_STATE
     - Don't switch workspace if it hasn't actually changed?
-    - Merge unmanage() and manage_client_gone()
     - IPC
         - Center floaters
         - Maximize floaters

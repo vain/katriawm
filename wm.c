@@ -197,6 +197,7 @@ static void manage_apply_rules(struct Client *c);
 static void manage_apply_size(struct Client *c);
 static void manage_arrange(struct Monitor *m);
 static void manage_client_gone(struct Client *c, char rearrange);
+static void manage_ewmh_update_hints(struct Client *c);
 static void manage_fit_on_monitor(struct Client *c);
 static void manage_focus_add_head(struct Client *c);
 static void manage_focus_add_tail(struct Client *c);
@@ -1641,11 +1642,6 @@ manage(Window win, XWindowAttributes *wa)
 {
     struct Client *c, *tc;
     Window transient_for;
-    Atom prop, da;
-    unsigned char *prop_ret = NULL;
-    int di;
-    unsigned long dl;
-    char *an;
     size_t i;
 
     if (client_get_for_window(win))
@@ -1706,39 +1702,7 @@ manage(Window win, XWindowAttributes *wa)
         }
     }
 
-    if (XGetWindowProperty(dpy, c->win, atom_net[AtomNetWMWindowType], 0,
-                           sizeof (Atom), False, XA_ATOM, &da, &di, &dl, &dl,
-                           &prop_ret)
-        == Success)
-    {
-        if (prop_ret)
-        {
-            prop = ((Atom *)prop_ret)[0];
-            if (prop == atom_net[AtomNetWMWindowTypeDialog]
-                || prop == atom_net[AtomNetWMWindowTypeMenu]
-                || prop == atom_net[AtomNetWMWindowTypeSplash]
-                || prop == atom_net[AtomNetWMWindowTypeToolbar]
-                || prop == atom_net[AtomNetWMWindowTypeUtility])
-            {
-                c->floating = 1;
-                an = XGetAtomName(dpy, prop);
-                D fprintf(stderr, __NAME_WM__": Client %p should be floating, "
-                          "says EWMH (has type %s)\n", (void *)c, an);
-                if (an)
-                    XFree(an);
-            }
-            else
-                D fprintf(stderr, __NAME_WM__": Client %p has EWMH type, but "
-                          "we don't know that type\n", (void *)c);
-        }
-        else
-            D fprintf(stderr, __NAME_WM__": Client %p has EWMH type, but "
-                      "pointer NULL\n", (void *)c);
-    }
-    else
-        D fprintf(stderr, __NAME_WM__": Client %p has no EWMH window type\n",
-                  (void *)c);
-
+    manage_ewmh_update_hints(c);
     manage_icccm_update_hints(c);
     manage_apply_rules(c);
 
@@ -1924,6 +1888,49 @@ manage_client_gone(struct Client *c, char rearrange)
     free(c);
 
     publish_state();
+}
+
+void
+manage_ewmh_update_hints(struct Client *c)
+{
+    Atom prop, da;
+    unsigned char *prop_ret = NULL;
+    int di;
+    unsigned long dl;
+    char *an;
+
+    if (XGetWindowProperty(dpy, c->win, atom_net[AtomNetWMWindowType], 0,
+                           sizeof (Atom), False, XA_ATOM, &da, &di, &dl, &dl,
+                           &prop_ret)
+        == Success)
+    {
+        if (prop_ret)
+        {
+            prop = ((Atom *)prop_ret)[0];
+            if (prop == atom_net[AtomNetWMWindowTypeDialog]
+                || prop == atom_net[AtomNetWMWindowTypeMenu]
+                || prop == atom_net[AtomNetWMWindowTypeSplash]
+                || prop == atom_net[AtomNetWMWindowTypeToolbar]
+                || prop == atom_net[AtomNetWMWindowTypeUtility])
+            {
+                c->floating = 1;
+                an = XGetAtomName(dpy, prop);
+                D fprintf(stderr, __NAME_WM__": Client %p should be floating, "
+                          "says EWMH (has type %s)\n", (void *)c, an);
+                if (an)
+                    XFree(an);
+            }
+            else
+                D fprintf(stderr, __NAME_WM__": Client %p has EWMH type, but "
+                          "we don't know that type\n", (void *)c);
+        }
+        else
+            D fprintf(stderr, __NAME_WM__": Client %p has EWMH type, but "
+                      "pointer NULL\n", (void *)c);
+    }
+    else
+        D fprintf(stderr, __NAME_WM__": Client %p has no EWMH window type\n",
+                  (void *)c);
 }
 
 void

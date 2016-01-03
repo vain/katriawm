@@ -1158,7 +1158,7 @@ ipc_client_resize_mouse(char arg)
 
     if (arg == 0)
     {
-        D fprintf(stderr,  __NAME_WM__": Mouse resize: down at %d, %d over %lu\n",
+        D fprintf(stderr, __NAME_WM__": Mouse resize: down at %d, %d over %lu\n",
                   x, y, child);
 
         mouse_dc = NULL;

@@ -1,9 +1,4 @@
-It's bug hunting time!
-
-
---- Future ---
-
-Next "sprint":
+Active "sprint":
 
     - WM_TAKE_FOCUS:
         http://lists.suckless.org/dev/1104/7548.html#replies
@@ -16,6 +11,9 @@ Next "sprint":
     - publish_state():
         - Save slots
         - Selected monitor
+
+
+--- Future ---
 
 Next "sprint":
 

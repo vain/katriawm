@@ -112,6 +112,7 @@ enum AtomsWM
 {
     AtomWMDeleteWindow,
     AtomWMProtocols,
+    AtomWMState,
     AtomWMTakeFocus,
 
     AtomWMLAST,
@@ -1638,6 +1639,7 @@ manage(Window win, XWindowAttributes *wa)
     struct Client *c, *tc;
     Window transient_for;
     size_t i;
+    unsigned long wm_state[2];
 
     if (client_get_for_window(win))
     {
@@ -1720,6 +1722,16 @@ manage(Window win, XWindowAttributes *wa)
     manage_arrange(c->mon);
     XMapWindow(dpy, c->win);
     manage_raisefocus(c);
+
+    /* ICCCM 4.1.3.1 says that the WM should place a WM_STATE property
+     * on client windows. We only ever manage windows in NormalState.
+     * Note that wm_state also contains a window ID (of a potentially
+     * existing icon window) which is always None for us -- but that's
+     * why nelements = 2. */
+    wm_state[0] = NormalState;
+    wm_state[1] = None;
+    XChangeProperty(dpy, c->win, atom_wm[AtomWMState], atom_wm[AtomWMState],
+                    32, PropModeReplace, (unsigned char *)wm_state, 2);
 }
 
 void
@@ -1879,6 +1891,10 @@ manage_client_gone(struct Client *c, char rearrange)
         if (c == old_selc)
             manage_raisefocus_first_matching();
     }
+
+    /* Once the client is gone, ICCCM 4.1.3.1 says that we can remove
+     * the WM_STATE property */
+    XDeleteProperty(dpy, c->win, atom_wm[AtomWMState]);
 
     free(c);
 
@@ -2600,6 +2616,7 @@ setup_hints(void)
 
     atom_wm[AtomWMDeleteWindow] = XInternAtom(dpy, "WM_DELETE_WINDOW", False);
     atom_wm[AtomWMProtocols] = XInternAtom(dpy, "WM_PROTOCOLS", False);
+    atom_wm[AtomWMState] = XInternAtom(dpy, "WM_STATE", False);
     atom_wm[AtomWMTakeFocus] = XInternAtom(dpy, "WM_TAKE_FOCUS", False);
 }
 

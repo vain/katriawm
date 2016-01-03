@@ -1,6 +1,5 @@
 Active "sprint":
 
-    - WM_STATE
     - Don't switch workspace if it hasn't actually changed?
     - IPC
         - Center floaters

@@ -197,7 +197,7 @@ static void manage_apply_rules(struct Client *c);
 static void manage_apply_size(struct Client *c);
 static void manage_arrange(struct Monitor *m);
 static void manage_client_gone(struct Client *c, char rearrange);
-static void manage_ewmh_update_hints(struct Client *c);
+static void manage_ewmh_evaluate_hints(struct Client *c);
 static void manage_fit_on_monitor(struct Client *c);
 static void manage_focus_add_head(struct Client *c);
 static void manage_focus_add_tail(struct Client *c);
@@ -206,7 +206,7 @@ static void manage_focus_set(struct Client *c);
 static void manage_fullscreen(struct Client *c, char fs);
 static void manage_goto_monitor(int i);
 static void manage_goto_workspace(int i);
-static void manage_icccm_update_hints(struct Client *c);
+static void manage_icccm_evaluate_hints(struct Client *c);
 static void manage_raisefocus(struct Client *c);
 static void manage_raisefocus_first_matching(void);
 static void manage_showhide(struct Client *c, char hide);
@@ -878,7 +878,7 @@ handle_propertynotify(XEvent *e)
         {
             D fprintf(stderr, __NAME_WM__": Client %p has changed its WM_HINTS, "
                       "updating\n", (void *)c);
-            manage_icccm_update_hints(c);
+            manage_icccm_evaluate_hints(c);
         }
         /* XXX ev->atom == XA_WM_TRANSIENT_FOR
          * dwm indicates that there might be changes to the
@@ -1702,8 +1702,8 @@ manage(Window win, XWindowAttributes *wa)
         }
     }
 
-    manage_ewmh_update_hints(c);
-    manage_icccm_update_hints(c);
+    manage_ewmh_evaluate_hints(c);
+    manage_icccm_evaluate_hints(c);
     manage_apply_rules(c);
 
     D fprintf(stderr, __NAME_WM__": Client %p lives on WS %d on monitor %d\n",
@@ -1891,7 +1891,7 @@ manage_client_gone(struct Client *c, char rearrange)
 }
 
 void
-manage_ewmh_update_hints(struct Client *c)
+manage_ewmh_evaluate_hints(struct Client *c)
 {
     Atom prop, da;
     unsigned char *prop_ret = NULL;
@@ -2198,7 +2198,7 @@ manage_goto_workspace(int i)
 }
 
 void
-manage_icccm_update_hints(struct Client *c)
+manage_icccm_evaluate_hints(struct Client *c)
 {
     XWMHints *wmh;
 

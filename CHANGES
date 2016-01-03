@@ -20,6 +20,8 @@ next
     - Center currently selected floating client
     - Maximize currently selected floating client
     - Collect floating clients, i.e. fit them to current monitor
+  - Currently selected monitor index is published in the root window
+    property _KATRIA_STATE and will be displayed in lemonbar.
 
 Milestone 2  2016-01-01
   [Fixed]

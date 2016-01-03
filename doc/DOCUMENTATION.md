@@ -174,6 +174,8 @@ katriawm introduces a new property on the root window called
 
 -   Index 0 is the number of monitors recognized by katriawm. Let’s call
     this `N`.
+-   Index 1 indicates the currently selected monitor. It's an integer
+    `m` where `0 <= m < N`.
 -   The next `N` bytes indicate the active workspace on each monitor. A
     workspace is an integer `w` where `0 <= w <= 127`.
 -   The next `N` bytes indicate the visible layout algorithm on each

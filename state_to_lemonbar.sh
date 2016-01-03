@@ -45,16 +45,18 @@ while read line
 do
     info=($line)
     mn=${info[0]}
+    smon=${info[1]}
+    (( smon < 0 )) && (( smon += 256 ))
 
     out=
     for (( i = 0; i < mn; i++ ))
     do
-        out+="%{S$i} "
-        out+="${layout_names[${info[1 + i + mn]}]} "
+        out+="%{S$i}%{l} "
+        out+="${layout_names[${info[2 + i + mn]}]} "
 
-        active_workspace=${info[1 + i]}
+        active_workspace=${info[2 + i]}
 
-        offset_ws=$((1 + mn + mn + i * size_monws))
+        offset_ws=$((2 + mn + mn + i * size_monws))
         ws_num=0
         for (( byte_i = 0; byte_i < size_monws; byte_i++ ))
         do
@@ -85,6 +87,9 @@ do
                 (( mask <<= 1 ))
             done
         done
+
+        out+='%{r}'
+        (( i == smon )) && out+="${style_sel} SELECTED ${style_nor}"
     done
     echo "$out"
 done

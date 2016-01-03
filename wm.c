@@ -2485,7 +2485,8 @@ publish_state(void)
     struct Client *c;
 
     /* The very first byte indicates the number of monitors detected by
-     * us. Then, the first monitors_num bytes indicate the active
+     * us. The second byte indicates the index of the currently selected
+     * monitor. Then, the next monitors_num bytes indicate the active
      * workspace on each monitor. The next monitors_num bytes indicate
      * the active layout on each monitor (note: different layouts might
      * be active on different workspaces on each monitor, but they are
@@ -2496,7 +2497,7 @@ publish_state(void)
 
     size_monws = 16;
 
-    size = 1 + monitors_num * 2 + monitors_num * size_monws * 2;
+    size = 1 + 1 + monitors_num * 2 + monitors_num * size_monws * 2;
     state = calloc(size, sizeof (unsigned char));
     if (state == NULL)
     {
@@ -2504,9 +2505,10 @@ publish_state(void)
         return;
     }
 
-    /* Number of detected monitors (int) */
+    /* Number of detected monitors and currently selected monitor (int) */
     state[0] = monitors_num;
-    off = 1;
+    state[1] = selmon ? selmon->index : 0;
+    off = 2;
 
     /* Active workspace on each monitor (int) */
     for (m = monitors; m; m = m->next)

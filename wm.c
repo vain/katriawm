@@ -891,8 +891,15 @@ handle_unmapnotify(XEvent *e)
     XUnmapEvent *ev = &e->xunmap;
     struct Client *c;
 
+    /* ICCCM 4.1.4 says that you either get a synthetic or unsynthetic
+     * UnmapNotify event. In either case, the WM should issue the
+     * transition from NormalState to WithdrawnState by unmapping the
+     * window and removing the WM_STATE property. */
     if ((c = client_get_for_window(ev->window)))
+    {
+        XUnmapWindow(dpy, c->win);
         manage_client_gone(c, 1);
+    }
 }
 
 void

@@ -9,6 +9,7 @@ next
   [Changed]
   - On startup, the pointer is now warped to the selected monitor.
   - DestroyNotify events are now ignored.
+  - We now always unmap windows on UnmapNotify as suggested by ICCCM.
 
   [Added]
   - Support for ICCCM input focus models and WM_TAKE_FOCUS.

@@ -40,7 +40,7 @@ do
 done
 
 xprop -spy -notype -root "$atom_name" |
-sed -u 's/^[^=]\+= //; s/,//g' |
+sed -u 's/^[^=]\+= //; s/,//g; /[^- 0-9]/d' |
 while read line
 do
     info=($line)

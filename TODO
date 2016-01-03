@@ -1,8 +1,4 @@
-Active "sprint":
-
-    - publish_state():
-        - Save slots
-        - Selected monitor
+It's bughunting time!
 
 
 --- Future ---
@@ -54,3 +50,4 @@ Next "sprint":
 - More IPC calls:
     - Jump to workspace N on monitor M.
     - Show workspace N on monitor M without jumping to it.
+    - Wipe all save slots?

@@ -1,7 +1,5 @@
 Active "sprint":
 
-    - WM_TAKE_FOCUS:
-        http://lists.suckless.org/dev/1104/7548.html#replies
     - WM_STATE
     - Don't switch workspace if it hasn't actually changed?
     - IPC

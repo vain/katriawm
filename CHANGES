@@ -9,6 +9,9 @@ next
   [Changed]
   - On startup, the pointer is now warped to the selected monitor.
 
+  [Added]
+  - Support for ICCCM input focus models and WM_TAKE_FOCUS.
+
 Milestone 2  2016-01-01
   [Fixed]
   - Moving and resizing works when pointer over decorations.

@@ -46,6 +46,7 @@ struct Client
     char floating;
     char fullscreen;
     char hidden;
+    char never_focus;
     char urgent;
 
     char title[512];
@@ -111,6 +112,7 @@ enum AtomsWM
 {
     AtomWMDeleteWindow,
     AtomWMProtocols,
+    AtomWMTakeFocus,
 
     AtomWMLAST,
 };
@@ -203,11 +205,13 @@ static void manage_focus_set(struct Client *c);
 static void manage_fullscreen(struct Client *c, char fs);
 static void manage_goto_monitor(int i);
 static void manage_goto_workspace(int i);
+static void manage_icccm_update_hints(struct Client *c);
 static void manage_raisefocus(struct Client *c);
 static void manage_raisefocus_first_matching(void);
 static void manage_showhide(struct Client *c, char hide);
 static void manage_xfocus(struct Client *c);
 static void manage_xraise(struct Client *c);
+static int manage_xsend_icccm(struct Client *c, Atom atom);
 static void publish_state(void);
 static void run(void);
 static void scan(void);
@@ -855,7 +859,6 @@ handle_maprequest(XEvent *e)
 void
 handle_propertynotify(XEvent *e)
 {
-    XWMHints *wmh;
     XPropertyEvent *ev = &e->xproperty;
     struct Client *c;
     char *an = NULL;
@@ -872,38 +875,9 @@ handle_propertynotify(XEvent *e)
         }
         else if (ev->atom == XA_WM_HINTS)
         {
-            if ((wmh = XGetWMHints(dpy, c->win)))
-            {
-                if (wmh->flags & XUrgencyHint)
-                {
-                    if (c == selc && VIS_ON_SELMON(c))
-                    {
-                        /* Setting the urgency hint on the currently
-                         * selected window shall have no effect */
-                        wmh->flags &= ~XUrgencyHint;
-                        XSetWMHints(dpy, c->win, wmh);
-                        D fprintf(stderr, __NAME_WM__": Urgency hint on client "
-                                  "%p ignored because selected\n", (void *)c);
-                    }
-                    else
-                    {
-                        c->urgent = 1;
-                        decorations_draw_for_client(c, DecWinLAST);
-                        D fprintf(stderr, __NAME_WM__": Urgency hint on client "
-                                  "%p set\n", (void *)c);
-                    }
-                }
-                else if (c->urgent)
-                {
-                    /* Urgency hint has been cleared by the application */
-                    c->urgent = 0;
-                    decorations_draw_for_client(c, DecWinLAST);
-                    D fprintf(stderr, __NAME_WM__": Urgency hint on client %p "
-                              "cleared\n", (void *)c);
-                }
-                publish_state();
-                XFree(wmh);
-            }
+            D fprintf(stderr, __NAME_WM__": Client %p has changed its WM_HINTS, "
+                      "updating\n", (void *)c);
+            manage_icccm_update_hints(c);
         }
         /* XXX ev->atom == XA_WM_TRANSIENT_FOR
          * dwm indicates that there might be changes to the
@@ -935,21 +909,12 @@ handle_unmapnotify(XEvent *e)
 void
 ipc_client_close(char arg)
 {
-    XEvent ev;
-
     (void)arg;
 
     if (!SOMETHING_FOCUSED)
         return;
 
-    memset(&ev, 0, sizeof ev);
-    ev.xclient.type = ClientMessage;
-    ev.xclient.window = selc->win;
-    ev.xclient.message_type = atom_wm[AtomWMProtocols];
-    ev.xclient.format = 32;
-    ev.xclient.data.l[0] = atom_wm[AtomWMDeleteWindow];
-    ev.xclient.data.l[1] = CurrentTime;
-    XSendEvent(dpy, selc->win, False, NoEventMask, &ev);
+    manage_xsend_icccm(selc, atom_wm[AtomWMDeleteWindow]);
 }
 
 void
@@ -1774,6 +1739,7 @@ manage(Window win, XWindowAttributes *wa)
         D fprintf(stderr, __NAME_WM__": Client %p has no EWMH window type\n",
                   (void *)c);
 
+    manage_icccm_update_hints(c);
     manage_apply_rules(c);
 
     D fprintf(stderr, __NAME_WM__": Client %p lives on WS %d on monitor %d\n",
@@ -2225,6 +2191,62 @@ manage_goto_workspace(int i)
 }
 
 void
+manage_icccm_update_hints(struct Client *c)
+{
+    XWMHints *wmh;
+
+    if ((wmh = XGetWMHints(dpy, c->win)))
+    {
+        if (wmh->flags & XUrgencyHint)
+        {
+            if (c == selc && VIS_ON_SELMON(c))
+            {
+                /* Setting the urgency hint on the currently selected
+                 * window shall have no effect */
+                wmh->flags &= ~XUrgencyHint;
+                XSetWMHints(dpy, c->win, wmh);
+                D fprintf(stderr, __NAME_WM__": Urgency hint on client "
+                          "%p ignored because selected\n", (void *)c);
+            }
+            else
+            {
+                c->urgent = 1;
+                decorations_draw_for_client(c, DecWinLAST);
+                D fprintf(stderr, __NAME_WM__": Urgency hint on client "
+                          "%p set\n", (void *)c);
+            }
+        }
+        else if (c->urgent)
+        {
+            /* Urgency hint has been cleared by the application */
+            c->urgent = 0;
+            decorations_draw_for_client(c, DecWinLAST);
+            D fprintf(stderr, __NAME_WM__": Urgency hint on client %p "
+                      "cleared\n", (void *)c);
+        }
+
+        /* This is from a dwm patch by Brendan MacDonell:
+         * http://lists.suckless.org/dev/1104/7548.html
+         * It takes care of ICCCM input focus models. */
+        if (wmh->flags & InputHint)
+        {
+            c->never_focus = !wmh->input;
+            D fprintf(stderr, __NAME_WM__": Client %p never_focus: %d\n",
+                      (void *)c, c->never_focus);
+        }
+        else
+        {
+            c->never_focus = 0;
+            D fprintf(stderr, __NAME_WM__": Client %p never_focus: %d\n",
+                      (void *)c, c->never_focus);
+        }
+
+        publish_state();
+        XFree(wmh);
+    }
+}
+
+void
 manage_raisefocus(struct Client *c)
 {
     if (c && !VIS_ON_SELMON(c))
@@ -2298,7 +2320,10 @@ manage_xfocus(struct Client *c)
         }
         publish_state();
 
-        XSetInputFocus(dpy, c->win, RevertToParent, CurrentTime);
+        if (!c->never_focus)
+            XSetInputFocus(dpy, c->win, RevertToParent, CurrentTime);
+
+        manage_xsend_icccm(c, atom_wm[AtomWMTakeFocus]);
     }
     else
         XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);
@@ -2316,6 +2341,42 @@ manage_xraise(struct Client *c)
 
     for (i = DecWinTop; i <= DecWinBottom; i++)
         XRaiseWindow(dpy, c->decwin[i]);
+}
+
+int
+manage_xsend_icccm(struct Client *c, Atom atom)
+{
+    /* This is from a dwm patch by Brendan MacDonell:
+     * http://lists.suckless.org/dev/1104/7548.html */
+
+    int n;
+    Atom *protocols;
+    int exists = 0;
+    XEvent ev;
+
+    if (XGetWMProtocols(dpy, c->win, &protocols, &n))
+    {
+        while (!exists && n--)
+            exists = protocols[n] == atom;
+        XFree(protocols);
+    }
+    if (exists)
+    {
+        ev.type = ClientMessage;
+        ev.xclient.window = c->win;
+        ev.xclient.message_type = atom_wm[AtomWMProtocols];
+        ev.xclient.format = 32;
+        ev.xclient.data.l[0] = atom;
+        ev.xclient.data.l[1] = CurrentTime;
+        XSendEvent(dpy, c->win, False, NoEventMask, &ev);
+
+        D fprintf(stderr, __NAME_WM__": ICCCM: Atom %lu sent to client %p\n",
+                  atom, (void *)c);
+    }
+    else
+        D fprintf(stderr, __NAME_WM__": ICCCM: Atom NOT %lu sent to client %p\n",
+                  atom, (void *)c);
+    return exists;
 }
 
 void
@@ -2537,6 +2598,7 @@ setup_hints(void)
 
     atom_wm[AtomWMDeleteWindow] = XInternAtom(dpy, "WM_DELETE_WINDOW", False);
     atom_wm[AtomWMProtocols] = XInternAtom(dpy, "WM_PROTOCOLS", False);
+    atom_wm[AtomWMTakeFocus] = XInternAtom(dpy, "WM_TAKE_FOCUS", False);
 }
 
 int

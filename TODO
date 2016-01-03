@@ -3,7 +3,7 @@ It's bughunting time!
 
 --- Future ---
 
-Next "sprint":
+Next cycle:
 
     - std types / go for C99
         - Images: We need 32 bit integers, not just integers!
@@ -18,7 +18,7 @@ Next "sprint":
     - scan():
         - Grab server?
 
-Next "sprint":
+Next cycle:
 
     - Test on BSD
     - Test on different architectures

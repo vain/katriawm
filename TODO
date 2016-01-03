@@ -24,12 +24,8 @@ Next "sprint":
     - ICCCM
         - WM_NORMAL_HINTS
             - should fix GIMP dialogs not resizing themselves
-        - InputOnly, see WM_TAKE_FOCUS above
-    - Learn about "withdrawn" state. How should the WM handle that? See
-      also dwm's UnmapNotify handler.
     - scan():
         - Grab server?
-        - Pick up iconified windows?
 
 Next "sprint":
 

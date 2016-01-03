@@ -159,7 +159,6 @@ static void draw_text(Drawable d, XftFont *xfont, XftColor *col, int x, int y,
 static void handle_clientmessage(XEvent *e);
 static void handle_configurenotify(XEvent *e);
 static void handle_configurerequest(XEvent *e);
-static void handle_destroynotify(XEvent *e);
 static void handle_expose(XEvent *e);
 static void handle_focusin(XEvent *e);
 static void handle_maprequest(XEvent *e);
@@ -255,7 +254,6 @@ static void (*x11_handler[LASTEvent]) (XEvent *) = {
     [ClientMessage] = handle_clientmessage,
     [ConfigureNotify] = handle_configurenotify,
     [ConfigureRequest] = handle_configurerequest,
-    [DestroyNotify] = handle_destroynotify,
     [Expose] = handle_expose,
     [FocusIn] = handle_focusin,
     [MapRequest] = handle_maprequest,
@@ -804,16 +802,6 @@ handle_configurerequest(XEvent *e)
         wc.stack_mode = ev->detail;
         XConfigureWindow(dpy, ev->window, ev->value_mask, &wc);
     }
-}
-
-void
-handle_destroynotify(XEvent *e)
-{
-    XDestroyWindowEvent *ev = &e->xdestroywindow;
-    struct Client *c;
-
-    if ((c = client_get_for_window(ev->window)))
-        manage_client_gone(c, 1);
 }
 
 void

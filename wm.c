@@ -109,8 +109,8 @@ enum AtomsNet
 
 enum AtomsWM
 {
-    AtomWMProtocols,
     AtomWMDeleteWindow,
+    AtomWMProtocols,
 
     AtomWMLAST,
 };
@@ -2527,8 +2527,8 @@ setup_hints(void)
     XChangeProperty(dpy, root, atom_net[AtomNetSupported], XA_ATOM, 32,
                     PropModeReplace, (unsigned char *)atom_net, AtomNetLAST);
 
-    atom_wm[AtomWMProtocols] = XInternAtom(dpy, "WM_PROTOCOLS", False);
     atom_wm[AtomWMDeleteWindow] = XInternAtom(dpy, "WM_DELETE_WINDOW", False);
+    atom_wm[AtomWMProtocols] = XInternAtom(dpy, "WM_PROTOCOLS", False);
 }
 
 int

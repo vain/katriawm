@@ -179,6 +179,7 @@ static void ipc_client_select_recent(char arg);
 static void ipc_client_switch_monitor_adjacent(char arg);
 static void ipc_client_switch_workspace(char arg);
 static void ipc_client_switch_workspace_adjacent(char arg);
+static void ipc_floaters_collect(char arg);
 static void ipc_layout_set(char arg);
 static void ipc_monitor_select_adjacent(char arg);
 static void ipc_monitor_select_recent(char arg);
@@ -242,6 +243,7 @@ static void (*ipc_handler[IPCLast]) (char arg) = {
     [IPCClientSwitchMonitorAdjacent] = ipc_client_switch_monitor_adjacent,
     [IPCClientSwitchWorkspace] = ipc_client_switch_workspace,
     [IPCClientSwitchWorkspaceAdjacent] = ipc_client_switch_workspace_adjacent,
+    [IPCFloatersCollect] = ipc_floaters_collect,
     [IPCLayoutSet] = ipc_layout_set,
     [IPCMonitorSelectAdjacent] = ipc_monitor_select_adjacent,
     [IPCMonitorSelectRecent] = ipc_monitor_select_recent,
@@ -1347,6 +1349,23 @@ ipc_client_switch_workspace_adjacent(char arg)
     /* Note: This call is not meant to switch the workspace but to force
      * rearrangement of the current workspace */
     manage_goto_workspace(selmon->active_workspace, 1);
+}
+
+void
+ipc_floaters_collect(char arg)
+{
+    struct Client *c;
+
+    (void)arg;
+
+    for (c = clients; c; c = c->next)
+    {
+        if (c->floating && VIS_ON_SELMON(c))
+        {
+            manage_fit_on_monitor(c);
+            manage_apply_size(c);
+        }
+    }
 }
 
 void

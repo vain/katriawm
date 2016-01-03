@@ -1,7 +1,5 @@
 Active "sprint":
 
-    - IPC
-        - Collect floaters, i.e. fit them to current monitor
     - publish_state():
         - Save slots
         - Selected monitor

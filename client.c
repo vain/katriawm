@@ -45,6 +45,7 @@ static struct Command c[] = {
     {  {  "client_switch_workspace",   "next"     },  IPCClientSwitchWorkspaceAdjacent,  fn_int,   +1         },
     {  {  "client_switch_workspace",   "prev"     },  IPCClientSwitchWorkspaceAdjacent,  fn_int,   -1         },
     {  {  "client_switch_workspace",   ANY        },  IPCClientSwitchWorkspace,          fn_atoi,  0          },
+    {  {  "floaters_collect",          ANY        },  IPCFloatersCollect,                NULL,     0          },
     {  {  "layout_set",                "float"    },  IPCLayoutSet,                      fn_int,   LAFloat    },
     {  {  "layout_set",                "monocle"  },  IPCLayoutSet,                      fn_int,   LAMonocle  },
     {  {  "layout_set",                "tile"     },  IPCLayoutSet,                      fn_int,   LATile     },

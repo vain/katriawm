@@ -349,8 +349,8 @@ client_update_title(struct Client *c)
     {
         /* This is a particularly gnarly function. Props to dwm which has
          * figured out how to use it. */
-        if (XmbTextPropertyToTextList(dpy, &tp, &slist, &count) >= Success
-            && count > 0 && *slist)
+        if (XmbTextPropertyToTextList(dpy, &tp, &slist, &count) >= Success &&
+            count > 0 && *slist)
         {
             strncpy(c->title, slist[0], sizeof c->title - 1);
             XFreeStringList(slist);
@@ -685,20 +685,20 @@ handle_clientmessage(XEvent *e)
         {
             /* An EWMH client state message might contain two properties
              * to alter, data.l[1] and data.l[2] */
-            if ((Atom)cme->data.l[1] == atom_net[AtomNetWMStateFullscreen]
-                || (Atom)cme->data.l[2] == atom_net[AtomNetWMStateFullscreen])
+            if ((Atom)cme->data.l[1] == atom_net[AtomNetWMStateFullscreen] ||
+                (Atom)cme->data.l[2] == atom_net[AtomNetWMStateFullscreen])
             {
                 D fprintf(stderr, __NAME_WM__": Client %p requested EWMH "
                           "fullscreen\n", (void *)c);
 
                 /* 0 = remove, 1 = add, 2 = toggle */
-                if (c->fullscreen && (cme->data.l[0] == 0
-                                      || cme->data.l[0] == 2))
+                if (c->fullscreen && (cme->data.l[0] == 0 ||
+                                      cme->data.l[0] == 2))
                 {
                     manage_fullscreen(c, 0);
                 }
-                else if (!c->fullscreen && (cme->data.l[0] == 1
-                                            || cme->data.l[0] == 2))
+                else if (!c->fullscreen && (cme->data.l[0] == 1 ||
+                                            cme->data.l[0] == 2))
                 {
                     manage_fullscreen(c, 1);
                 }
@@ -1124,8 +1124,8 @@ ipc_client_move_mouse(char arg)
 
         mouse_dc = NULL;
 
-        if ((c = client_get_for_window(child))
-            || (c = client_get_for_decoration(child, NULL)))
+        if ((c = client_get_for_window(child)) ||
+            (c = client_get_for_decoration(child, NULL)))
         {
             if (!c->fullscreen)
             {
@@ -1177,8 +1177,8 @@ ipc_client_resize_mouse(char arg)
 
         mouse_dc = NULL;
 
-        if ((c = client_get_for_window(child))
-            || (c = client_get_for_decoration(child, NULL)))
+        if ((c = client_get_for_window(child)) ||
+            (c = client_get_for_decoration(child, NULL)))
         {
             if (!c->fullscreen)
             {
@@ -1543,8 +1543,8 @@ ipc_placement_use(char arg)
             if (m->index == c->saved_monitor[ai])
                 c->mon = m;
 
-        if (c->saved_workspace[ai] >= WORKSPACE_MIN
-            && c->saved_workspace[ai] <= WORKSPACE_MAX)
+        if (c->saved_workspace[ai] >= WORKSPACE_MIN &&
+            c->saved_workspace[ai] <= WORKSPACE_MAX)
             c->workspace = c->saved_workspace[ai];
     }
 
@@ -2008,11 +2008,11 @@ manage_ewmh_evaluate_hints(struct Client *c)
         if (prop_ret)
         {
             prop = ((Atom *)prop_ret)[0];
-            if (prop == atom_net[AtomNetWMWindowTypeDialog]
-                || prop == atom_net[AtomNetWMWindowTypeMenu]
-                || prop == atom_net[AtomNetWMWindowTypeSplash]
-                || prop == atom_net[AtomNetWMWindowTypeToolbar]
-                || prop == atom_net[AtomNetWMWindowTypeUtility])
+            if (prop == atom_net[AtomNetWMWindowTypeDialog] ||
+                prop == atom_net[AtomNetWMWindowTypeMenu] ||
+                prop == atom_net[AtomNetWMWindowTypeSplash] ||
+                prop == atom_net[AtomNetWMWindowTypeToolbar] ||
+                prop == atom_net[AtomNetWMWindowTypeUtility])
             {
                 c->floating = 1;
                 an = XGetAtomName(dpy, prop);
@@ -2743,8 +2743,8 @@ setup_monitors_is_duplicate(XRRCrtcInfo *ci, char *chosen, XRRScreenResources *s
         if (chosen[i])
         {
             o = XRRGetCrtcInfo(dpy, sr, sr->crtcs[i]);
-            if (o->x == ci->x && o->y == ci->y
-                && o->width == ci->width && o->height == ci->height)
+            if (o->x == ci->x && o->y == ci->y &&
+                o->width == ci->width && o->height == ci->height)
                 return 1;
         }
     }
@@ -2909,15 +2909,15 @@ xerror(Display *dpy, XErrorEvent *ee)
      * cases are ignored (especially on UnmapNotify's). Other types of
      * errors call Xlibs default error handler, which may call exit. */
 
-    if (ee->error_code == BadWindow
-    || (ee->request_code == X_SetInputFocus && ee->error_code == BadMatch)
-    || (ee->request_code == X_PolyText8 && ee->error_code == BadDrawable)
-    || (ee->request_code == X_PolyFillRectangle && ee->error_code == BadDrawable)
-    || (ee->request_code == X_PolySegment && ee->error_code == BadDrawable)
-    || (ee->request_code == X_ConfigureWindow && ee->error_code == BadMatch)
-    || (ee->request_code == X_GrabButton && ee->error_code == BadAccess)
-    || (ee->request_code == X_GrabKey && ee->error_code == BadAccess)
-    || (ee->request_code == X_CopyArea && ee->error_code == BadDrawable))
+    if (ee->error_code == BadWindow ||
+        (ee->request_code == X_SetInputFocus && ee->error_code == BadMatch) ||
+        (ee->request_code == X_PolyText8 && ee->error_code == BadDrawable) ||
+        (ee->request_code == X_PolyFillRectangle && ee->error_code == BadDrawable) ||
+        (ee->request_code == X_PolySegment && ee->error_code == BadDrawable) ||
+        (ee->request_code == X_ConfigureWindow && ee->error_code == BadMatch) ||
+        (ee->request_code == X_GrabButton && ee->error_code == BadAccess) ||
+        (ee->request_code == X_GrabKey && ee->error_code == BadAccess) ||
+        (ee->request_code == X_CopyArea && ee->error_code == BadDrawable))
         return 0;
     fprintf(stderr,
             __NAME_WM__": Fatal error: request code=%d, error code=%d\n",

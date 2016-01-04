@@ -115,9 +115,9 @@ main(int argc, char **argv)
         {
             /* ... and then check if the second argument matches. A
              * wildcard matches anything. */
-            if (c[i].ops[1] == ANY
-                || (argc >= 3
-                    && !strncmp(argv[2], c[i].ops[1], strlen(c[i].ops[1]))))
+            if (c[i].ops[1] == ANY ||
+                (argc >= 3 &&
+                 !strncmp(argv[2], c[i].ops[1], strlen(c[i].ops[1]))))
             {
                 cmd = c[i].cmd;
 

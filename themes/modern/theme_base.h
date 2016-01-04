@@ -3,7 +3,7 @@ static char *dec_fonts[] = {
 };
 
 static char *dec_font_colors[] = {
-    "#222222",  /* DecTintNormal */
+    "#AAAAAA",  /* DecTintNormal */
     "#000000",  /* DecTintSelect */
     "#000000",  /* DecTintUrgent */
 };

@@ -6,6 +6,7 @@ next
   [Changed]
   - When floating clients are larger than the work area, we try to make
     the upper left corner visible.
+  - Reworked theme "modern".
 
   [Added]
   - Exemplary lemonbar script:

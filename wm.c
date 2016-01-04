@@ -31,12 +31,13 @@
 struct Client
 {
     Window win;
+    Window decwin[DecWinLAST];
 
     /* Inner size of the actual client, excluding decorations */
     int x, y, w, h;
-
     int normal_x, normal_y, normal_w, normal_h;
     int nonhidden_x;
+
     char floating;
     char fullscreen;
     char hidden;
@@ -49,8 +50,6 @@ struct Client
     int workspace;
 
     int saved_monitor[SAVE_SLOTS], saved_workspace[SAVE_SLOTS];
-
-    Window decwin[DecWinLAST];
 
     struct Client *next;
     struct Client *focus_next;
@@ -76,6 +75,7 @@ struct Rule
 {
     char *class;
     char *instance;
+
     int workspace;
     int monitor;
     char floating;
@@ -114,8 +114,7 @@ enum AtomsWM
 
 #include "config.h"
 
-static struct Client *clients = NULL, *selc = NULL;
-static struct Client *mouse_dc = NULL;
+static struct Client *clients = NULL, *selc = NULL, *mouse_dc = NULL;
 static struct Monitor *monitors = NULL, *selmon = NULL;
 static struct Monitor *saved_monitor[SAVE_SLOTS] = { 0 };
 static int screen_w = -1, screen_h = -1;
@@ -123,10 +122,10 @@ static int mouse_dx, mouse_dy, mouse_ocx, mouse_ocy, mouse_ocw, mouse_och;
 static Atom atom_net[AtomNetLAST], atom_wm[AtomWMLAST], atom_state, atom_ipc;
 static Cursor cursor_normal;
 static Display *dpy;
-static XftColor font_color[DecTintLAST];
-static XftFont *font[FontLAST];
 static Pixmap dec_tiles[DecTintLAST][DecLAST];
 static Window root;
+static XftColor font_color[DecTintLAST];
+static XftFont *font[FontLAST];
 static int monitors_num = 0, prevmon_i = 0;
 static int running = 1;
 static int restart = 0;
@@ -222,7 +221,7 @@ static void shutdown(void);
 static void shutdown_monitors_free(void);
 static int xerror(Display *dpy, XErrorEvent *ee);
 
-static void (*ipc_handler[IPCLast]) (char arg) = {
+static void (*ipc_handler[IPCLast])(char arg) = {
     [IPCClientCenterFloating] = ipc_client_center_floating,
     [IPCClientClose] = ipc_client_close,
     [IPCClientFloatingToggle] = ipc_client_floating_toggle,
@@ -251,7 +250,7 @@ static void (*ipc_handler[IPCLast]) (char arg) = {
     [IPCWorkspaceSelectRecent] = ipc_workspace_select_recent,
 };
 
-static void (*x11_handler[LASTEvent]) (XEvent *) = {
+static void (*x11_handler[LASTEvent])(XEvent *e) = {
     [ClientMessage] = handle_clientmessage,
     [ConfigureNotify] = handle_configurenotify,
     [ConfigureRequest] = handle_configurerequest,
@@ -262,7 +261,7 @@ static void (*x11_handler[LASTEvent]) (XEvent *) = {
     [UnmapNotify] = handle_unmapnotify,
 };
 
-static void (*layouts[LALast]) (struct Monitor *m) = {
+static void (*layouts[LALast])(struct Monitor *m) = {
     /* Index 0 is the default layout, see ipc.h */
     [LAFloat] = layout_float,
     [LAMonocle] = layout_monocle,
@@ -328,7 +327,7 @@ client_update_title(struct Client *c)
         if (!XGetTextProperty(dpy, c->win, &tp, XA_WM_NAME))
         {
             D fprintf(stderr, __NAME_WM__": Title of client %p could not be "
-                      "read from X\n", (void *)c);
+                      "read from ICCCM\n", (void *)c);
             strncpy(c->title, WM_NAME_UNKNOWN, sizeof c->title);
             return;
         }
@@ -634,7 +633,8 @@ draw_text(Drawable d, XftFont *xfont, XftColor *col, int x, int y, int w, char *
         return;
 
     /* Reduce length until the rendered text can fit into the desired
-     * width -- this is "kind of"-ish UTF-8 compatible */
+     * width -- this is "kind of"-ish UTF-8 compatible. It creates a
+     * better visual result than just clipping the region. */
     for (len = strlen(s); len >= 0; len--)
     {
         XftTextExtentsUtf8(dpy, xfont, (XftChar8 *)s, len, &ext);
@@ -667,6 +667,9 @@ handle_clientmessage(XEvent *e)
         cmd = (enum IPCCommand)cme->data.b[0];
         arg = cme->data.b[1];
 
+        /* Note: Checking for "cmd >= 0" creates a compiler warning on
+         * LLVM but not on GCC. The warning says that enums are always
+         * unsigned. I want to be on the safe side here, though. */
         if (cmd >= 0 && cmd < IPCLast && ipc_handler[cmd])
             ipc_handler[cmd](arg);
     }
@@ -838,6 +841,11 @@ handle_maprequest(XEvent *e)
     XMapRequestEvent *ev = &e->xmaprequest;
     XWindowAttributes wa;
 
+    /* This is where we start managing a new window (unless it has been
+     * detected by scan() at startup). Note that windows might have
+     * existed before a MapRequest. Explicitly ignore windows with
+     * override_redirect being True to allow popups, bars, panels, ... */
+
     if (!XGetWindowAttributes(dpy, ev->window, &wa))
         return;
     if (wa.override_redirect)
@@ -892,7 +900,12 @@ handle_unmapnotify(XEvent *e)
     XUnmapEvent *ev = &e->xunmap;
     struct Client *c;
 
-    /* ICCCM 4.1.4 says that you either get a synthetic or unsynthetic
+    /* This is the counterpart to a MapRequest. It's where we stop
+     * managing a window. The window might not necessarily be destroyed,
+     * it could be reused later on -- but that doesn't matter to us
+     * because it's invisible until another MapRequest occurs.
+     *
+     * ICCCM 4.1.4 says that you either get a synthetic or unsynthetic
      * UnmapNotify event. In either case, the WM should issue the
      * transition from NormalState to WithdrawnState by unmapping the
      * window and removing the WM_STATE property. */
@@ -931,6 +944,7 @@ ipc_client_close(char arg)
     if (!SOMETHING_FOCUSED)
         return;
 
+    /* This call asks the client to please close itself gracefully */
     manage_xsend_icccm(selc, atom_wm[AtomWMDeleteWindow]);
 }
 
@@ -965,6 +979,8 @@ ipc_client_kill(char arg)
     if (!SOMETHING_FOCUSED)
         return;
 
+    /* This brutally kills the X11 connection of the client. Use only as
+     * a last resort. */
     XKillClient(dpy, selc->win);
 }
 
@@ -1049,8 +1065,8 @@ ipc_client_move_list(char arg)
 
     /* The following method does not really "swap" the two list
      * elements. It simply removes the second item from the list and
-     * then prepends it in front of the first item. Thus, "two" now
-     * comes before "one". */
+     * then prepends it in front of "one". Thus, "two" now comes before
+     * "one", which is all we wanted. */
 
     for (c = clients; c && c->next != two; c = c->next)
         /* nop */;
@@ -1662,6 +1678,7 @@ layout_tile(struct Monitor *m)
                 if (i == master_n)
                     at_y = m->wy;
 
+                /* Decide which column to place this client into */
                 if (i < master_n)
                 {
                     c->x = m->wx;

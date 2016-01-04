@@ -38,11 +38,13 @@ Configuration
 
 ### Command line arguments
 
-The script accepts three parameters:
+The script accepts three parameters, each specifying an attribute string
+which will be inserted before the corresponding area:
 
--   `-n`: Attribute string to prepend to unselected areas.
--   `-s`: The same for selected areas.
--   `-u`: The same for urgent areas.
+-   `-m`: Layout icon if monitor selected.
+-   `-n`: Unselected areas.
+-   `-s`: Selected tags.
+-   `-u`: Urgent tags.
 
 Let’s say you want to change the background color for selected items,
 then you have to call it like this:

@@ -7,13 +7,15 @@ layout_names[1]='[M]'
 layout_names[2]='><>'
 size_monws=16
 
+style_mon='%{R}'
 style_nor='%{B-}%{F-}%{-u}%{-o}'
 style_sel='%{+u}%{+o}'
 style_urg='%{R}'
 
-while getopts n:s:u: name
+while getopts m:n:s:u: name
 do
     case $name in
+        m) style_mon=$OPTARG ;;
         n) style_nor=$OPTARG ;;
         s) style_sel=$OPTARG ;;
         u) style_urg=$OPTARG ;;
@@ -58,8 +60,10 @@ do
     out=
     for (( i = 0; i < mn; i++ ))
     do
-        out+="%{S$i}%{l} "
-        out+="${layout_names[${info[3 + i + mn]}]} "
+        out+="%{S$i}%{l}"
+        (( i == smon )) && out+=$style_mon
+        out+=" ${layout_names[${info[3 + i + mn]}]} "
+        out+=$style_nor
 
         active_workspace=${info[3 + i]}
 
@@ -101,20 +105,20 @@ do
             done
         done
 
-        out+='%{c}'
-        (( i == smon )) && out+="${style_sel} SELECTED ${style_nor}"
-
-        out+='%{r}'
-        mask=1
-        for (( bit = 0; bit < 8; bit++ ))
-        do
-            if (( slots & mask ))
-            then
-                out+="$bit"
-            fi
-            (( mask <<= 1 ))
-        done
-        out+=' '
+        if (( i == smon ))
+        then
+            out+='%{r}'
+            mask=1
+            for (( bit = 0; bit < 8; bit++ ))
+            do
+                if (( slots & mask ))
+                then
+                    out+="$bit"
+                fi
+                (( mask <<= 1 ))
+            done
+            out+=' '
+        fi
     done
     echo "$out"
 done

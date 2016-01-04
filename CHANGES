@@ -8,7 +8,9 @@ next
     the upper left corner visible.
 
   [Added]
-  - Exemplary lemonbar script: Workspaces can be suffixed.
+  - Exemplary lemonbar script:
+    - Workspaces can be suffixed.
+    - Current monitor indicated by styling the layout icon differently.
 
 Milestone 3  2016-01-03
   [Fixed]

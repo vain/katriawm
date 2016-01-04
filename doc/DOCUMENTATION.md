@@ -198,6 +198,8 @@ This property can be read by external tools in order to draw a pager or
 a bar. This can be done using a shell script and the `xprop` utility.
 
 As an example, there is a script that reads this property and produces
-output suitable to be fed into [lemonbar].
+output suitable to be fed into [lemonbar]. See also
+[`LEMONBAR.md`][lbdoc].
 
 [lemonbar]: https://github.com/LemonBoy/bar
+[lbdoc]: LEMONBAR.md

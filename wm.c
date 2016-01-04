@@ -2686,40 +2686,14 @@ setup_hints(void)
     atom_net[AtomNetSupported] = XInternAtom(dpy, "_NET_SUPPORTED", False);
     atom_net[AtomNetWMName] = XInternAtom(dpy, "_NET_WM_NAME", False);
     atom_net[AtomNetWMState] = XInternAtom(dpy, "_NET_WM_STATE", False);
-    atom_net[AtomNetWMStateFullscreen] = XInternAtom(dpy,
-                                                     "_NET_WM_STATE_FULLSCREEN",
-                                                     False);
+    atom_net[AtomNetWMStateFullscreen] = XInternAtom(dpy, "_NET_WM_STATE_FULLSCREEN", False);
 
-    atom_net[AtomNetWMWindowType] = XInternAtom(
-            dpy,
-            "_NET_WM_WINDOW_TYPE",
-            False
-    );
-    atom_net[AtomNetWMWindowTypeDialog] = XInternAtom(
-            dpy,
-            "_NET_WM_WINDOW_TYPE_DIALOG",
-            False
-    );
-    atom_net[AtomNetWMWindowTypeMenu] = XInternAtom(
-            dpy,
-            "_NET_WM_WINDOW_TYPE_MENU",
-            False
-    );
-    atom_net[AtomNetWMWindowTypeSplash] = XInternAtom(
-            dpy,
-            "_NET_WM_WINDOW_TYPE_SPLASH",
-            False
-    );
-    atom_net[AtomNetWMWindowTypeToolbar] = XInternAtom(
-            dpy,
-            "_NET_WM_WINDOW_TYPE_TOOLBAR",
-            False
-    );
-    atom_net[AtomNetWMWindowTypeUtility] = XInternAtom(
-            dpy,
-            "_NET_WM_WINDOW_TYPE_UTILITY",
-            False
-    );
+    atom_net[AtomNetWMWindowType] = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE", False);
+    atom_net[AtomNetWMWindowTypeDialog] = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_DIALOG", False);
+    atom_net[AtomNetWMWindowTypeMenu] = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_MENU", False);
+    atom_net[AtomNetWMWindowTypeSplash] = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_SPLASH", False);
+    atom_net[AtomNetWMWindowTypeToolbar] = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_TOOLBAR", False);
+    atom_net[AtomNetWMWindowTypeUtility] = XInternAtom( dpy, "_NET_WM_WINDOW_TYPE_UTILITY", False);
 
     XChangeProperty(dpy, root, atom_net[AtomNetSupported], XA_ATOM, 32,
                     PropModeReplace, (unsigned char *)atom_net, AtomNetLAST);

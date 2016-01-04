@@ -72,8 +72,8 @@ window. You can use this to draw a "pager". I suggest using lemonbar:
 
     https://github.com/LemonBoy/bar
 
-A script, which you can use in your ~/.xinitrc, to read and evaluate
-that property is provided by us:
+A script, which you can use in your ~/.xinitrc to read and evaluate
+that property, is provided:
 
     $ state_to_lemonbar.sh | lemonbar -d ...
 
@@ -96,7 +96,7 @@ Background information
   several years, many parts of katriawm are heavily inspired by dwm and
   some routines have indeed been copied.
 
-  So, many thanks to dwm and all its creators!
+  So, many thanks to dwm and all its authors!
 
   http://dwm.suckless.org/
 

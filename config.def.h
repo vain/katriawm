@@ -1,3 +1,6 @@
+#ifndef _WM_CONFIG_H
+#define _WM_CONFIG_H
+
 struct WorkareaInsets wai = {
     .top = 20,
     .left = 0,
@@ -20,3 +23,5 @@ struct Rule rules[] = {
     /* class   instance   workspace   monitor  floating */
     {  NULL,   NULL,      -1,         -1,      -1  },
 };
+
+#endif /* _WM_CONFIG_H */

@@ -23,13 +23,19 @@ Running
 I suggest you run it like this:
 
     state_to_lemonbar.sh |
-    while sleep 1; do lemonbar -d ...; done
+    while sleep 1; do lemonbar ...; done
 
 The thing is, lemonbar does not handle XRandR changes. This can be
 easily worked around by restarting lemonbar (see [upstream issue][is]).
 Thus, after doing `xrandr --output ...`, you have to do a `killall
 lemonbar`. A loop like the one above ensures that lemonbar will be
 restarted automatically and continues to read status information.
+
+You will most likely want to use these default arguments for lemonbar:
+
+-   `-d`: Make lemonbar use the `override_redirect` flag, so it docks
+    properly.
+-   `-g x20`: Set the bar’s height to 20 pixels.
 
 [is]: https://github.com/LemonBoy/bar/issues/135
 

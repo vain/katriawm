@@ -1799,6 +1799,15 @@ manage(Window win, XWindowAttributes *wa)
     manage_fit_on_monitor(c);
     manage_apply_size(c);
 
+    /* When a window spawns "in the background", we put it into hidden
+     * state */
+    if (c->workspace != c->mon->active_workspace)
+    {
+        D fprintf(stderr, __NAME_WM__": Client %p spawned in background, hiding\n",
+                  (void *)c);
+        manage_showhide(c, 1);
+    }
+
     client_save(c);
 
     /* Whatever happens, we must add the client to the focus list, even
@@ -2037,9 +2046,7 @@ manage_ewmh_evaluate_hints(struct Client *c)
 void
 manage_fit_on_monitor(struct Client *c)
 {
-    /* Fit monitor on its screen. Caution: This function is not only
-     * called by manage(), so don't make assumptions specific to
-     * manage(). */
+    /* Fit monitor on its screen */
 
     if (c->mon == NULL)
     {
@@ -2059,15 +2066,6 @@ manage_fit_on_monitor(struct Client *c)
         c->x = c->mon->wx + c->mon->ww - c->w - dgeo.right_width - gap_pixels;
     if (c->y + c->h + dgeo.bottom_height + gap_pixels >= c->mon->wy + c->mon->wh)
         c->y = c->mon->wy + c->mon->wh - c->h - dgeo.bottom_height - gap_pixels;
-
-    /* When a window spawns "in the background", we put it into hidden
-     * state */
-    if (c->workspace != c->mon->active_workspace)
-    {
-        D fprintf(stderr, __NAME_WM__": Client %p spawned in background, hiding\n",
-                  (void *)c);
-        manage_showhide(c, 1);
-    }
 }
 
 void

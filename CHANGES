@@ -3,6 +3,9 @@ next
   - A bar will now be notified when a different monitor has been
     selected.
 
+  [Added]
+  - Exemplary lemonbar script: Workspaces can be suffixed.
+
 Milestone 3  2016-01-03
   [Fixed]
   - Critical: Fix "use after free" when a client terminates or unmaps.

@@ -20,6 +20,11 @@ do
     esac
 done
 
+# This file can contain an array of suffixes. For example,
+# `ws_names[4]='dev'` will make workspace 4 appear as '4:dev'.
+declare -A ws_names
+[[ -r ~/.katriabar ]] && . ~/.katriabar
+
 # "$atom_name" is, of course, a non-standard atom. Thus, it's not
 # allocated before katriawm has started. This makes xprop fail instead
 # of waiting until the atom is present. So, it's our job to wait.
@@ -69,20 +74,26 @@ do
             mask=1
             for (( bit = 0; bit < 8; bit++ ))
             do
+                if [[ -z ${ws_names[$ws_num]} ]]
+                then
+                    show=$ws_num
+                else
+                    show="$ws_num:${ws_names[$ws_num]}"
+                fi
                 if (( ubyte & mask ))
                 then
                     out+=$style_urg
-                    out+=" $ws_num "
+                    out+=" $show "
                     out+=$style_nor
                 elif (( byte & mask )) || (( ws_num == active_workspace ))
                 then
                     if (( ws_num == active_workspace ))
                     then
                         out+=$style_sel
-                        out+=" $ws_num "
+                        out+=" $show "
                         out+=$style_nor
                     else
-                        out+=" $ws_num "
+                        out+=" $show "
                     fi
                 fi
                 (( ws_num++ ))

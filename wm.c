@@ -582,9 +582,9 @@ decorations_tint(unsigned long color)
     out = (unsigned int *)malloc(sizeof dec_img);
     assert(out != NULL);
 
-    tr = (0x00FF0000 & color) >> 16;
-    tg = (0x0000FF00 & color) >> 8;
-    tb = (0x000000FF & color);
+    tr = (0xFF0000 & color) >> 16;
+    tg = (0x00FF00 & color) >> 8;
+    tb = (0x0000FF & color);
 
     for (i = 0; i < sizeof dec_img / sizeof dec_img[0]; i++)
     {
@@ -592,9 +592,9 @@ decorations_tint(unsigned long color)
          * the source image will have the full tint color, pixels with
          * less than 255 will dim the tint color */
 
-        r = (0x00FF0000 & dec_img[i]) >> 16;
-        g = (0x0000FF00 & dec_img[i]) >> 8;
-        b = (0x000000FF & dec_img[i]);
+        r = (0xFF0000 & dec_img[i]) >> 16;
+        g = (0x00FF00 & dec_img[i]) >> 8;
+        b = (0x0000FF & dec_img[i]);
 
         r *= tr;
         g *= tg;
@@ -608,7 +608,7 @@ decorations_tint(unsigned long color)
         g = g > 255 ? 255 : g;
         b = b > 255 ? 255 : b;
 
-        out[i] = 0xFF000000 | (r << 16) | (g << 8) | b;
+        out[i] = (r << 16) | (g << 8) | b;
     }
 
     return (char *)out;

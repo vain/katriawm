@@ -3,6 +3,10 @@ next
   - A bar will now be notified when a different monitor has been
     selected.
 
+  [Changed]
+  - When floating clients are larger than the work area, we try to make
+    the upper left corner visible.
+
   [Added]
   - Exemplary lemonbar script: Workspaces can be suffixed.
 

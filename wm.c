@@ -2046,7 +2046,8 @@ manage_ewmh_evaluate_hints(struct Client *c)
 void
 manage_fit_on_monitor(struct Client *c)
 {
-    /* Fit monitor on its screen */
+    /* Fit monitor on its screen in such a way that the upper left
+     * corner is visible */
 
     if (c->mon == NULL)
     {
@@ -2058,14 +2059,17 @@ manage_fit_on_monitor(struct Client *c)
     if (c->fullscreen)
         return;
 
-    if (c->x - dgeo.left_width - gap_pixels < c->mon->wx)
-        c->x = c->mon->wx + dgeo.left_width + gap_pixels;
-    if (c->y - dgeo.top_height - gap_pixels < c->mon->wy)
-        c->y = c->mon->wy + dgeo.top_height + gap_pixels;
+    /* Right and bottom */
     if (c->x + c->w + dgeo.right_width + gap_pixels >= c->mon->wx + c->mon->ww)
         c->x = c->mon->wx + c->mon->ww - c->w - dgeo.right_width - gap_pixels;
     if (c->y + c->h + dgeo.bottom_height + gap_pixels >= c->mon->wy + c->mon->wh)
         c->y = c->mon->wy + c->mon->wh - c->h - dgeo.bottom_height - gap_pixels;
+
+    /* Top and left */
+    if (c->x - dgeo.left_width - gap_pixels < c->mon->wx)
+        c->x = c->mon->wx + dgeo.left_width + gap_pixels;
+    if (c->y - dgeo.top_height - gap_pixels < c->mon->wy)
+        c->y = c->mon->wy + dgeo.top_height + gap_pixels;
 }
 
 void

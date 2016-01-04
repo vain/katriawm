@@ -1,9 +1,3 @@
-/*
- * http://www.x.org/wiki/UserDocumentation/
- * http://www.x.org/releases/X11R7.7/doc/libX11/libX11/libX11.html
- * http://seasonofcode.com/posts/how-x-window-managers-work-and-how-to-write-one-part-i.html
- */
-
 #include <assert.h>
 #include <locale.h>
 #include <stdio.h>

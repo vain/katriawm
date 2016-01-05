@@ -44,3 +44,6 @@ Next cycle:
 - EWMH:
     - _NET_ACTIVE_WINDOW and _NET_CLIENT_LIST if there's a really good
       reason to support them.
+- ICCCM:
+    - Support aspect ratios and increments if there's a really good
+      reason to do so. They're mainly eye candy.

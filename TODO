@@ -3,8 +3,6 @@ Active cycle:
     - EWMH
         - Active window
         - Client list on root window
-        - Hints on decoration windows so stuff like compton can ignore
-          them (also set their WM_CLASS)
     - ICCCM
         - WM_NORMAL_HINTS
             - should fix GIMP dialogs not resizing themselves

@@ -381,6 +381,10 @@ decorations_create(struct Client *c)
         .background_pixmap = ParentRelative,
         .event_mask = ExposureMask,
     };
+    XClassHint ch = {
+        .res_class = __NAME_WM_CAPITALIZED__,
+        .res_name = "decoration",
+    };
 
     for (i = DecWinTop; i <= DecWinBottom; i++)
     {
@@ -391,6 +395,12 @@ decorations_create(struct Client *c)
                 CWOverrideRedirect | CWBackPixmap | CWEventMask,
                 &wa
         );
+
+        /* Setting hints on decoration windows gives tools a change to
+         * handle them differently. EWMH does not account for decoration
+         * windows because reparenting usually happens. */
+        XSetClassHint(dpy, c->decwin[i], &ch);
+
         XMapRaised(dpy, c->decwin[i]);
     }
 }

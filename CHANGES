@@ -14,6 +14,8 @@ next
   - Exemplary lemonbar script:
     - Workspaces can be suffixed.
     - Current monitor indicated by styling the layout icon differently.
+  - Set class hint "Katriawm/decoration" on decoration windows, so tools
+    like compton can ignore them.
 
 Milestone 3  2016-01-03
   [Fixed]

@@ -1,8 +1,5 @@
 Active cycle:
 
-    - EWMH
-        - Active window
-        - Client list on root window
     - ICCCM
         - WM_NORMAL_HINTS
             - should fix GIMP dialogs not resizing themselves
@@ -47,3 +44,6 @@ Next cycle:
     - Jump to workspace N on monitor M.
     - Show workspace N on monitor M without jumping to it.
     - Wipe all save slots?
+- EWMH:
+    - _NET_ACTIVE_WINDOW and _NET_CLIENT_LIST if there's a really good
+      reason to support them.

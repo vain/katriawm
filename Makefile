@@ -1,4 +1,4 @@
-CFLAGS += -Wall -Wextra -O3
+CFLAGS += -std=c99 -Wall -Wextra -O3
 
 # To enable debug output:
 #DEBUGFLAGS = -DDEBUG

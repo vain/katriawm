@@ -1,8 +1,5 @@
 Active cycle:
 
-    - ICCCM
-        - WM_NORMAL_HINTS
-            - should fix GIMP dialogs not resizing themselves
     - scan():
         - Grab server?
     - state_to_lemonbar.sh is ugly and hardly portable. Rewrite in C or

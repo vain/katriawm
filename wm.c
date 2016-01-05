@@ -892,6 +892,12 @@ handle_propertynotify(XEvent *e)
                       "updating\n", (void *)c);
             manage_icccm_evaluate_hints(c);
         }
+        else if (ev->atom == XA_WM_NORMAL_HINTS)
+        {
+            D fprintf(stderr, __NAME_WM__": Client %p has changed its "
+                      "WM_NORMAL_HINTS, updating\n", (void *)c);
+            manage_icccm_evaluate_hints(c);
+        }
         /* XXX ev->atom == XA_WM_TRANSIENT_FOR
          * dwm indicates that there might be changes to the
          * transient_for_hint after the window has been mapped. I'm not
@@ -2329,6 +2335,8 @@ void
 manage_icccm_evaluate_hints(struct Client *c)
 {
     XWMHints *wmh;
+    XSizeHints xsh;
+    long dl;
 
     if ((wmh = XGetWMHints(dpy, c->win)))
     {
@@ -2378,6 +2386,24 @@ manage_icccm_evaluate_hints(struct Client *c)
 
         publish_state();
         XFree(wmh);
+    }
+
+    if (XGetWMNormalHints(dpy, c->win, &xsh, &dl))
+    {
+        /* We only support "fixed sized windows". Dialogs often set both
+         * min and max size to the same value, indicating they want a
+         * window of a certain size. We honour that request and resize
+         * the window. */
+        if (xsh.flags & PMinSize && xsh.flags & PMaxSize &&
+            xsh.min_width == xsh.max_width && xsh.min_height == xsh.max_height)
+        {
+            D fprintf(stderr, __NAME_WM__": Client %p requested a fixed size "
+                      "of %dx%d\n", (void *)c, xsh.min_width, xsh.min_height);
+
+            c->w = xsh.min_width;
+            c->h = xsh.min_height;
+            manage_apply_size(c);
+        }
     }
 }
 

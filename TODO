@@ -1,7 +1,5 @@
 Active cycle:
 
-    - std types / go for C99
-        - Images: We need 32 bit integers, not just integers!
     - EWMH
         - Active window
         - Client list on root window

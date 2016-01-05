@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <locale.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -150,7 +151,7 @@ static void decorations_draw_for_client(struct Client *c,
 static Pixmap decorations_get_pm(GC gc, XImage **ximg, enum DecorationLocation l,
                                  enum DecTint t);
 static void decorations_load(void);
-static char *decorations_tint(unsigned long color);
+static char *decorations_tint(uint32_t color);
 static XImage *decorations_to_ximg(char *data);
 static void draw_text(Drawable d, XftFont *xfont, XftColor *col, int x, int y,
                       int w, char *s);
@@ -577,13 +578,13 @@ decorations_load(void)
 }
 
 char *
-decorations_tint(unsigned long color)
+decorations_tint(uint32_t color)
 {
-    unsigned int r, g, b, tr, tg, tb;
-    unsigned int *out;
+    uint32_t r, g, b, tr, tg, tb;
+    uint32_t *out;
     size_t i;
 
-    out = (unsigned int *)malloc(sizeof dec_img);
+    out = (uint32_t *)malloc(sizeof dec_img);
     assert(out != NULL);
 
     tr = (0xFF0000 & color) >> 16;

@@ -8,7 +8,7 @@ static char *dec_font_colors[] = {
     "#000000",  /* DecTintUrgent */
 };
 
-static unsigned int dec_tints[] = {
+static uint32_t dec_tints[] = {
     0x6a3f3f,  /* DecTintNormal */
     0xffcb38,  /* DecTintSelect */
     0xff0000,  /* DecTintUrgent */

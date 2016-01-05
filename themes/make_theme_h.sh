@@ -32,13 +32,13 @@ echo "static unsigned int dec_img_w = $size_w;"
 echo "static unsigned int dec_img_h = $size_h;"
 
 # The following code converts any image readable by ImageMagick into an
-# array unsigned ints. This is achieved by first converting it into a
-# raw PPM file ("-compress losless"). In binary, this format is already
+# array of uint32_t. This is achieved by first converting it into a raw
+# PPM file ("-compress losless"). In binary, this format is already
 # pretty close to what we want. We convert it into hex using od. Bytes
 # are grouped in packs of three, thus each group will represent one
 # pixel. We prepend a "0x" and then finally neatly fold the array to 72
 # characters in width.
-echo 'static unsigned int dec_img[] = {'
+echo 'static uint32_t dec_img[] = {'
 
 bytes=$(identify -format '%[fx:w*h*3]' "$dir/$source_image")
 convert -quiet -compress lossless -depth 8 "$dir/$source_image" ppm:- |

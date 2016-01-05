@@ -2048,6 +2048,8 @@ manage_ewmh_evaluate_hints(struct Client *c)
             else
                 D fprintf(stderr, __NAME_WM__": Client %p has EWMH type, but "
                           "we don't know that type\n", (void *)c);
+
+            XFree(prop_ret);
         }
         else
             D fprintf(stderr, __NAME_WM__": Client %p has EWMH type, but "

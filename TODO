@@ -1,9 +1,4 @@
-It's bughunting time!
-
-
---- Future ---
-
-Next cycle:
+Active cycle:
 
     - std types / go for C99
         - Images: We need 32 bit integers, not just integers!
@@ -19,6 +14,9 @@ Next cycle:
         - Grab server?
     - state_to_lemonbar.sh is ugly and hardly portable. Rewrite in C or
       Python.
+
+
+--- Future ---
 
 Next cycle:
 

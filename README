@@ -77,6 +77,11 @@ that property, is provided:
 
     $ state_to_lemonbar.sh | lemonbar -d ...
 
+As real world examples, you can have a look at my setup:
+
+    https://github.com/vain/dotfiles-pub/blob/master/sxhkdrc
+    https://github.com/vain/bin-pub/blob/master/katriawm-launch
+
 
 Customization
 -------------

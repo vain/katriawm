@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -63,7 +64,7 @@ static struct Command c[] = {
     {  {  "workspace_select",          ANY        },  IPCWorkspaceSelect,                fn_atoi,  0          },
 };
 
-static int
+static bool
 send_command(enum IPCCommand cmd, char arg)
 {
     Display *dpy;
@@ -71,7 +72,7 @@ send_command(enum IPCCommand cmd, char arg)
     XEvent ev;
 
     if (!(dpy = XOpenDisplay(NULL)))
-        return 0;
+        return false;
 
     root = DefaultRootWindow(dpy);
 
@@ -92,7 +93,7 @@ send_command(enum IPCCommand cmd, char arg)
     XSendEvent(dpy, root, False, SubstructureRedirectMask, &ev);
     XSync(dpy, False);
 
-    return 1;
+    return true;
 }
 
 int

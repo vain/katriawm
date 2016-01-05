@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <locale.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -38,11 +39,11 @@ struct Client
     int normal_x, normal_y, normal_w, normal_h;
     int nonhidden_x;
 
-    char floating;
-    char fullscreen;
-    char hidden;
-    char never_focus;
-    char urgent;
+    bool floating;
+    bool fullscreen;
+    bool hidden;
+    bool never_focus;
+    bool urgent;
 
     char title[512];
 
@@ -78,6 +79,9 @@ struct Rule
 
     int workspace;
     int monitor;
+
+    /* Note: Do not make this a bool. It has three states:
+     * -1 = unchanged, 1 = force floating, 0 = force non-floating */
     char floating;
 };
 
@@ -127,8 +131,8 @@ static Window root;
 static XftColor font_color[DecTintLAST];
 static XftFont *font[FontLAST];
 static int monitors_num = 0, prevmon_i = 0;
-static int running = 1;
-static int restart = 0;
+static bool running = true;
+static bool restart = false;
 static int screen;
 static int (*xerrorxlib)(Display *, XErrorEvent *);
 
@@ -192,20 +196,20 @@ static void manage_apply_gaps(struct Client *c);
 static void manage_apply_rules(struct Client *c);
 static void manage_apply_size(struct Client *c);
 static void manage_arrange(struct Monitor *m);
-static void manage_client_gone(struct Client *c, char rearrange);
+static void manage_client_gone(struct Client *c, bool rearrange);
 static void manage_ewmh_evaluate_hints(struct Client *c);
 static void manage_fit_on_monitor(struct Client *c);
 static void manage_focus_add_head(struct Client *c);
 static void manage_focus_add_tail(struct Client *c);
 static void manage_focus_remove(struct Client *c);
 static void manage_focus_set(struct Client *c);
-static void manage_fullscreen(struct Client *c, char fs);
-static void manage_goto_monitor(int i, char force);
-static void manage_goto_workspace(int i, char force);
+static void manage_fullscreen(struct Client *c, bool fs);
+static void manage_goto_monitor(int i, bool force);
+static void manage_goto_workspace(int i, bool force);
 static void manage_icccm_evaluate_hints(struct Client *c);
 static void manage_raisefocus(struct Client *c);
 static void manage_raisefocus_first_matching(void);
-static void manage_showhide(struct Client *c, char hide);
+static void manage_showhide(struct Client *c, bool hide);
 static void manage_xfocus(struct Client *c);
 static void manage_xraise(struct Client *c);
 static int manage_xsend_icccm(struct Client *c, Atom atom);
@@ -214,8 +218,8 @@ static void run(void);
 static void scan(void);
 static void setup(void);
 static void setup_hints(void);
-static int setup_monitors_is_duplicate(XRRCrtcInfo *ci, char *chosen,
-                                       XRRScreenResources *sr);
+static bool setup_monitors_is_duplicate(XRRCrtcInfo *ci, bool *chosen,
+                                        XRRScreenResources *sr);
 static void setup_monitors_read(void);
 static void shutdown(void);
 static void shutdown_monitors_free(void);
@@ -695,12 +699,12 @@ handle_clientmessage(XEvent *e)
                 if (c->fullscreen && (cme->data.l[0] == 0 ||
                                       cme->data.l[0] == 2))
                 {
-                    manage_fullscreen(c, 0);
+                    manage_fullscreen(c, false);
                 }
                 else if (!c->fullscreen && (cme->data.l[0] == 1 ||
                                             cme->data.l[0] == 2))
                 {
-                    manage_fullscreen(c, 1);
+                    manage_fullscreen(c, true);
                 }
             }
             else
@@ -754,11 +758,11 @@ handle_configurenotify(XEvent *e)
     /* Hide everything, then unhide what should be visible on the
      * default workspace */
     for (c = clients; c; c = c->next)
-        manage_showhide(c, 1);
+        manage_showhide(c, true);
 
     for (c = clients; c; c = c->next)
         if (c->mon == selmon && c->workspace == selmon->active_workspace)
-            manage_showhide(c, 0);
+            manage_showhide(c, false);
 
     manage_arrange(selmon);
     manage_raisefocus_first_matching();
@@ -912,7 +916,7 @@ handle_unmapnotify(XEvent *e)
     if ((c = client_get_for_window(ev->window)))
     {
         XUnmapWindow(dpy, c->win);
-        manage_client_gone(c, 1);
+        manage_client_gone(c, true);
     }
 }
 
@@ -1014,7 +1018,7 @@ ipc_client_maximize_floating(char arg)
 void
 ipc_client_move_list(char arg)
 {
-    char use_next = 0;
+    bool use_next = false;
     struct Client *c, *one = NULL, *two = NULL,
                   *before_one = NULL, *before_two = NULL;
 
@@ -1050,7 +1054,7 @@ ipc_client_move_list(char arg)
             if (VIS_ON_SELMON(c))
             {
                 if (c == selc)
-                    use_next = 1;
+                    use_next = true;
                 else if (use_next)
                 {
                     one = selc;
@@ -1342,7 +1346,7 @@ ipc_client_switch_workspace(char arg)
 
     /* Note: This call is not meant to switch the workspace but to force
      * rearrangement of the current workspace */
-    manage_goto_workspace(selmon->active_workspace, 1);
+    manage_goto_workspace(selmon->active_workspace, true);
 }
 
 void
@@ -1364,7 +1368,7 @@ ipc_client_switch_workspace_adjacent(char arg)
 
     /* Note: This call is not meant to switch the workspace but to force
      * rearrangement of the current workspace */
-    manage_goto_workspace(selmon->active_workspace, 1);
+    manage_goto_workspace(selmon->active_workspace, true);
 }
 
 void
@@ -1412,7 +1416,7 @@ ipc_monitor_select_adjacent(char arg)
     i %= monitors_num;
     i = i < 0 ? monitors_num + i : i;
 
-    manage_goto_monitor(i, 0);
+    manage_goto_monitor(i, false);
 }
 
 void
@@ -1420,7 +1424,7 @@ ipc_monitor_select_recent(char arg)
 {
     (void)arg;
 
-    manage_goto_monitor(prevmon_i, 0);
+    manage_goto_monitor(prevmon_i, false);
 }
 
 void
@@ -1429,7 +1433,7 @@ ipc_urgency_clear_visible(char arg)
     struct Client *c;
     struct Monitor *m;
     XWMHints *wmh;
-    char visible;
+    bool visible;
 
     (void)arg;
 
@@ -1437,15 +1441,15 @@ ipc_urgency_clear_visible(char arg)
 
     for (c = clients; c; c = c->next)
     {
-        visible = 0;
+        visible = false;
 
         for (m = monitors; !visible && m; m = m->next)
             if (VIS_ON_M(c, m))
-                visible = 1;
+                visible = true;
 
         if (visible)
         {
-            c->urgent = 0;
+            c->urgent = false;
             if ((wmh = XGetWMHints(dpy, c->win)))
             {
                 wmh->flags &= ~XUrgencyHint;
@@ -1566,8 +1570,8 @@ ipc_placement_use(char arg)
 
     for (m = monitors; m; m = m->next)
     {
-        manage_goto_monitor(m->index, 1);
-        manage_goto_workspace(m->active_workspace, 1);
+        manage_goto_monitor(m->index, true);
+        manage_goto_workspace(m->active_workspace, true);
     }
 }
 
@@ -1576,7 +1580,7 @@ ipc_wm_quit(char arg)
 {
     (void)arg;
 
-    running = 0;
+    running = false;
 
     D fprintf(stderr, __NAME_WM__": Quitting\n");
 }
@@ -1586,8 +1590,8 @@ ipc_wm_restart(char arg)
 {
     (void)arg;
 
-    restart = 1;
-    running = 0;
+    restart = true;
+    running = false;
 
     D fprintf(stderr, __NAME_WM__": Quitting for restart\n");
 }
@@ -1598,7 +1602,7 @@ ipc_workspace_select(char arg)
     int i;
 
     i = arg;
-    manage_goto_workspace(i, 0);
+    manage_goto_workspace(i, false);
 }
 
 void
@@ -1608,7 +1612,7 @@ ipc_workspace_select_adjacent(char arg)
 
     i = selmon->active_workspace;
     i += arg;
-    manage_goto_workspace(i, 0);
+    manage_goto_workspace(i, false);
 }
 
 void
@@ -1616,7 +1620,7 @@ ipc_workspace_select_recent(char arg)
 {
     (void)arg;
 
-    manage_goto_workspace(selmon->recent_workspace, 0);
+    manage_goto_workspace(selmon->recent_workspace, false);
 }
 
 void
@@ -1775,7 +1779,7 @@ manage(Window win, XWindowAttributes *wa)
          * window [...]"
          *
          * A popup window should always be floating. */
-        c->floating = 1;
+        c->floating = true;
 
         /* Try to find the other client this window is transient for. If
          * we don't find it, root and None are valid values, too
@@ -1805,7 +1809,7 @@ manage(Window win, XWindowAttributes *wa)
     {
         D fprintf(stderr, __NAME_WM__": Client %p spawned in background, hiding\n",
                   (void *)c);
-        manage_showhide(c, 1);
+        manage_showhide(c, true);
     }
 
     client_save(c);
@@ -1848,7 +1852,7 @@ manage_apply_rules(struct Client *c)
     size_t i;
     XClassHint ch;
     struct Monitor *m;
-    char match_class, match_instance;
+    bool match_class, match_instance;
 
     D fprintf(stderr, __NAME_WM__": rules: Testing client %p\n", (void *)c);
 
@@ -1869,19 +1873,19 @@ manage_apply_rules(struct Client *c)
              * the rule's class or instance is NULL, then this field
              * matches everything. */
 
-            match_class = 0;
+            match_class = false;
             if (rules[i].class == NULL)
-                match_class = 1;
+                match_class = true;
             else if (ch.res_class && strncmp(rules[i].class, ch.res_class,
                                              strlen(rules[i].class)) == 0)
-                match_class = 1;
+                match_class = true;
 
-            match_instance = 0;
+            match_instance = false;
             if (rules[i].instance == NULL)
-                match_instance = 1;
+                match_instance = true;
             else if (ch.res_name && strncmp(rules[i].instance, ch.res_name,
                                             strlen(rules[i].instance)) == 0)
-                match_instance = 1;
+                match_instance = true;
 
             if (match_class && match_instance)
             {
@@ -1960,7 +1964,7 @@ manage_arrange(struct Monitor *m)
 }
 
 void
-manage_client_gone(struct Client *c, char rearrange)
+manage_client_gone(struct Client *c, bool rearrange)
 {
     struct Client *old_selc, **tc;
 
@@ -2023,7 +2027,7 @@ manage_ewmh_evaluate_hints(struct Client *c)
                 prop == atom_net[AtomNetWMWindowTypeToolbar] ||
                 prop == atom_net[AtomNetWMWindowTypeUtility])
             {
-                c->floating = 1;
+                c->floating = true;
                 an = XGetAtomName(dpy, prop);
                 D fprintf(stderr, __NAME_WM__": Client %p should be floating, "
                           "says EWMH (has type %s)\n", (void *)c, an);
@@ -2125,14 +2129,14 @@ manage_focus_add_tail(struct Client *nc)
 void
 manage_focus_remove(struct Client *new_selc)
 {
-    char found = 0;
+    bool found = false;
     struct Client **tc, *c;
 
     /* Remove client from focus list (if present) */
 
     for (c = selc; !found && c; c = c->focus_next)
         if (c == new_selc)
-            found = 1;
+            found = true;
 
     if (!found)
         return;
@@ -2199,11 +2203,11 @@ manage_focus_set(struct Client *new_selc)
 }
 
 void
-manage_fullscreen(struct Client *c, char fs)
+manage_fullscreen(struct Client *c, bool fs)
 {
     if (fs)
     {
-        c->fullscreen = 1;
+        c->fullscreen = true;
 
         c->normal_x = c->x;
         c->normal_y = c->y;
@@ -2225,7 +2229,7 @@ manage_fullscreen(struct Client *c, char fs)
     }
     else
     {
-        c->fullscreen = 0;
+        c->fullscreen = false;
 
         c->x = c->normal_x;
         c->y = c->normal_y;
@@ -2241,7 +2245,7 @@ manage_fullscreen(struct Client *c, char fs)
 }
 
 void
-manage_goto_monitor(int i, char force)
+manage_goto_monitor(int i, bool force)
 {
     struct Monitor *m, *new_selmon = NULL;
 
@@ -2276,7 +2280,7 @@ manage_goto_monitor(int i, char force)
 }
 
 void
-manage_goto_workspace(int i, char force)
+manage_goto_workspace(int i, bool force)
 {
     struct Client *c;
 
@@ -2295,11 +2299,11 @@ manage_goto_workspace(int i, char force)
 
     for (c = clients; c; c = c->next)
         if (c->mon == selmon)
-            manage_showhide(c, 1);
+            manage_showhide(c, true);
 
     for (c = clients; c; c = c->next)
         if (c->mon == selmon && c->workspace == i)
-            manage_showhide(c, 0);
+            manage_showhide(c, false);
 
     selmon->recent_workspace = selmon->active_workspace;
     selmon->active_workspace = i;
@@ -2328,7 +2332,7 @@ manage_icccm_evaluate_hints(struct Client *c)
             }
             else
             {
-                c->urgent = 1;
+                c->urgent = true;
                 decorations_draw_for_client(c, DecWinLAST);
                 D fprintf(stderr, __NAME_WM__": Urgency hint on client "
                           "%p set\n", (void *)c);
@@ -2337,7 +2341,7 @@ manage_icccm_evaluate_hints(struct Client *c)
         else if (c->urgent)
         {
             /* Urgency hint has been cleared by the application */
-            c->urgent = 0;
+            c->urgent = false;
             decorations_draw_for_client(c, DecWinLAST);
             D fprintf(stderr, __NAME_WM__": Urgency hint on client %p "
                       "cleared\n", (void *)c);
@@ -2354,7 +2358,7 @@ manage_icccm_evaluate_hints(struct Client *c)
         }
         else
         {
-            c->never_focus = 0;
+            c->never_focus = false;
             D fprintf(stderr, __NAME_WM__": Client %p never_focus: %d\n",
                       (void *)c, c->never_focus);
         }
@@ -2402,13 +2406,13 @@ manage_raisefocus_first_matching(void)
 }
 
 void
-manage_showhide(struct Client *c, char hide)
+manage_showhide(struct Client *c, bool hide)
 {
     if (hide && !c->hidden)
     {
         c->nonhidden_x = c->x;
         c->x = -2 * c->w;
-        c->hidden = 1;
+        c->hidden = true;
 
         manage_apply_size(c);
     }
@@ -2416,7 +2420,7 @@ manage_showhide(struct Client *c, char hide)
     if (!hide)
     {
         c->x = c->nonhidden_x;
-        c->hidden = 0;
+        c->hidden = false;
 
         manage_apply_size(c);
     }
@@ -2429,7 +2433,7 @@ manage_xfocus(struct Client *c)
 
     if (c)
     {
-        c->urgent = 0;
+        c->urgent = false;
         if ((wmh = XGetWMHints(dpy, c->win)))
         {
             wmh->flags &= ~XUrgencyHint;
@@ -2708,8 +2712,8 @@ setup_hints(void)
     atom_wm[AtomWMTakeFocus] = XInternAtom(dpy, "WM_TAKE_FOCUS", False);
 }
 
-int
-setup_monitors_is_duplicate(XRRCrtcInfo *ci, char *chosen, XRRScreenResources *sr)
+bool
+setup_monitors_is_duplicate(XRRCrtcInfo *ci, bool *chosen, XRRScreenResources *sr)
 {
     XRRCrtcInfo *o;
     int i;
@@ -2721,11 +2725,11 @@ setup_monitors_is_duplicate(XRRCrtcInfo *ci, char *chosen, XRRScreenResources *s
             o = XRRGetCrtcInfo(dpy, sr, sr->crtcs[i]);
             if (o->x == ci->x && o->y == ci->y &&
                 o->width == ci->width && o->height == ci->height)
-                return 1;
+                return true;
         }
     }
 
-    return 0;
+    return false;
 }
 
 void
@@ -2736,7 +2740,7 @@ setup_monitors_read(void)
     struct Monitor *m;
     int c, cinner;
     int minx, minindex;
-    char *chosen = NULL;
+    bool *chosen = NULL;
 
     /* Note: This method has O(n**3) with n being the number of CRTCs
      * returned by XRandR. This *should* be okay because you usually
@@ -2750,7 +2754,7 @@ setup_monitors_read(void)
     D fprintf(stderr, __NAME_WM__": XRandR reported %d monitors/CRTCs\n",
               sr->ncrtc);
     assert(sr->ncrtc > 0);
-    chosen = calloc(sr->ncrtc, sizeof (char));
+    chosen = calloc(sr->ncrtc, sizeof (bool));
     for (c = 0; c < sr->ncrtc; c++)
     {
         /* Always sort monitors by their X offset. */
@@ -2775,7 +2779,7 @@ setup_monitors_read(void)
             continue;
 
         ci = XRRGetCrtcInfo(dpy, sr, sr->crtcs[minindex]);
-        chosen[minindex] = 1;
+        chosen[minindex] = true;
 
         m = calloc(1, sizeof (struct Monitor));
         if (selmon == NULL)
@@ -2846,7 +2850,7 @@ shutdown(void)
     size_t i, j;
 
     while (clients != NULL)
-        manage_client_gone(clients, 0);
+        manage_client_gone(clients, false);
 
     for (i = DecTintNormal; i <= DecTintUrgent; i++)
         for (j = DecTopLeft; j <= DecBottomRight; j++)

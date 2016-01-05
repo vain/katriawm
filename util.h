@@ -2,9 +2,9 @@
 #define _WM_UTIL_H
 
 #ifdef DEBUG
-#define D if (1)
+#define D if (true)
 #else
-#define D if (0)
+#define D if (false)
 #endif
 
 #endif /* _WM_UTIL_H */

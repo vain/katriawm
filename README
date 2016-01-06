@@ -35,6 +35,7 @@ katriawm expects to be run on a POSIX-ish operating system.
 
 To build the program and install it to /usr/local:
 
+    $ cd src/
     $ make
     # make install
 

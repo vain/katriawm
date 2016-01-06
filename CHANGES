@@ -9,6 +9,7 @@ next
   - When floating clients are larger than the work area, we try to make
     the upper left corner visible.
   - Reworked theme "modern".
+  - Maintainers: The Makefile is now located in "src/".
 
   [Added]
   - Exemplary lemonbar script:

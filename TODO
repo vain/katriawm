@@ -1,30 +1,20 @@
-Active cycle:
+--- Near Future ---
 
-    - state_to_lemonbar.sh is ugly and hardly portable. Rewrite in C or
-      Python.
-
-
---- Future ---
-
-Next cycle:
-
-    - Test on BSD
-    - Test on different architectures
-    - Create and test asymmetrical theme (top != bottom already works,
-      test left != right)
-    - Refactor: There is no need for "monitors" being a list. It's just
-      a dwm-ism that complicates things for us. Monitors aren't
-      added/removed all the time like clients. We should make "monitors"
-      a calloc'd array.
-    - Refactor: manage_apply_rules() is bad. This can be shortened and
-      simplified.
-    - Refactor: Rename "selc" to something like "focus_head". "selc" is
-      not only "the currently selected client" but refers to the focus
-      list.
-    - Refactor: Add one function to clear urgency hints, kill code
-      duplication.
-    - Refactor: ipc_client_resize_mouse() duplicates a lot of code from
-      ipc_client_move_mouse().
+- Test on BSD
+- Test on different architectures
+- Create and test asymmetrical theme (top != bottom already works, test
+  left != right)
+- Refactor: There is no need for "monitors" being a list. It's just a
+  dwm-ism that complicates things for us. Monitors aren't added/removed
+  all the time like clients. We should make "monitors" a calloc'd array.
+- Refactor: manage_apply_rules() is bad. This can be shortened and
+  simplified.
+- Refactor: Rename "selc" to something like "focus_head". "selc" is not
+  only "the currently selected client" but refers to the focus list.
+- Refactor: Add one function to clear urgency hints, kill code
+  duplication.
+- Refactor: ipc_client_resize_mouse() duplicates a lot of code from
+  ipc_client_move_mouse().
 
 
 --- Ideas ---

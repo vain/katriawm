@@ -1,17 +1,22 @@
-.TH katriawm 1 "2015-12-25" "Katria Window Manager" "User Commands"
+.TH katriabi 1 "2016-01-06" "Katria Window Manager" "User Commands"
 .\" --------------------------------------------------------------------
 .SH NAME
-katriawm \- Katria Window Manager
+katriabi \- Bar information for katriawm
 .\" --------------------------------------------------------------------
 .SH SYNOPSIS
-\fBkatriawm\fP
+\fBkatriabi\fP
 .\" --------------------------------------------------------------------
 .SH DESCRIPTION
-\fBkatriawm\fP is a simple window manager.
+\fBkatriawm\fP(1) creates a property on the root window. This property
+contains some of \fBkatriawm\fP's internal state. It can be used to draw
+a bar or \(lqpager\(rq.
 .P
-\fBkatriawm\fP is usually controlled by \fBkatriac\fP(1). Bars are
-usually created with the help of \fBkatriabi\fP(1). You should
-have a look at those manpage.
+\fBkatriabi\fP can monitor said property and create output suitable for
+display in a bar. Currently, \fBkatriabi\fP only supports
+\fBlemonbar\fP(1).
+.P
+For each update of the property, \fBkatriabi\fP will print one line to
+\fISTDOUT\fP.
 .\" --------------------------------------------------------------------
 .SH OPTIONS
 There are no options to specify or files to read. Only the
@@ -24,14 +29,13 @@ to connect to.
 Target display.
 .\" --------------------------------------------------------------------
 .SH LICENSE
-\fBkatriawm\fP is released as \(lqPIZZA-WARE\(rq. See the accompanying
+\fBkatriabi\fP is released as \(lqPIZZA-WARE\(rq. See the accompanying
 \fILICENSE\fP file.
 .\" --------------------------------------------------------------------
 .SH HISTORY
-\fBkatriawm\fP was originally written by Peter Hofmann. The project
+\fBkatriabi\fP was originally written by Peter Hofmann. The project
 was started in December 2015.
 .\" --------------------------------------------------------------------
 .SH "SEE ALSO"
-.BR katriac (1),
-.BR katriabi (1),
-.BR sxhkd (1).
+.BR katriawm (1),
+.BR lemonbar (1).

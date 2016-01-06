@@ -2398,6 +2398,7 @@ manage_icccm_evaluate_hints(struct Client *c)
             D fprintf(stderr, __NAME_WM__": Client %p requested a fixed size "
                       "of %dx%d\n", (void *)c, xsh.min_width, xsh.min_height);
 
+            c->floating = true;
             c->w = xsh.min_width;
             c->h = xsh.min_height;
             manage_apply_size(c);

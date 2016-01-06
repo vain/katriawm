@@ -1,9 +1,9 @@
 #!/bin/sh
 
 dir=$1
+image=decorations.ppm
 
 # Reads:
-#  - $image
 #  - $image_width
 #  - $image_height
 . "$dir"/metadata || exit 1
@@ -11,10 +11,10 @@ dir=$1
 echo '#ifndef _WM_THEME_H'
 echo '#define _WM_THEME_H'
 echo
-cat "$dir"/theme_base.h
+cat "$dir"/colorsfonts.h
 echo
 
-cat "$dir"/"$image".h
+cat "$dir"/layout.h
 echo
 echo "static unsigned int dec_img_w = $image_width;"
 echo "static unsigned int dec_img_h = $image_height;"

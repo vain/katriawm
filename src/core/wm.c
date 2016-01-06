@@ -21,8 +21,6 @@
 
 #define SAVE_SLOTS 8
 #define WORKSPACE_DEFAULT 1
-#define WORKSPACE_MIN 0
-#define WORKSPACE_MAX 127
 #define WM_NAME_UNKNOWN "<name unknown>"
 #define VIS_ON_SELMON(c) ((c)->mon == selmon && \
                           (c)->workspace == selmon->active_workspace)
@@ -2561,7 +2559,7 @@ publish_state(void)
      * occupied. We need the same amount of data to indicate whether a
      * workspace has the urgency hint set. */
 
-    size_monws = 16;
+    size_monws = STATE_BYTES_PER_WORKSPACE;
 
     size = 1 + 1 + 1 + monitors_num * 2 + monitors_num * size_monws * 2;
     state = calloc(size, sizeof (unsigned char));

@@ -4,6 +4,12 @@
 #define IPC_ATOM_COMMAND "_"__NAME_UPPERCASE__"_CLIENT_COMMAND"
 #define IPC_ATOM_STATE "_"__NAME_UPPERCASE__"_STATE"
 
+#define WORKSPACE_MIN 0
+#define WORKSPACE_MAX 127
+
+/* See publish_state() in wm.c */
+#define STATE_BYTES_PER_WORKSPACE 16
+
 enum IPCCommand
 {
     /* These commands shall use the following name scheme:

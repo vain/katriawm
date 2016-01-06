@@ -35,9 +35,10 @@ barinfo/config.h:
 install: all installdirs
 	$(INSTALL_PROGRAM) core/$(__NAME_WM__) $(DESTDIR)$(bindir)/$(__NAME_WM__)
 	$(INSTALL_PROGRAM) core/$(__NAME_C__) $(DESTDIR)$(bindir)/$(__NAME_C__)
+	$(INSTALL_PROGRAM) barinfo/$(__NAME_BI__) $(DESTDIR)$(bindir)/$(__NAME_BI__)
 	$(INSTALL_DATA) ../doc/man1/$(__NAME_WM__).1 $(DESTDIR)$(man1dir)/$(__NAME_WM__).1
 	$(INSTALL_DATA) ../doc/man1/$(__NAME_C__).1 $(DESTDIR)$(man1dir)/$(__NAME_C__).1
-	@#$(INSTALL_DATA) ../doc/man1/$(__NAME_BI__).1 $(DESTDIR)$(man1dir)/$(__NAME_BI__).1
+	$(INSTALL_DATA) ../doc/man1/$(__NAME_BI__).1 $(DESTDIR)$(man1dir)/$(__NAME_BI__).1
 
 installdirs:
 	mkdir -p $(DESTDIR)$(bindir) $(DESTDIR)$(man1dir)

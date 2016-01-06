@@ -12,6 +12,9 @@ next
   - Maintainers: The Makefile is now located in "src/".
   - "state_to_lemonbar.sh" has been replaced with a more portable tool
     written in C.
+  - Theming:
+    - No need for ImageMagick anymore.
+    - Minor file name changes, incompatible though.
 
   [Added]
   - Bar info tool:

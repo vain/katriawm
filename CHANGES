@@ -10,9 +10,11 @@ next
     the upper left corner visible.
   - Reworked theme "modern".
   - Maintainers: The Makefile is now located in "src/".
+  - "state_to_lemonbar.sh" has been replaced with a more portable tool
+    written in C.
 
   [Added]
-  - Exemplary lemonbar script:
+  - Bar info tool:
     - Workspaces can be suffixed.
     - Current monitor indicated by styling the layout icon differently.
   - Set class hint "Katriawm/decoration" on decoration windows, so tools

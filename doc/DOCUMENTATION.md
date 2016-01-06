@@ -174,7 +174,7 @@ katriawm introduces a new property on the root window called
 
 -   Index 0 is the number of monitors recognized by katriawm. Let’s call
     this `N`.
--   Index 1 indicates the currently selected monitor. It's an integer
+-   Index 1 indicates the currently selected monitor. It’s an integer
     `m` where `0 <= m < N`.
 -   Index 2 is a bitmask. If the `n`-th bit is set, then the `n`-th save
     slot is occupied.
@@ -197,7 +197,7 @@ katriawm introduces a new property on the root window called
 This property can be read by external tools in order to draw a pager or
 a bar. This can be done using a shell script and the `xprop` utility.
 
-As an example, there is a script that reads this property and produces
+As an example, there is a tool that reads this property and produces
 output suitable to be fed into [lemonbar]. See also
 [`LEMONBAR.md`][lbdoc].
 

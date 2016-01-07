@@ -27,7 +27,7 @@ The following C libraries are required at runtime:
 
 katriawm expects to be run on a POSIX-ish operating system.
 
-To build the program and install it to /usr/local:
+To build the program and install it to /usr/local, please use GNU make:
 
     $ cd src/
     $ make

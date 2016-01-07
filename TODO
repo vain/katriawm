@@ -1,6 +1,5 @@
 --- Near Future ---
 
-- Test on BSD
 - Test on different architectures
 - Create and test asymmetrical theme (top != bottom already works, test
   left != right)

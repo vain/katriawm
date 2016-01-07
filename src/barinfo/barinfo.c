@@ -140,7 +140,7 @@ state_to_lemonbar(unsigned char *state, unsigned long nitems)
         }
 
         /* Save slots */
-        if (i == selmon_i)
+        if (i == selmon_i && slots_mask)
         {
             printf("%%{r}%s", s_lemonbar_norm);
             mask = 1;

@@ -138,11 +138,12 @@ state_to_lemonbar(unsigned char *state, unsigned long nitems)
                 mask <<= 1;
             }
         }
+        printf("%%{B-}%%{F-}");
 
         /* Save slots */
         if (i == selmon_i && slots_mask)
         {
-            printf("%%{r}%s", s_lemonbar_norm);
+            printf("%%{r}%s ", s_lemonbar_norm);
             mask = 1;
             for (bit = 0; bit < 8; bit++)
             {
@@ -152,6 +153,7 @@ state_to_lemonbar(unsigned char *state, unsigned long nitems)
             }
             printf(" ");
         }
+        printf("%%{B-}%%{F-}");
     }
     printf("\n");
     fflush(stdout);

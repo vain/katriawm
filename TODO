@@ -1,8 +1,6 @@
 --- Near Future ---
 
 - Test on different architectures
-- Create and test asymmetrical theme (top != bottom already works, test
-  left != right)
 - Refactor: There is no need for "monitors" being a list. It's just a
   dwm-ism that complicates things for us. Monitors aren't added/removed
   all the time like clients. We should make "monitors" a calloc'd array.

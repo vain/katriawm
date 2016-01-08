@@ -1,6 +1,6 @@
 Release history for katriawm
 
-next
+v16.01  2016-01-08
   [Fixed]
   - A bar will now be notified when a different monitor has been
     selected.

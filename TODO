@@ -12,6 +12,7 @@
   duplication.
 - Refactor: ipc_client_resize_mouse() duplicates a lot of code from
   ipc_client_move_mouse().
+- Floaters should be able to resize themselves.
 
 
 --- Ideas ---

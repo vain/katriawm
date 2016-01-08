@@ -1,5 +1,9 @@
 Release history for katriawm
 
+next
+  [Fixed]
+  - Less flickering when changing workspaces on the same monitor.
+
 v16.01  2016-01-08
   [Fixed]
   - A bar will now be notified when a different monitor has been

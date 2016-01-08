@@ -2314,13 +2314,16 @@ manage_goto_workspace(int i, bool force)
      * has focus after changing workspaces or monitors. */
     manage_xfocus(NULL);
 
-    for (c = clients; c; c = c->next)
-        if (c->mon == selmon)
-            manage_showhide(c, true);
-
+    /* First make new clients visible, then hide old clients. This way,
+     * the root window won't be visible for a tiny fraction of time,
+     * hence we get less flickering. */
     for (c = clients; c; c = c->next)
         if (c->mon == selmon && c->workspace == i)
             manage_showhide(c, false);
+
+    for (c = clients; c; c = c->next)
+        if (c->mon == selmon && c->workspace != i)
+            manage_showhide(c, true);
 
     selmon->recent_workspace = selmon->active_workspace;
     selmon->active_workspace = i;

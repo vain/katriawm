@@ -2,7 +2,8 @@ Design Principles
 =================
 
 -   Manage windows. Don’t try to be a hotkey daemon or to draw bars.
--   Don’t read any files at runtime. Everything is configured at compile time.
+-   Don’t read any files at runtime. Everything is configured at compile
+    time.
 -   Provide reasonable floating and tiling behaviour.
 -   Try to make clients at least 90% happy.
 

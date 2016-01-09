@@ -2466,7 +2466,7 @@ manage_showhide(struct Client *c, bool hide)
         manage_apply_size(c);
     }
 
-    if (!hide)
+    if (!hide && c->hidden)
     {
         c->x = c->nonhidden_x;
         c->hidden = false;

@@ -4,6 +4,8 @@ next
   [Fixed]
   - Less flickering when changing workspaces on the same monitor.
   - Less flickering when mapping new windows.
+  - Unhiding already visible clients is now a no-op. This fixes a bug
+    when moving clients to other workspaces.
 
 v16.01  2016-01-08
   [Fixed]

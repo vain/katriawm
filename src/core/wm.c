@@ -26,7 +26,7 @@
                           (c)->workspace == selmon->active_workspace)
 #define VIS_ON_M(c, m) ((c)->mon == (m) && \
                         (c)->workspace == (m)->active_workspace)
-#define SOMETHING_FOCUSED (selc && VIS_ON_SELMON(selc))
+#define SOMETHING_FOCUSED (focus && VIS_ON_SELMON(focus))
 
 struct Client
 {
@@ -117,7 +117,7 @@ enum AtomsWM
 
 #include "config.h"
 
-static struct Client *clients = NULL, *selc = NULL, *mouse_dc = NULL;
+static struct Client *clients = NULL, *focus = NULL, *mouse_dc = NULL;
 static struct Monitor *monitors = NULL, *selmon = NULL;
 static struct Monitor *saved_monitor[SAVE_SLOTS] = { 0 };
 static int screen_w = -1, screen_h = -1;
@@ -442,7 +442,7 @@ decorations_draw(struct Client *c, enum DecorationWindowLocation which)
 
     if (c->urgent)
         tint = DecTintUrgent;
-    else if (c == selc && c->mon == selmon && VIS_ON_SELMON(c))
+    else if (c == focus && c->mon == selmon && VIS_ON_SELMON(c))
         tint = DecTintSelect;
 
     w = dgeo.left_width + c->w + dgeo.right_width;
@@ -851,8 +851,8 @@ handle_focusin(XEvent *e)
      * this. The only thing we can do, is to revert the focus to what we
      * think should have it. */
 
-    if (selc && ev->window != selc->win)
-        manage_xfocus(selc);
+    if (focus && ev->window != focus->win)
+        manage_xfocus(focus);
 }
 
 void
@@ -950,18 +950,18 @@ ipc_client_center_floating(char arg)
     if (!SOMETHING_FOCUSED)
         return;
 
-    if (!selc->floating && selmon->layouts[selmon->active_workspace] != LAFloat)
+    if (!focus->floating && selmon->layouts[selmon->active_workspace] != LAFloat)
         return;
 
-    selc->x = selc->mon->wx + 0.5 * (selc->mon->ww - selc->w
-                                     - dgeo.left_width - dgeo.right_width);
-    selc->y = selc->mon->wy + 0.5 * (selc->mon->wh - selc->h
-                                     - dgeo.top_height - dgeo.bottom_height);
+    focus->x = focus->mon->wx + 0.5 * (focus->mon->ww - focus->w
+                                       - dgeo.left_width - dgeo.right_width);
+    focus->y = focus->mon->wy + 0.5 * (focus->mon->wh - focus->h
+                                       - dgeo.top_height - dgeo.bottom_height);
 
-    selc->x += dgeo.left_width;
-    selc->y += dgeo.top_height;
+    focus->x += dgeo.left_width;
+    focus->y += dgeo.top_height;
 
-    manage_apply_size(selc);
+    manage_apply_size(focus);
 }
 
 void
@@ -973,7 +973,7 @@ ipc_client_close(char arg)
         return;
 
     /* This call asks the client to please close itself gracefully */
-    manage_xsend_icccm(selc, atom_wm[AtomWMDeleteWindow]);
+    manage_xsend_icccm(focus, atom_wm[AtomWMDeleteWindow]);
 }
 
 void
@@ -984,7 +984,7 @@ ipc_client_floating_toggle(char arg)
     if (!SOMETHING_FOCUSED)
         return;
 
-    selc->floating = !selc->floating;
+    focus->floating = !focus->floating;
     manage_arrange(selmon);
 }
 
@@ -996,7 +996,7 @@ ipc_client_fullscreen_toggle(char arg)
     if (!SOMETHING_FOCUSED)
         return;
 
-    manage_fullscreen(selc, !selc->fullscreen);
+    manage_fullscreen(focus, !focus->fullscreen);
 }
 
 void
@@ -1009,7 +1009,7 @@ ipc_client_kill(char arg)
 
     /* This brutally kills the X11 connection of the client. Use only as
      * a last resort. */
-    XKillClient(dpy, selc->win);
+    XKillClient(dpy, focus->win);
 }
 
 void
@@ -1020,21 +1020,21 @@ ipc_client_maximize_floating(char arg)
     if (!SOMETHING_FOCUSED)
         return;
 
-    if (!selc->floating && selmon->layouts[selmon->active_workspace] != LAFloat)
+    if (!focus->floating && selmon->layouts[selmon->active_workspace] != LAFloat)
         return;
 
-    selc->x = selc->mon->wx;
-    selc->y = selc->mon->wy;
-    selc->w = selc->mon->ww;
-    selc->h = selc->mon->wh;
+    focus->x = focus->mon->wx;
+    focus->y = focus->mon->wy;
+    focus->w = focus->mon->ww;
+    focus->h = focus->mon->wh;
 
-    selc->x += dgeo.left_width;
-    selc->y += dgeo.top_height;
-    selc->w -= dgeo.left_width + dgeo.right_width;
-    selc->h -= dgeo.top_height + dgeo.bottom_height;
+    focus->x += dgeo.left_width;
+    focus->y += dgeo.top_height;
+    focus->w -= dgeo.left_width + dgeo.right_width;
+    focus->h -= dgeo.top_height + dgeo.bottom_height;
 
-    manage_apply_gaps(selc);
-    manage_apply_size(selc);
+    manage_apply_gaps(focus);
+    manage_apply_size(focus);
 }
 
 void
@@ -1047,39 +1047,39 @@ ipc_client_move_list(char arg)
     if (!SOMETHING_FOCUSED)
         return;
 
-    if (selc->fullscreen)
+    if (focus->fullscreen)
         return;
 
     if (arg < 0)
     {
-        /* Find visible client before selc */
+        /* Find visible client before "focus" */
         for (c = clients; c; c = c->next)
         {
             if (VIS_ON_SELMON(c))
             {
-                if (c == selc)
+                if (c == focus)
                     break;
                 else
                 {
                     /* List order: "one" precedes "two" */
                     one = c;
-                    two = selc;
+                    two = focus;
                 }
             }
         }
     }
     else
     {
-        /* Find visible client after selc */
-        for (c = selc; c; c = c->next)
+        /* Find visible client after "focus" */
+        for (c = focus; c; c = c->next)
         {
             if (VIS_ON_SELMON(c))
             {
-                if (c == selc)
+                if (c == focus)
                     use_next = true;
                 else if (use_next)
                 {
-                    one = selc;
+                    one = focus;
                     two = c;
                     break;
                 }
@@ -1252,10 +1252,10 @@ ipc_client_select_adjacent(char arg)
 
     if (arg > 0)
     {
-        /* Start at selc and search the next visible client. If that
+        /* Start at "focus" and search the next visible client. If that
          * doesn't work, then start from the beginning of the list. */
 
-        for (c = selc->next; c && !VIS_ON_SELMON(c); c = c->next)
+        for (c = focus->next; c && !VIS_ON_SELMON(c); c = c->next)
             /* nop */;
 
         if (!c)
@@ -1268,17 +1268,17 @@ ipc_client_select_adjacent(char arg)
     {
         /* Look at all visible clients before c, keep track of c and the
          * visible client before it (to_select). Once we have found
-         * selc, we will not enter the loop body, thus to_select will
+         * "focus", we will not enter the loop body, thus to_select will
          * still point to the visible client before c. */
-        for (c = clients; c != selc; c = c->next)
+        for (c = clients; c != focus; c = c->next)
             if (VIS_ON_SELMON(c))
                 to_select = c;
 
-        /* Nothing found? Then start at selc and look at all clients
+        /* Nothing found? Then start at "focus" and look at all clients
          * after c. After this loop, to_select will point to the last
          * visible client in the list. */
         if (!to_select)
-            for (c = selc->next; c; c = c->next)
+            for (c = focus->next; c; c = c->next)
                 if (VIS_ON_SELMON(c))
                     to_select = c;
     }
@@ -1296,9 +1296,9 @@ ipc_client_select_recent(char arg)
 
     /* In the focus list, we must find the second matching client for
      * the current workspace/monitor. By definition, the first matching
-     * client is selc itself, so we can easily skip it. */
+     * client is "focus" itself, so we can easily skip it. */
 
-    for (c = selc->focus_next; c; c = c->focus_next)
+    for (c = focus->focus_next; c; c = c->focus_next)
         if (VIS_ON_SELMON(c))
             break;
 
@@ -1318,7 +1318,7 @@ ipc_client_switch_monitor_adjacent(char arg)
     if (!SOMETHING_FOCUSED)
         return;
 
-    if (selc->fullscreen)
+    if (focus->fullscreen)
         return;
 
     i = selmon->index;
@@ -1330,16 +1330,16 @@ ipc_client_switch_monitor_adjacent(char arg)
     {
         if (m->index == i)
         {
-            old_mon = selc->mon;
-            selc->mon = m;
-            selc->workspace = selc->mon->active_workspace;
+            old_mon = focus->mon;
+            focus->mon = m;
+            focus->workspace = focus->mon->active_workspace;
 
             /* If the client is floating or the target layout is
              * floating, then we need to re-fit the client and apply the
              * newly calculated size. This has no effect for
              * non-floaters because we call manage_arrange() afterwards. */
-            manage_fit_on_monitor(selc);
-            manage_apply_size(selc);
+            manage_fit_on_monitor(focus);
+            manage_apply_size(focus);
 
             manage_arrange(old_mon);
             manage_arrange(m);
@@ -1357,14 +1357,14 @@ ipc_client_switch_workspace(char arg)
     if (!SOMETHING_FOCUSED)
         return;
 
-    if (selc->fullscreen)
+    if (focus->fullscreen)
         return;
 
     i = arg;
     i = i < WORKSPACE_MIN ? WORKSPACE_MIN : i;
     i = i > WORKSPACE_MAX ? WORKSPACE_MAX : i;
 
-    selc->workspace = i;
+    focus->workspace = i;
 
     /* Note: This call is not meant to switch the workspace but to force
      * rearrangement of the current workspace */
@@ -1379,14 +1379,14 @@ ipc_client_switch_workspace_adjacent(char arg)
     if (!SOMETHING_FOCUSED)
         return;
 
-    if (selc->fullscreen)
+    if (focus->fullscreen)
         return;
 
     i = selmon->active_workspace + arg;
     i = i < WORKSPACE_MIN ? WORKSPACE_MIN : i;
     i = i > WORKSPACE_MAX ? WORKSPACE_MAX : i;
 
-    selc->workspace = i;
+    focus->workspace = i;
 
     /* Note: This call is not meant to switch the workspace but to force
      * rearrangement of the current workspace */
@@ -1989,7 +1989,7 @@ manage_arrange(struct Monitor *m)
 void
 manage_client_gone(struct Client *c, bool rearrange)
 {
-    struct Client *old_selc, **tc;
+    struct Client *old_focus, **tc;
 
     D fprintf(stderr, __NAME_WM__": No longer managing window %lu (%p)\n",
               c->win, (void *)c);
@@ -2002,8 +2002,8 @@ manage_client_gone(struct Client *c, bool rearrange)
     decorations_destroy(c);
 
     /* Remove client from focus list. Note that manage_focus_remove()
-     * changes selc. */
-    old_selc = selc;
+     * changes "focus". */
+    old_focus = focus;
     manage_focus_remove(c);
 
     if (rearrange)
@@ -2014,7 +2014,7 @@ manage_client_gone(struct Client *c, bool rearrange)
          * c->mon"), then we have to select a new client: We choose the
          * first matching client in the focus list -- "matching" means
          * it's the correct workspace and monitor */
-        if (c == old_selc)
+        if (c == old_focus)
             manage_raisefocus_first_matching();
     }
 
@@ -2102,12 +2102,12 @@ manage_fit_on_monitor(struct Client *c)
 }
 
 void
-manage_focus_add_head(struct Client *new_selc)
+manage_focus_add_head(struct Client *new_focus)
 {
     /* Add client to head of the focus list */
 
-    new_selc->focus_next = selc;
-    selc = new_selc;
+    new_focus->focus_next = focus;
+    focus = new_focus;
 }
 
 void
@@ -2120,22 +2120,22 @@ manage_focus_add_tail(struct Client *nc)
     D
     {
         fprintf(stderr, __NAME_WM__": Focus list (pre tail-add): ");
-        for (c = selc; c; c = c->focus_next)
+        for (c = focus; c; c = c->focus_next)
             fprintf(stderr, "%p (%p) ", (void *)c,
                     (void *)(c ? c->focus_next : NULL));
         fprintf(stderr, "\n");
     }
 
-    for (c = selc; c; c = c->focus_next)
+    for (c = focus; c; c = c->focus_next)
         last = c;
 
     D fprintf(stderr, __NAME_WM__": Last client in focus list: %p\n",
               (void *)c);
 
     /* If this is the very first client added to the list, then we must
-     * also set selc */
+     * also set focus */
     if (last == NULL)
-        selc = nc;
+        focus = nc;
     else
         last->focus_next = nc;
 
@@ -2144,7 +2144,7 @@ manage_focus_add_tail(struct Client *nc)
     D
     {
         fprintf(stderr, __NAME_WM__": Focus list (post tail-add): ");
-        for (c = selc; c; c = c->focus_next)
+        for (c = focus; c; c = c->focus_next)
             fprintf(stderr, "%p (%p) ", (void *)c,
                     (void *)(c ? c->focus_next : NULL));
         fprintf(stderr, "\n");
@@ -2152,79 +2152,79 @@ manage_focus_add_tail(struct Client *nc)
 }
 
 void
-manage_focus_remove(struct Client *new_selc)
+manage_focus_remove(struct Client *new_focus)
 {
     bool found = false;
     struct Client **tc, *c;
 
     /* Remove client from focus list (if present) */
 
-    for (c = selc; !found && c; c = c->focus_next)
-        if (c == new_selc)
+    for (c = focus; !found && c; c = c->focus_next)
+        if (c == new_focus)
             found = true;
 
     if (!found)
         return;
 
-    for (tc = &selc; *tc && *tc != new_selc; tc = &(*tc)->focus_next);
-    *tc = new_selc->focus_next;
+    for (tc = &focus; *tc && *tc != new_focus; tc = &(*tc)->focus_next);
+    *tc = new_focus->focus_next;
 }
 
 void
-manage_focus_set(struct Client *new_selc)
+manage_focus_set(struct Client *new_focus)
 {
-    struct Client *c, *old_selc;
+    struct Client *c, *old_focus;
 
-    D fprintf(stderr, __NAME_WM__": selc before list manipulation: %p (%p)\n",
-              (void *)selc, (void *)(selc ? selc->focus_next : NULL));
-    D fprintf(stderr, __NAME_WM__": new_selc before list manipulation: %p (%p)\n",
-              (void *)new_selc, (void *)(new_selc ? new_selc->focus_next : NULL));
+    D fprintf(stderr, __NAME_WM__": focus before list manipulation: %p (%p)\n",
+              (void *)focus, (void *)(focus ? focus->focus_next : NULL));
+    D fprintf(stderr, __NAME_WM__": new_focus before list manipulation: %p (%p)\n",
+              (void *)new_focus, (void *)(new_focus ? new_focus->focus_next : NULL));
 
-    old_selc = selc;
+    old_focus = focus;
 
-    if (new_selc)
+    if (new_focus)
     {
         /* Move newly selected client to head of focus list, thus
-         * changing selc */
+         * changing "focus" */
 
         D
         {
             fprintf(stderr, __NAME_WM__": Focus list (pre remove): ");
-            for (c = selc; c; c = c->focus_next)
+            for (c = focus; c; c = c->focus_next)
                 fprintf(stderr, "%p (%p) ", (void *)c,
                         (void *)(c ? c->focus_next : NULL));
             fprintf(stderr, "\n");
         }
 
-        manage_focus_remove(new_selc);
+        manage_focus_remove(new_focus);
 
         D
         {
             fprintf(stderr, __NAME_WM__": Focus list (pre add): ");
-            for (c = selc; c; c = c->focus_next)
+            for (c = focus; c; c = c->focus_next)
                 fprintf(stderr, "%p (%p) ", (void *)c,
                         (void *)(c ? c->focus_next : NULL));
             fprintf(stderr, "\n");
         }
 
-        manage_focus_add_head(new_selc);
+        manage_focus_add_head(new_focus);
     }
 
     D
     {
         fprintf(stderr, __NAME_WM__": Focus list: ");
-        for (c = selc; c; c = c->focus_next)
+        for (c = focus; c; c = c->focus_next)
             fprintf(stderr, "%p (%p) ", (void *)c,
                     (void *)(c ? c->focus_next : NULL));
         fprintf(stderr, "\n");
     }
 
     /* Unfocus previous client, focus new client */
-    if (old_selc)
-        decorations_draw(old_selc, DecWinLAST);
+    if (old_focus)
+        decorations_draw(old_focus, DecWinLAST);
 
-    if (new_selc)
-        decorations_draw(new_selc, DecWinLAST);
+    if (new_focus)
+        decorations_draw(new_focus, DecWinLAST);
 }
 
 void
@@ -2351,7 +2351,7 @@ manage_icccm_evaluate_hints(struct Client *c)
     {
         if (wmh->flags & XUrgencyHint)
         {
-            if (c == selc && VIS_ON_SELMON(c))
+            if (c == focus && VIS_ON_SELMON(c))
             {
                 /* Setting the urgency hint on the currently selected
                  * window shall have no effect */
@@ -2438,7 +2438,7 @@ manage_raisefocus_first_matching(void)
 {
     struct Client *c;
 
-    for (c = selc; c; c = c->focus_next)
+    for (c = focus; c; c = c->focus_next)
     {
         if (VIS_ON_SELMON(c))
         {

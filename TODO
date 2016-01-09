@@ -6,8 +6,6 @@
   all the time like clients. We should make "monitors" a calloc'd array.
 - Refactor: manage_apply_rules() is bad. This can be shortened and
   simplified.
-- Refactor: Rename "selc" to something like "focus_head". "selc" is not
-  only "the currently selected client" but refers to the focus list.
 - Refactor: Add one function to clear urgency hints, kill code
   duplication.
 - Refactor: ipc_client_resize_mouse() duplicates a lot of code from

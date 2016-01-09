@@ -144,8 +144,8 @@ static void client_save(struct Client *c);
 static void client_update_title(struct Client *c);
 static void decorations_create(struct Client *c);
 static void decorations_destroy(struct Client *c);
-static void decorations_draw_for_client(struct Client *c,
-                                        enum DecorationWindowLocation which);
+static void decorations_draw(struct Client *c,
+                             enum DecorationWindowLocation which);
 static Pixmap decorations_get_pm(GC gc, XImage **ximg, enum DecorationLocation l,
                                  enum DecTint t);
 static void decorations_load(void);
@@ -415,8 +415,7 @@ decorations_destroy(struct Client *c)
 }
 
 void
-decorations_draw_for_client(struct Client *c,
-                            enum DecorationWindowLocation which)
+decorations_draw(struct Client *c, enum DecorationWindowLocation which)
 {
     int x, y, w, h;
     enum DecTint tint = DecTintNormal;
@@ -839,7 +838,7 @@ handle_expose(XEvent *e)
     if ((c = client_get_for_decoration(ev->window, &which)) == NULL)
         return;
 
-    decorations_draw_for_client(c, which);
+    decorations_draw(c, which);
 }
 
 void
@@ -890,7 +889,7 @@ handle_propertynotify(XEvent *e)
         if (ev->atom == atom_net[AtomNetWMName] || ev->atom == XA_WM_NAME)
         {
             client_update_title(c);
-            decorations_draw_for_client(c, DecWinLAST);
+            decorations_draw(c, DecWinLAST);
         }
         else if (ev->atom == XA_WM_HINTS)
         {
@@ -1479,7 +1478,7 @@ ipc_urgency_clear_visible(char arg)
                 XSetWMHints(dpy, c->win, wmh);
                 XFree(wmh);
             }
-            decorations_draw_for_client(c, DecWinLAST);
+            decorations_draw(c, DecWinLAST);
         }
     }
 
@@ -2222,10 +2221,10 @@ manage_focus_set(struct Client *new_selc)
 
     /* Unfocus previous client, focus new client */
     if (old_selc)
-        decorations_draw_for_client(old_selc, DecWinLAST);
+        decorations_draw(old_selc, DecWinLAST);
 
     if (new_selc)
-        decorations_draw_for_client(new_selc, DecWinLAST);
+        decorations_draw(new_selc, DecWinLAST);
 }
 
 void
@@ -2364,7 +2363,7 @@ manage_icccm_evaluate_hints(struct Client *c)
             else
             {
                 c->urgent = true;
-                decorations_draw_for_client(c, DecWinLAST);
+                decorations_draw(c, DecWinLAST);
                 D fprintf(stderr, __NAME_WM__": Urgency hint on client "
                           "%p set\n", (void *)c);
             }
@@ -2373,7 +2372,7 @@ manage_icccm_evaluate_hints(struct Client *c)
         {
             /* Urgency hint has been cleared by the application */
             c->urgent = false;
-            decorations_draw_for_client(c, DecWinLAST);
+            decorations_draw(c, DecWinLAST);
             D fprintf(stderr, __NAME_WM__": Urgency hint on client %p "
                       "cleared\n", (void *)c);
         }

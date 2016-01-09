@@ -211,6 +211,7 @@ static void manage_icccm_evaluate_hints(struct Client *c);
 static void manage_raisefocus(struct Client *c);
 static void manage_raisefocus_first_matching(void);
 static void manage_show(struct Client *c);
+static void manage_clear_urgency(struct Client *c);
 static void manage_xfocus(struct Client *c);
 static void manage_xraise(struct Client *c);
 static int manage_xsend_icccm(struct Client *c, Atom atom);
@@ -1455,7 +1456,6 @@ ipc_urgency_clear_visible(char arg)
 {
     struct Client *c;
     struct Monitor *m;
-    XWMHints *wmh;
     bool visible;
 
     (void)arg;
@@ -1472,13 +1472,7 @@ ipc_urgency_clear_visible(char arg)
 
         if (visible)
         {
-            c->urgent = false;
-            if ((wmh = XGetWMHints(dpy, c->win)))
-            {
-                wmh->flags &= ~XUrgencyHint;
-                XSetWMHints(dpy, c->win, wmh);
-                XFree(wmh);
-            }
+            manage_clear_urgency(c);
             decorations_draw(c, DecWinLAST);
         }
     }
@@ -2481,19 +2475,25 @@ manage_show(struct Client *c)
 }
 
 void
-manage_xfocus(struct Client *c)
+manage_clear_urgency(struct Client *c)
 {
     XWMHints *wmh;
 
+    c->urgent = false;
+    if ((wmh = XGetWMHints(dpy, c->win)))
+    {
+        wmh->flags &= ~XUrgencyHint;
+        XSetWMHints(dpy, c->win, wmh);
+        XFree(wmh);
+    }
+}
+
+void
+manage_xfocus(struct Client *c)
+{
     if (c)
     {
-        c->urgent = false;
-        if ((wmh = XGetWMHints(dpy, c->win)))
-        {
-            wmh->flags &= ~XUrgencyHint;
-            XSetWMHints(dpy, c->win, wmh);
-            XFree(wmh);
-        }
+        manage_clear_urgency(c);
         publish_state();
 
         if (!c->never_focus)

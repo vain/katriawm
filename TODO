@@ -6,8 +6,6 @@
   all the time like clients. We should make "monitors" a calloc'd array.
 - Refactor: manage_apply_rules() is bad. This can be shortened and
   simplified.
-- Refactor: Add one function to clear urgency hints, kill code
-  duplication.
 - Refactor: ipc_client_resize_mouse() duplicates a lot of code from
   ipc_client_move_mouse().
 - ICCCM:

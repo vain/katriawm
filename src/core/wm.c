@@ -206,10 +206,11 @@ static void manage_focus_set(struct Client *c);
 static void manage_fullscreen(struct Client *c, bool fs);
 static void manage_goto_monitor(int i, bool force);
 static void manage_goto_workspace(int i, bool force);
+static void manage_hide(struct Client *c);
 static void manage_icccm_evaluate_hints(struct Client *c);
 static void manage_raisefocus(struct Client *c);
 static void manage_raisefocus_first_matching(void);
-static void manage_showhide(struct Client *c, bool hide);
+static void manage_show(struct Client *c);
 static void manage_xfocus(struct Client *c);
 static void manage_xraise(struct Client *c);
 static int manage_xsend_icccm(struct Client *c, Atom atom);
@@ -774,11 +775,11 @@ handle_configurenotify(XEvent *e)
     /* Hide everything, then unhide what should be visible on the
      * default workspace */
     for (c = clients; c; c = c->next)
-        manage_showhide(c, true);
+        manage_hide(c);
 
     for (c = clients; c; c = c->next)
         if (c->mon == selmon && c->workspace == selmon->active_workspace)
-            manage_showhide(c, false);
+            manage_show(c);
 
     manage_arrange(selmon);
     manage_raisefocus_first_matching();
@@ -1831,7 +1832,7 @@ manage(Window win, XWindowAttributes *wa)
     {
         D fprintf(stderr, __NAME_WM__": Client %p spawned in background, hiding\n",
                   (void *)c);
-        manage_showhide(c, true);
+        manage_hide(c);
     }
 
     client_save(c);
@@ -2327,17 +2328,30 @@ manage_goto_workspace(int i, bool force)
      * hence we get less flickering. */
     for (c = clients; c; c = c->next)
         if (c->mon == selmon && c->workspace == i)
-            manage_showhide(c, false);
+            manage_show(c);
 
     for (c = clients; c; c = c->next)
         if (c->mon == selmon && c->workspace != i)
-            manage_showhide(c, true);
+            manage_hide(c);
 
     selmon->recent_workspace = selmon->active_workspace;
     selmon->active_workspace = i;
 
     manage_arrange(selmon);
     manage_raisefocus_first_matching();
+}
+
+void
+manage_hide(struct Client *c)
+{
+    if (!c->hidden)
+    {
+        c->nonhidden_x = c->x;
+        c->x = -2 * c->w;
+        c->hidden = true;
+
+        manage_apply_size(c);
+    }
 }
 
 void
@@ -2455,18 +2469,9 @@ manage_raisefocus_first_matching(void)
 }
 
 void
-manage_showhide(struct Client *c, bool hide)
+manage_show(struct Client *c)
 {
-    if (hide && !c->hidden)
-    {
-        c->nonhidden_x = c->x;
-        c->x = -2 * c->w;
-        c->hidden = true;
-
-        manage_apply_size(c);
-    }
-
-    if (!hide && c->hidden)
+    if (c->hidden)
     {
         c->x = c->nonhidden_x;
         c->hidden = false;

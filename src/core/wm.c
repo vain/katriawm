@@ -149,6 +149,7 @@ static void decorations_draw_for_client(struct Client *c,
 static Pixmap decorations_get_pm(GC gc, XImage **ximg, enum DecorationLocation l,
                                  enum DecTint t);
 static void decorations_load(void);
+static void decorations_map(struct Client *c);
 static char *decorations_tint(uint32_t color);
 static XImage *decorations_to_ximg(char *data);
 static void draw_text(Drawable d, XftFont *xfont, XftColor *col, int x, int y,
@@ -398,8 +399,6 @@ decorations_create(struct Client *c)
          * handle them differently. EWMH does not account for decoration
          * windows because reparenting usually happens. */
         XSetClassHint(dpy, c->decwin[i], &ch);
-
-        XMapRaised(dpy, c->decwin[i]);
     }
 }
 
@@ -583,6 +582,15 @@ decorations_load(void)
     for (i = DecTintNormal; i <= DecTintUrgent; i++)
         /* Note: This also frees tinted[i] */
         XDestroyImage(ximg[i]);
+}
+
+void
+decorations_map(struct Client *c)
+{
+    size_t i;
+
+    for (i = DecWinTop; i <= DecWinBottom; i++)
+        XMapRaised(dpy, c->decwin[i]);
 }
 
 char *
@@ -1838,6 +1846,7 @@ manage(Window win, XWindowAttributes *wa)
               c->win, (void *)c, c->w, c->h, c->x, c->y);
 
     manage_arrange(c->mon);
+    decorations_map(c);
     XMapWindow(dpy, c->win);
     manage_raisefocus(c);
 

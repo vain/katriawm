@@ -16,6 +16,7 @@
           resizing such a client: Some clients (VTE) notice that their
           size hints are being ignored, so they try to fit the window by
           themselves.)
+- Respect EWMH fullscreen in manage().
 
 
 --- Ideas ---

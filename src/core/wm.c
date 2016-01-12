@@ -204,7 +204,7 @@ static void manage_focus_add_head(struct Client *c);
 static void manage_focus_add_tail(struct Client *c);
 static void manage_focus_remove(struct Client *c);
 static void manage_focus_set(struct Client *c);
-static void manage_fullscreen(struct Client *c, bool fs);
+static void manage_fullscreen(struct Client *c);
 static void manage_goto_monitor(int i, bool force);
 static void manage_goto_workspace(int i, bool force);
 static void manage_hide(struct Client *c);
@@ -212,6 +212,7 @@ static void manage_icccm_evaluate_hints(struct Client *c);
 static void manage_raisefocus(struct Client *c);
 static void manage_raisefocus_first_matching(void);
 static void manage_show(struct Client *c);
+static void manage_unfullscreen(struct Client *c);
 static void manage_xfocus(struct Client *c);
 static void manage_xraise(struct Client *c);
 static int manage_xsend_icccm(struct Client *c, Atom atom);
@@ -717,12 +718,12 @@ handle_clientmessage(XEvent *e)
                 if (c->fullscreen && (cme->data.l[0] == 0 ||
                                       cme->data.l[0] == 2))
                 {
-                    manage_fullscreen(c, false);
+                    manage_unfullscreen(c);
                 }
                 else if (!c->fullscreen && (cme->data.l[0] == 1 ||
                                             cme->data.l[0] == 2))
                 {
-                    manage_fullscreen(c, true);
+                    manage_fullscreen(c);
                 }
             }
             else
@@ -998,7 +999,10 @@ ipc_client_fullscreen_toggle(char arg)
     if (!SOMETHING_FOCUSED)
         return;
 
-    manage_fullscreen(focus, !focus->fullscreen);
+    if (focus->fullscreen)
+        manage_unfullscreen(focus);
+    else
+        manage_fullscreen(focus);
 }
 
 void
@@ -2121,7 +2125,7 @@ manage_ewmh_evaluate_hints(struct Client *c)
         }
 
         if (make_fullscreen)
-            manage_fullscreen(c, true);
+            manage_fullscreen(c);
     }
 }
 
@@ -2281,9 +2285,9 @@ manage_focus_set(struct Client *new_focus)
 }
 
 void
-manage_fullscreen(struct Client *c, bool fs)
+manage_fullscreen(struct Client *c)
 {
-    if (fs)
+    if (!c->fullscreen)
     {
         c->fullscreen = true;
 
@@ -2302,21 +2306,6 @@ manage_fullscreen(struct Client *c, bool fs)
         XChangeProperty(dpy, c->win, atom_net[AtomNetWMState], XA_ATOM,
                         32, PropModeReplace,
                         (unsigned char *)&atom_net[AtomNetWMStateFullscreen], 1);
-
-        manage_apply_size(c);
-    }
-    else
-    {
-        c->fullscreen = false;
-
-        c->x = c->normal_x;
-        c->y = c->normal_y;
-        c->w = c->normal_w;
-        c->h = c->normal_h;
-
-        /* XXX dwm empties the list instead of simply removing the
-         * property. Why is that? */
-        XDeleteProperty(dpy, c->win, atom_net[AtomNetWMState]);
 
         manage_apply_size(c);
     }
@@ -2527,6 +2516,26 @@ manage_show(struct Client *c)
     {
         c->x = c->nonhidden_x;
         c->hidden = false;
+
+        manage_apply_size(c);
+    }
+}
+
+void
+manage_unfullscreen(struct Client *c)
+{
+    if (c->fullscreen)
+    {
+        c->fullscreen = false;
+
+        c->x = c->normal_x;
+        c->y = c->normal_y;
+        c->w = c->normal_w;
+        c->h = c->normal_h;
+
+        /* XXX dwm empties the list instead of simply removing the
+         * property. Why is that? */
+        XDeleteProperty(dpy, c->win, atom_net[AtomNetWMState]);
 
         manage_apply_size(c);
     }

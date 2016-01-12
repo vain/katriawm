@@ -2028,8 +2028,9 @@ manage_ewmh_evaluate_hints(struct Client *c)
     Atom prop, da;
     unsigned char *prop_ret = NULL;
     int di;
-    unsigned long dl;
+    unsigned long dl, ni;
     char *an;
+    bool make_fullscreen = false;
 
     if (XGetWindowProperty(dpy, c->win, atom_net[AtomNetWMWindowType], 0,
                            sizeof (Atom), False, XA_ATOM, &da, &di, &dl, &dl,
@@ -2065,6 +2066,49 @@ manage_ewmh_evaluate_hints(struct Client *c)
     else
         D fprintf(stderr, __NAME_WM__": Client %p has no EWMH window type\n",
                   (void *)c);
+
+    /* If a client is not yet fullscreen, we check if _NET_WM_STATE asks
+     * for a fullscreen window. 12 atoms are currently defined as valid
+     * atoms for _NET_WM_STATE, so we ask for a list of max. 32 items.
+     * IIUC, the fullscreen atom can appear anywhere in the list. (dwm
+     * only check's the first item and I've never had problems with
+     * that...) */
+    if (!c->fullscreen)
+    {
+        if (XGetWindowProperty(dpy, c->win, atom_net[AtomNetWMState], 0,
+                               32 * sizeof (Atom), False, XA_ATOM, &da, &di, &ni,
+                               &dl, &prop_ret)
+            == Success)
+        {
+            if (prop_ret)
+            {
+                while (ni--)
+                {
+                    prop = ((Atom *)prop_ret)[ni];
+
+                    an = XGetAtomName(dpy, prop);
+                    D fprintf(stderr, __NAME_WM__": Client %p has EWMH state: %s\n",
+                              (void *)c, an);
+                    if (an)
+                        XFree(an);
+
+                    if (prop == atom_net[AtomNetWMStateFullscreen])
+                    {
+                        make_fullscreen = true;
+
+                        /* We found a fullscreen hint, okay, fine. Now
+                         * stop looking for other stuff since we don't
+                         * support it anyway. */
+                        break;
+                    }
+                }
+                XFree(prop_ret);
+            }
+        }
+
+        if (make_fullscreen)
+            manage_fullscreen(c, true);
+    }
 }
 
 void

@@ -7,6 +7,11 @@ next
   - Unhiding already visible clients is now a no-op. This fixes a bug
     when moving clients to other workspaces.
 
+  [Added]
+  - EWMH fullscreen hint honoured when windows are being mapped (instead
+    of only responding to ClientMessages asking for fullscreen mode
+    *after* the window has been mapped).
+
 v16.01  2016-01-08
   [Fixed]
   - A bar will now be notified when a different monitor has been

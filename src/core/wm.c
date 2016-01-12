@@ -196,6 +196,7 @@ static void manage_apply_gaps(struct Client *c);
 static void manage_apply_rules(struct Client *c);
 static void manage_apply_size(struct Client *c);
 static void manage_arrange(struct Monitor *m);
+static void manage_clear_urgency(struct Client *c);
 static void manage_client_gone(struct Client *c, bool rearrange);
 static void manage_ewmh_evaluate_hints(struct Client *c);
 static void manage_fit_on_monitor(struct Client *c);
@@ -211,7 +212,6 @@ static void manage_icccm_evaluate_hints(struct Client *c);
 static void manage_raisefocus(struct Client *c);
 static void manage_raisefocus_first_matching(void);
 static void manage_show(struct Client *c);
-static void manage_clear_urgency(struct Client *c);
 static void manage_xfocus(struct Client *c);
 static void manage_xraise(struct Client *c);
 static int manage_xsend_icccm(struct Client *c, Atom atom);
@@ -1982,6 +1982,20 @@ manage_arrange(struct Monitor *m)
 }
 
 void
+manage_clear_urgency(struct Client *c)
+{
+    XWMHints *wmh;
+
+    c->urgent = false;
+    if ((wmh = XGetWMHints(dpy, c->win)))
+    {
+        wmh->flags &= ~XUrgencyHint;
+        XSetWMHints(dpy, c->win, wmh);
+        XFree(wmh);
+    }
+}
+
+void
 manage_client_gone(struct Client *c, bool rearrange)
 {
     struct Client *old_focus, **tc;
@@ -2515,20 +2529,6 @@ manage_show(struct Client *c)
         c->hidden = false;
 
         manage_apply_size(c);
-    }
-}
-
-void
-manage_clear_urgency(struct Client *c)
-{
-    XWMHints *wmh;
-
-    c->urgent = false;
-    if ((wmh = XGetWMHints(dpy, c->win)))
-    {
-        wmh->flags &= ~XUrgencyHint;
-        XSetWMHints(dpy, c->win, wmh);
-        XFree(wmh);
     }
 }
 

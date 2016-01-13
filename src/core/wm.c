@@ -2366,7 +2366,10 @@ manage_goto_workspace(int i, bool force)
 
     /* First make new clients visible, then hide old clients. This way,
      * the root window won't be visible for a tiny fraction of time,
-     * hence we get less flickering. */
+     * hence we get less flickering.
+     *
+     * Finally re-fit all floaters for the sake of consistency (this
+     * might result in a short flicker for those windows). */
     for (c = clients; c; c = c->next)
         if (c->mon == selmon && c->workspace == i)
             manage_show(c);
@@ -2374,6 +2377,14 @@ manage_goto_workspace(int i, bool force)
     for (c = clients; c; c = c->next)
         if (c->mon == selmon && c->workspace != i)
             manage_hide(c);
+
+    for (c = clients; c; c = c->next)
+        if (c->mon == selmon && c->workspace == i)
+            if (c->floating || selmon->layouts[i] == LAFloat)
+            {
+                manage_fit_on_monitor(c);
+                manage_apply_size(c);
+            }
 
     selmon->recent_workspace = selmon->active_workspace;
     selmon->active_workspace = i;

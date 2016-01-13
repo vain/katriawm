@@ -6,6 +6,8 @@ next
   - Less flickering when mapping new windows.
   - Unhiding already visible clients is now a no-op. This fixes a bug
     when moving clients to other workspaces.
+  - Floaters will be re-fit to their monitor when changing workspaces.
+    We don't want floaters to float away too far ... :-)
 
   [Added]
   - EWMH fullscreen hint honoured when windows are being mapped (instead

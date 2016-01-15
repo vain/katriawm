@@ -802,7 +802,11 @@ handle_configurerequest(XEvent *e)
     {
         /* This is a known client. However, we do not allow the client
          * to resize or move itself. Hence, we simply inform him about
-         * the last known configuration. */
+         * the last known configuration.
+         *
+         * This calls XSendEvent() and creates a synthetic event, so the
+         * server is not being told to change anything. We just inform
+         * the client about its configuration. */
         ce.type = ConfigureNotify;
         ce.display = dpy;
         ce.event = c->win;
@@ -819,7 +823,10 @@ handle_configurerequest(XEvent *e)
     else
     {
         /* We don't know anything about this client yet, so we give him
-         * just what he wants. */
+         * just what he wants.
+         *
+         * This calls XConfigureWindow() because we want the server to
+         * actually execute what the client requested. */
         wc.x = ev->x;
         wc.y = ev->y;
         wc.width = ev->width;

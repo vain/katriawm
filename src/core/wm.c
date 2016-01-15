@@ -1352,7 +1352,6 @@ ipc_client_switch_monitor_adjacent(char arg)
              * newly calculated size. This has no effect for
              * non-floaters because we call manage_arrange() afterwards. */
             manage_fit_on_monitor(focus);
-            manage_apply_size(focus);
 
             manage_arrange(old_mon);
             manage_arrange(m);
@@ -1414,14 +1413,9 @@ ipc_floaters_collect(char arg)
     (void)arg;
 
     for (c = clients; c; c = c->next)
-    {
         if ((c->floating || selmon->layouts[selmon->active_workspace] == LAFloat)
             && VIS_ON_SELMON(c))
-        {
             manage_fit_on_monitor(c);
-            manage_apply_size(c);
-        }
-    }
 }
 
 void
@@ -1829,7 +1823,6 @@ manage(Window win, XWindowAttributes *wa)
               (void *)c, c->workspace, c->mon->index);
 
     manage_fit_on_monitor(c);
-    manage_apply_size(c);
 
     /* When a window spawns "in the background", we put it into hidden
      * state */
@@ -2163,6 +2156,8 @@ manage_fit_on_monitor(struct Client *c)
         c->x = c->mon->wx + dgeo.left_width + gap_pixels;
     if (c->y - dgeo.top_height - gap_pixels < c->mon->wy)
         c->y = c->mon->wy + dgeo.top_height + gap_pixels;
+
+    manage_apply_size(c);
 }
 
 void
@@ -2380,7 +2375,6 @@ manage_goto_workspace(int i, bool force)
         {
             manage_show(c);
             manage_fit_on_monitor(c);
-            manage_apply_size(c);
         }
 
     for (c = clients; c; c = c->next)

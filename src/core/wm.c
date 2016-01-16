@@ -2809,10 +2809,12 @@ setup_monitors_compare(const void *a, const void *b)
     ma = (struct Monitor *)a;
     mb = (struct Monitor *)b;
 
-    if (ma->mx < mb->mx)
+    /* Sort monitors lemonbar/neeasade stlye: left-to-right and top-to-bottom */
+
+    if (ma->mx < mb->mx || ma->my + ma->mh <= mb->my)
         return -1;
 
-    if (ma->mx > mb->mx)
+    if (ma->mx > mb->mx || ma->my + ma->mh > mb->my)
         return 1;
 
     return 0;
@@ -2897,7 +2899,6 @@ setup_monitors_read(void)
     }
     free(chosen);
 
-    /* Always sort monitors by their X offset */
     qsort(monitors, monitors_num, sizeof (struct Monitor), setup_monitors_compare);
 
     D

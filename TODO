@@ -1,9 +1,6 @@
 --- Near Future ---
 
 - Test on different architectures
-- Refactor: There is no need for "monitors" being a list. It's just a
-  dwm-ism that complicates things for us. Monitors aren't added/removed
-  all the time like clients. We should make "monitors" a calloc'd array.
 - Refactor: manage_apply_rules() is bad. This can be shortened and
   simplified.
 - Refactor: ipc_client_resize_mouse() duplicates a lot of code from

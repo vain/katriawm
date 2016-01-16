@@ -23,9 +23,11 @@
 #define WORKSPACE_DEFAULT 1
 #define WM_NAME_UNKNOWN "<name unknown>"
 #define VIS_ON_SELMON(c) ((c)->mon == selmon && \
-                          (c)->workspace == selmon->active_workspace)
+                          (c)->workspace == monitors[selmon].active_workspace)
 #define VIS_ON_M(c, m) ((c)->mon == (m) && \
-                        (c)->workspace == (m)->active_workspace)
+                        (c)->workspace == monitors[(m)].active_workspace)
+#define SOMEHOW_FLOATING(c) ((c)->floating || \
+                             monitors[(c)->mon].layouts[(c)->workspace] == LAFloat)
 #define SOMETHING_FOCUSED (focus && VIS_ON_SELMON(focus))
 
 struct Client
@@ -46,10 +48,10 @@ struct Client
 
     char title[512];
 
-    struct Monitor *mon;
+    int mon;
     int workspace;
 
-    int saved_monitor[SAVE_SLOTS], saved_workspace[SAVE_SLOTS];
+    int saved_monitors[SAVE_SLOTS], saved_workspaces[SAVE_SLOTS];
 
     struct Client *next;
     struct Client *focus_next;
@@ -57,9 +59,7 @@ struct Client
 
 struct Monitor
 {
-    int index;
     int active_workspace, recent_workspace;
-
     int layouts[WORKSPACE_MAX + 1];
 
     /* Actual monitor size */
@@ -67,8 +67,6 @@ struct Monitor
 
     /* Logical size, i.e. where we can place windows */
     int wx, wy, ww, wh;
-
-    struct Monitor *next;
 };
 
 struct Rule
@@ -118,8 +116,9 @@ enum AtomsWM
 #include "config.h"
 
 static struct Client *clients = NULL, *focus = NULL, *mouse_dc = NULL;
-static struct Monitor *monitors = NULL, *selmon = NULL;
-static struct Monitor *saved_monitor[SAVE_SLOTS] = { 0 };
+static struct Monitor *monitors = NULL;
+static struct Monitor *saved_monitors[SAVE_SLOTS] = { 0 };
+static int saved_monitor_nums[SAVE_SLOTS] = { 0 };
 static int screen_w = -1, screen_h = -1;
 static int mouse_dx, mouse_dy, mouse_ocx, mouse_ocy, mouse_ocw, mouse_och;
 static Atom atom_net[AtomNetLAST], atom_wm[AtomWMLAST], atom_state, atom_ipc;
@@ -129,7 +128,7 @@ static Pixmap dec_tiles[DecTintLAST][DecLAST];
 static Window root;
 static XftColor font_color[DecTintLAST];
 static XftFont *font[FontLAST];
-static int monitors_num = 0, prevmon_i = 0;
+static int monitors_num = 0, selmon = 0, prevmon = 0;
 static bool running = true;
 static bool restart = false;
 static int screen;
@@ -188,14 +187,14 @@ static void ipc_wm_restart(char arg);
 static void ipc_workspace_select(char arg);
 static void ipc_workspace_select_adjacent(char arg);
 static void ipc_workspace_select_recent(char arg);
-static void layout_float(struct Monitor *m);
-static void layout_monocle(struct Monitor *m);
-static void layout_tile(struct Monitor *m);
+static void layout_float(int m);
+static void layout_monocle(int m);
+static void layout_tile(int m);
 static void manage(Window win, XWindowAttributes *wa);
 static void manage_apply_gaps(struct Client *c);
 static void manage_apply_rules(struct Client *c);
 static void manage_apply_size(struct Client *c);
-static void manage_arrange(struct Monitor *m);
+static void manage_arrange(int m);
 static void manage_clear_urgency(struct Client *c);
 static void manage_client_gone(struct Client *c, bool rearrange);
 static void manage_ewmh_evaluate_hints(struct Client *c);
@@ -221,6 +220,7 @@ static void run(void);
 static void scan(void);
 static void setup(void);
 static void setup_hints(void);
+static int setup_monitors_compare(const void *a, const void *b);
 static bool setup_monitors_is_duplicate(XRRCrtcInfo *ci, bool *chosen,
                                         XRRScreenResources *sr);
 static void setup_monitors_read(void);
@@ -268,7 +268,7 @@ static void (*x11_handler[LASTEvent])(XEvent *e) = {
     [UnmapNotify] = handle_unmapnotify,
 };
 
-static void (*layouts[LALast])(struct Monitor *m) = {
+static void (*layouts[LALast])(int m) = {
     /* Index 0 is the default layout, see ipc.h */
     [LAFloat] = layout_float,
     [LAMonocle] = layout_monocle,
@@ -780,14 +780,15 @@ handle_configurenotify(XEvent *e)
         manage_hide(c);
 
     for (c = clients; c; c = c->next)
-        if (c->mon == selmon && c->workspace == selmon->active_workspace)
+        if (VIS_ON_SELMON(c))
             manage_show(c);
 
     manage_arrange(selmon);
     manage_raisefocus_first_matching();
 
     XWarpPointer(dpy, None, root, 0, 0, 0, 0,
-                 selmon->wx + selmon->ww / 2, selmon->wy + selmon->wh / 2);
+                 monitors[selmon].wx + monitors[selmon].ww / 2,
+                 monitors[selmon].wy + monitors[selmon].wh / 2);
 }
 
 void
@@ -960,13 +961,13 @@ ipc_client_center_floating(char arg)
     if (!SOMETHING_FOCUSED)
         return;
 
-    if (!focus->floating && selmon->layouts[selmon->active_workspace] != LAFloat)
+    if (!SOMEHOW_FLOATING(focus))
         return;
 
-    focus->x = focus->mon->wx + 0.5 * (focus->mon->ww - focus->w
-                                       - dgeo.left_width - dgeo.right_width);
-    focus->y = focus->mon->wy + 0.5 * (focus->mon->wh - focus->h
-                                       - dgeo.top_height - dgeo.bottom_height);
+    focus->x = monitors[focus->mon].wx + 0.5 * (monitors[focus->mon].ww - focus->w
+                                                - dgeo.left_width - dgeo.right_width);
+    focus->y = monitors[focus->mon].wy + 0.5 * (monitors[focus->mon].wh - focus->h
+                                                - dgeo.top_height - dgeo.bottom_height);
 
     focus->x += dgeo.left_width;
     focus->y += dgeo.top_height;
@@ -1033,13 +1034,13 @@ ipc_client_maximize_floating(char arg)
     if (!SOMETHING_FOCUSED)
         return;
 
-    if (!focus->floating && selmon->layouts[selmon->active_workspace] != LAFloat)
+    if (!SOMEHOW_FLOATING(focus))
         return;
 
-    focus->x = focus->mon->wx;
-    focus->y = focus->mon->wy;
-    focus->w = focus->mon->ww;
-    focus->h = focus->mon->wh;
+    focus->x = monitors[focus->mon].wx;
+    focus->y = monitors[focus->mon].wy;
+    focus->w = monitors[focus->mon].ww;
+    focus->h = monitors[focus->mon].wh;
 
     focus->x += dgeo.left_width;
     focus->y += dgeo.top_height;
@@ -1322,8 +1323,7 @@ ipc_client_select_recent(char arg)
 void
 ipc_client_switch_monitor_adjacent(char arg)
 {
-    int i;
-    struct Monitor *m, *old_mon = NULL;
+    int i, old_mon;
 
     /* Move currently selected client to an adjacent monitor, causing
      * both monitors to be re-arranged */
@@ -1334,31 +1334,24 @@ ipc_client_switch_monitor_adjacent(char arg)
     if (focus->fullscreen)
         return;
 
-    i = selmon->index;
+    i = selmon;
     i += arg;
     i = i < 0 ? 0 : i;
     i = i >= monitors_num ? monitors_num - 1 : i;
 
-    for (m = monitors; m; m = m->next)
-    {
-        if (m->index == i)
-        {
-            old_mon = focus->mon;
-            focus->mon = m;
-            focus->workspace = focus->mon->active_workspace;
+    old_mon = focus->mon;
+    focus->mon = i;
+    focus->workspace = monitors[i].active_workspace;
 
-            /* If the client is floating or the target layout is
-             * floating, then we need to re-fit the client and apply the
-             * newly calculated size. This has no effect for
-             * non-floaters because we call manage_arrange() afterwards. */
-            manage_fit_on_monitor(focus);
+    /* If the client is floating or the target layout is floating, then
+     * we need to re-fit the client and apply the newly calculated size.
+     * This has no effect for non-floaters because we call
+     * manage_arrange() afterwards. */
+    manage_fit_on_monitor(focus);
 
-            manage_arrange(old_mon);
-            manage_arrange(m);
-            manage_raisefocus_first_matching();
-            return;
-        }
-    }
+    manage_arrange(old_mon);
+    manage_arrange(i);
+    manage_raisefocus_first_matching();
 }
 
 void
@@ -1380,7 +1373,7 @@ ipc_client_switch_workspace(char arg)
 
     /* Note: This call is not meant to switch the workspace but to force
      * rearrangement of the current workspace */
-    manage_goto_workspace(selmon->active_workspace, true);
+    manage_goto_workspace(monitors[selmon].active_workspace, true);
 }
 
 void
@@ -1394,7 +1387,8 @@ ipc_client_switch_workspace_adjacent(char arg)
     if (focus->fullscreen)
         return;
 
-    i = selmon->active_workspace + arg;
+    i = monitors[selmon].active_workspace;
+    i += arg;
     i = i < WORKSPACE_MIN ? WORKSPACE_MIN : i;
     i = i > WORKSPACE_MAX ? WORKSPACE_MAX : i;
 
@@ -1402,7 +1396,7 @@ ipc_client_switch_workspace_adjacent(char arg)
 
     /* Note: This call is not meant to switch the workspace but to force
      * rearrangement of the current workspace */
-    manage_goto_workspace(selmon->active_workspace, true);
+    manage_goto_workspace(monitors[selmon].active_workspace, true);
 }
 
 void
@@ -1413,8 +1407,7 @@ ipc_floaters_collect(char arg)
     (void)arg;
 
     for (c = clients; c; c = c->next)
-        if ((c->floating || selmon->layouts[selmon->active_workspace] == LAFloat)
-            && VIS_ON_SELMON(c))
+        if (VIS_ON_SELMON(c) && SOMEHOW_FLOATING(c))
             manage_fit_on_monitor(c);
 }
 
@@ -1431,7 +1424,7 @@ ipc_layout_set(char arg)
         return;
     }
 
-    selmon->layouts[selmon->active_workspace] = i;
+    monitors[selmon].layouts[monitors[selmon].active_workspace] = i;
     manage_arrange(selmon);
 }
 
@@ -1440,7 +1433,7 @@ ipc_monitor_select_adjacent(char arg)
 {
     int i;
 
-    i = selmon->index;
+    i = selmon;
     i += arg;
     i %= monitors_num;
     i = i < 0 ? monitors_num + i : i;
@@ -1453,14 +1446,14 @@ ipc_monitor_select_recent(char arg)
 {
     (void)arg;
 
-    manage_goto_monitor(prevmon_i, false);
+    manage_goto_monitor(prevmon, false);
 }
 
 void
 ipc_urgency_clear_visible(char arg)
 {
     struct Client *c;
-    struct Monitor *m;
+    int m;
     bool visible;
 
     (void)arg;
@@ -1471,7 +1464,7 @@ ipc_urgency_clear_visible(char arg)
     {
         visible = false;
 
-        for (m = monitors; !visible && m; m = m->next)
+        for (m = 0; !visible && m < monitors_num; m++)
             if (VIS_ON_M(c, m))
                 visible = true;
 
@@ -1489,8 +1482,8 @@ void
 ipc_placement_store(char arg)
 {
     struct Client *c;
-    struct Monitor *m, *nm;
     size_t ai;
+    int m;
 
     /* Things to save:
      *
@@ -1498,7 +1491,7 @@ ipc_placement_store(char arg)
      * - Active workspace on each monitor
      * - Active layouts on each monitor
      *
-     * We store monitor info by copying the whole "monitors" list. */
+     * We store monitor info by copying the whole "monitors" array. */
 
     if (arg < 0 || arg >= SAVE_SLOTS)
     {
@@ -1510,31 +1503,26 @@ ipc_placement_store(char arg)
 
     for (c = clients; c; c = c->next)
     {
-        c->saved_monitor[ai] = c->mon->index;
-        c->saved_workspace[ai] = c->workspace;
+        c->saved_monitors[ai] = c->mon;
+        c->saved_workspaces[ai] = c->workspace;
     }
 
-    if (saved_monitor[ai])
-    {
-        for (m = saved_monitor[ai]; m; /* nop */)
-        {
-            nm = m->next;
-            free(m);
-            m = nm;
-        }
-    }
-    saved_monitor[ai] = NULL;
+    if (saved_monitors[ai])
+        free(saved_monitors[ai]);
 
-    /* Note: This results in saved_monitor[ai] being reversed. This has
-     * a nice side effect: When restoring layout, it'll be restored
-     * last-to-first, resulting in the very first monitor being selected
-     * automatically when finished. */
-    for (m = monitors; m; m = m->next)
+    saved_monitors[ai] = calloc(monitors_num, sizeof (struct Monitor));
+    saved_monitor_nums[ai] = monitors_num;
+    memcpy(saved_monitors[ai], monitors, monitors_num * sizeof (struct Monitor));
+
+    D
     {
-        nm = calloc(1, sizeof (struct Monitor));
-        memcpy(nm, m, sizeof (struct Monitor));
-        nm->next = saved_monitor[ai];
-        saved_monitor[ai] = nm;
+        /* Printing layout of workspace 1 just to get a rough idea */
+        fprintf(stderr, __NAME_WM__": Saved monitors in slot %lu:\n", ai);
+        for (m = 0; m < monitors_num; m++)
+            fprintf(stderr, __NAME_WM__":  %d: %d %d, %d\n", m,
+                    saved_monitors[ai][m].mx,
+                    saved_monitors[ai][m].my,
+                    saved_monitors[ai][m].layouts[1]);
     }
 
     publish_state();
@@ -1544,7 +1532,7 @@ void
 ipc_placement_use(char arg)
 {
     struct Client *c;
-    struct Monitor *m, *sm;
+    int m;
     size_t ai;
 
     /* The opposite of ipc_placement_store(): Restore clients'
@@ -1559,42 +1547,38 @@ ipc_placement_use(char arg)
 
     ai = arg;
 
-    /* Note that we do not explicitly check whether this slot has
-     * actually been filled. That's okay. Everything still works even if
-     * the slot is empty. */
+    if (saved_monitors[ai] == NULL)
+        return;
 
     for (c = clients; c; c = c->next)
     {
-        for (m = monitors; m; m = m->next)
-            if (m->index == c->saved_monitor[ai])
-                c->mon = m;
+        if (c->saved_monitors[ai] >= 0 && c->saved_monitors[ai] < monitors_num)
+            c->mon = c->saved_monitors[ai];
 
-        if (c->saved_workspace[ai] >= WORKSPACE_MIN &&
-            c->saved_workspace[ai] <= WORKSPACE_MAX)
-            c->workspace = c->saved_workspace[ai];
+        if (c->saved_workspaces[ai] >= WORKSPACE_MIN &&
+            c->saved_workspaces[ai] <= WORKSPACE_MAX)
+            c->workspace = c->saved_workspaces[ai];
     }
 
-    for (m = monitors; m; m = m->next)
+    for (m = 0; m < monitors_num && m < saved_monitor_nums[ai]; m++)
     {
-        /* Try to find a saved monitor with matching index. It's okay if
-         * we can't find one. */
-
-        for (sm = saved_monitor[ai]; sm && sm->index != m->index; sm = sm->next)
-            /* nop */;
-
-        if (sm)
-        {
-            memcpy(m->layouts, sm->layouts, sizeof m->layouts);
-            m->active_workspace = sm->active_workspace;
-            m->recent_workspace = sm->recent_workspace;
-        }
+        monitors[m].active_workspace = saved_monitors[ai][m].active_workspace;
+        memcpy(monitors[m].layouts, saved_monitors[ai][m].layouts,
+               sizeof monitors[m].layouts);
     }
 
-    for (m = monitors; m; m = m->next)
+    /* Re-arrange last-to-first, so, when we finish, the focused monitor
+     * will be index 0 */
+    for (m = monitors_num - 1; m >= 0; m--)
     {
-        manage_goto_monitor(m->index, true);
-        manage_goto_workspace(m->active_workspace, true);
+        manage_goto_monitor(m, true);
+        manage_goto_workspace(monitors[m].active_workspace, true);
     }
+
+    /* Restore these last because they have been altered by the loop
+     * above */
+    for (m = 0; m < monitors_num && m < saved_monitor_nums[ai]; m++)
+        monitors[m].recent_workspace = saved_monitors[ai][m].recent_workspace;
 }
 
 void
@@ -1632,7 +1616,7 @@ ipc_workspace_select_adjacent(char arg)
 {
     int i;
 
-    i = selmon->active_workspace;
+    i = monitors[selmon].active_workspace;
     i += arg;
     manage_goto_workspace(i, false);
 }
@@ -1642,17 +1626,17 @@ ipc_workspace_select_recent(char arg)
 {
     (void)arg;
 
-    manage_goto_workspace(selmon->recent_workspace, false);
+    manage_goto_workspace(monitors[selmon].recent_workspace, false);
 }
 
 void
-layout_float(struct Monitor *m)
+layout_float(int m)
 {
     (void)m;
 }
 
 void
-layout_monocle(struct Monitor *m)
+layout_monocle(int m)
 {
     struct Client *c;
 
@@ -1660,10 +1644,10 @@ layout_monocle(struct Monitor *m)
     {
         if (VIS_ON_M(c, m) && !c->floating && !c->fullscreen)
         {
-            c->x = c->mon->wx + dgeo.left_width;
-            c->y = c->mon->wy + dgeo.top_height;
-            c->w = c->mon->ww - dgeo.left_width - dgeo.right_width;
-            c->h = c->mon->wh - dgeo.top_height - dgeo.bottom_height;
+            c->x = monitors[c->mon].wx + dgeo.left_width;
+            c->y = monitors[c->mon].wy + dgeo.top_height;
+            c->w = monitors[c->mon].ww - dgeo.left_width - dgeo.right_width;
+            c->h = monitors[c->mon].wh - dgeo.top_height - dgeo.bottom_height;
             manage_apply_gaps(c);
             manage_apply_size(c);
         }
@@ -1671,7 +1655,7 @@ layout_monocle(struct Monitor *m)
 }
 
 void
-layout_tile(struct Monitor *m)
+layout_tile(int m)
 {
     struct Client *c;
     int i, num_clients, at_y, slave_h, master_w, master_n;
@@ -1681,13 +1665,13 @@ layout_tile(struct Monitor *m)
 
     i = 0;
     num_clients = 0;
-    at_y = m->wy;
+    at_y = monitors[m].wy;
 
     for (c = clients; c; c = c->next)
         if (VIS_ON_M(c, m) && !c->floating && !c->fullscreen)
             num_clients++;
 
-    master_w = m->ww / 2;
+    master_w = monitors[m].ww / 2;
     master_n = num_clients / 2;
 
     for (c = clients; c; c = c->next)
@@ -1697,27 +1681,27 @@ layout_tile(struct Monitor *m)
             if (num_clients == 1)
             {
                 /* Only one client total, just maximize it */
-                c->x = m->wx + dgeo.left_width;
-                c->y = m->wy + dgeo.top_height;
-                c->w = m->ww - dgeo.left_width - dgeo.right_width;
-                c->h = m->wh - dgeo.top_height - dgeo.bottom_height;
+                c->x = monitors[m].wx + dgeo.left_width;
+                c->y = monitors[m].wy + dgeo.top_height;
+                c->w = monitors[m].ww - dgeo.left_width - dgeo.right_width;
+                c->h = monitors[m].wh - dgeo.top_height - dgeo.bottom_height;
             }
             else
             {
                 /* Reset at_y on column switch */
                 if (i == master_n)
-                    at_y = m->wy;
+                    at_y = monitors[m].wy;
 
                 /* Decide which column to place this client into */
                 if (i < master_n)
                 {
-                    c->x = m->wx;
+                    c->x = monitors[m].wx;
                     c->w = master_w;
                 }
                 else
                 {
-                    c->x = m->wx + master_w;
-                    c->w = m->ww - master_w;
+                    c->x = monitors[m].wx + master_w;
+                    c->w = monitors[m].ww - master_w;
                 }
 
                 c->x += dgeo.left_width;
@@ -1727,16 +1711,17 @@ layout_tile(struct Monitor *m)
 
                 /* Clients in the last row get the remaining space in
                  * order to avoid rounding issues. Note that we need to
-                 * add m->wy here because that's where at_y started.
+                 * add monitors[m].wy here because that's where at_y
+                 * started.
                  *
                  * Regular clients in the master or slave column get
                  * their normal share of available space. */
                 if (i == num_clients - 1 || i == master_n - 1)
-                    slave_h = m->wh - at_y + m->wy;
+                    slave_h = monitors[m].wh - at_y + monitors[m].wy;
                 else if (i < master_n)
-                    slave_h = m->wh / master_n;
+                    slave_h = monitors[m].wh / master_n;
                 else
-                    slave_h = m->wh / (num_clients - master_n);
+                    slave_h = monitors[m].wh / (num_clients - master_n);
 
                 c->h = slave_h - dgeo.top_height - dgeo.bottom_height;
                 at_y += slave_h;
@@ -1768,12 +1753,12 @@ manage(Window win, XWindowAttributes *wa)
 
     c->win = win;
     c->mon = selmon;
-    c->workspace = selmon->active_workspace;
+    c->workspace = monitors[selmon].active_workspace;
 
     for (i = 0; i < SAVE_SLOTS; i++)
     {
-        c->saved_monitor[i] = -1;
-        c->saved_workspace[i] = -1;
+        c->saved_monitors[i] = -1;
+        c->saved_workspaces[i] = -1;
     }
 
     c->x = wa->x;
@@ -1820,13 +1805,13 @@ manage(Window win, XWindowAttributes *wa)
     manage_apply_rules(c);
 
     D fprintf(stderr, __NAME_WM__": Client %p lives on WS %d on monitor %d\n",
-              (void *)c, c->workspace, c->mon->index);
+              (void *)c, c->workspace, c->mon);
 
     manage_fit_on_monitor(c);
 
     /* When a window spawns "in the background", we put it into hidden
      * state */
-    if (c->workspace != c->mon->active_workspace)
+    if (c->workspace != monitors[c->mon].active_workspace)
     {
         D fprintf(stderr, __NAME_WM__": Client %p spawned in background, hiding\n",
                   (void *)c);
@@ -1873,7 +1858,6 @@ manage_apply_rules(struct Client *c)
 {
     size_t i;
     XClassHint ch;
-    struct Monitor *m;
     bool match_class, match_instance;
 
     D fprintf(stderr, __NAME_WM__": rules: Testing client %p\n", (void *)c);
@@ -1917,9 +1901,8 @@ manage_apply_rules(struct Client *c)
                 if (rules[i].workspace != -1)
                     c->workspace = rules[i].workspace;
 
-                for (m = monitors; m; m = m->next)
-                    if (m->index == rules[i].monitor)
-                        c->mon = m;
+                if (rules[i].monitor >= 0 && rules[i].monitor < monitors_num)
+                    c->mon = rules[i].monitor;
 
                 if (rules[i].floating != -1)
                     c->floating = rules[i].floating;
@@ -1977,10 +1960,10 @@ manage_apply_size(struct Client *c)
 }
 
 void
-manage_arrange(struct Monitor *m)
+manage_arrange(int m)
 {
-    D fprintf(stderr, __NAME_WM__": Arranging monitor %p\n", (void *)m);
-    layouts[m->layouts[m->active_workspace]](m);
+    D fprintf(stderr, __NAME_WM__": Arranging monitor %d\n", m);
+    layouts[monitors[m].layouts[monitors[m].active_workspace]](m);
 
     publish_state();
 }
@@ -2135,27 +2118,29 @@ manage_fit_on_monitor(struct Client *c)
     /* Fit monitor on its screen in such a way that the upper left
      * corner is visible */
 
-    if (c->mon == NULL)
-    {
-        fprintf(stderr, __NAME_WM__": No monitor assigned to %lu (%p)\n",
-                c->win, (void *)c);
-        return;
-    }
-
     if (c->fullscreen)
         return;
 
     /* Right and bottom */
-    if (c->x + c->w + dgeo.right_width + gap_pixels >= c->mon->wx + c->mon->ww)
-        c->x = c->mon->wx + c->mon->ww - c->w - dgeo.right_width - gap_pixels;
-    if (c->y + c->h + dgeo.bottom_height + gap_pixels >= c->mon->wy + c->mon->wh)
-        c->y = c->mon->wy + c->mon->wh - c->h - dgeo.bottom_height - gap_pixels;
+    if (c->x + c->w + dgeo.right_width + gap_pixels >=
+        monitors[c->mon].wx + monitors[c->mon].ww)
+    {
+        c->x = monitors[c->mon].wx + monitors[c->mon].ww - c->w -
+               dgeo.right_width - gap_pixels;
+    }
+
+    if (c->y + c->h + dgeo.bottom_height + gap_pixels >=
+        monitors[c->mon].wy + monitors[c->mon].wh)
+    {
+        c->y = monitors[c->mon].wy + monitors[c->mon].wh - c->h -
+               dgeo.bottom_height - gap_pixels;
+    }
 
     /* Top and left */
-    if (c->x - dgeo.left_width - gap_pixels < c->mon->wx)
-        c->x = c->mon->wx + dgeo.left_width + gap_pixels;
-    if (c->y - dgeo.top_height - gap_pixels < c->mon->wy)
-        c->y = c->mon->wy + dgeo.top_height + gap_pixels;
+    if (c->x - dgeo.left_width - gap_pixels < monitors[c->mon].wx)
+        c->x = monitors[c->mon].wx + dgeo.left_width + gap_pixels;
+    if (c->y - dgeo.top_height - gap_pixels < monitors[c->mon].wy)
+        c->y = monitors[c->mon].wy + dgeo.top_height + gap_pixels;
 
     manage_apply_size(c);
 }
@@ -2298,10 +2283,10 @@ manage_fullscreen(struct Client *c)
         c->normal_w = c->w;
         c->normal_h = c->h;
 
-        c->x = c->mon->mx;
-        c->y = c->mon->my;
-        c->w = c->mon->mw;
-        c->h = c->mon->mh;
+        c->x = monitors[c->mon].mx;
+        c->y = monitors[c->mon].my;
+        c->w = monitors[c->mon].mw;
+        c->h = monitors[c->mon].mh;
 
         /* We only support the state "fullscreen", so it's okay-ish to
          * only ever set this property (and kill all others) */
@@ -2316,21 +2301,10 @@ manage_fullscreen(struct Client *c)
 void
 manage_goto_monitor(int i, bool force)
 {
-    struct Monitor *m, *new_selmon = NULL;
-
-    if (!force && selmon->index == i)
+    if (!force && selmon == i)
         return;
 
-    for (m = monitors; m; m = m->next)
-    {
-        if (m->index == i)
-        {
-            new_selmon = m;
-            break;
-        }
-    }
-
-    if (new_selmon == NULL)
+    if (i < 0 || i >= monitors_num)
         return;
 
     /* XXX Quirk for suckless tabbed
@@ -2338,11 +2312,12 @@ manage_goto_monitor(int i, bool force)
      * has focus after changing workspaces or monitors. */
     manage_xfocus(NULL);
 
-    prevmon_i = selmon->index;
-    selmon = new_selmon;
+    prevmon = selmon;
+    selmon = i;
 
     XWarpPointer(dpy, None, root, 0, 0, 0, 0,
-                 selmon->wx + selmon->ww / 2, selmon->wy + selmon->wh / 2);
+                 monitors[selmon].wx + monitors[selmon].ww / 2,
+                 monitors[selmon].wy + monitors[selmon].wh / 2);
     manage_raisefocus_first_matching();
 
     publish_state();
@@ -2356,7 +2331,7 @@ manage_goto_workspace(int i, bool force)
     i = i < WORKSPACE_MIN ? WORKSPACE_MIN : i;
     i = i > WORKSPACE_MAX ? WORKSPACE_MAX : i;
 
-    if (!force && selmon->active_workspace == i)
+    if (!force && monitors[selmon].active_workspace == i)
         return;
 
     D fprintf(stderr, __NAME_WM__": Changing to workspace %d\n", i);
@@ -2381,8 +2356,8 @@ manage_goto_workspace(int i, bool force)
         if (c->mon == selmon && c->workspace != i)
             manage_hide(c);
 
-    selmon->recent_workspace = selmon->active_workspace;
-    selmon->active_workspace = i;
+    monitors[selmon].recent_workspace = monitors[selmon].active_workspace;
+    monitors[selmon].active_workspace = i;
 
     manage_arrange(selmon);
     manage_raisefocus_first_matching();
@@ -2619,7 +2594,7 @@ publish_state(void)
 {
     size_t size, off, byte_i, shifts_needed, i, size_monws;
     unsigned char *state = NULL, byte, mask;
-    struct Monitor *m;
+    int m;
     struct Client *c;
 
     /* The very first byte indicates the number of monitors detected by
@@ -2647,27 +2622,27 @@ publish_state(void)
 
     /* Number of detected monitors and currently selected monitor (int) */
     state[0] = monitors_num;
-    state[1] = selmon ? selmon->index : 0;
+    state[1] = selmon;
     off = 2;
 
     /* Bitmask of occupied save slots */
     mask = 1;
     for (i = 0; i < SAVE_SLOTS; i++)
     {
-        if (saved_monitor[i])
+        if (saved_monitors[i])
             state[off] |= mask;
         mask <<= 1;
     }
     off++;
 
     /* Active workspace on each monitor (int) */
-    for (m = monitors; m; m = m->next)
-        state[off + m->index] = m->active_workspace;
+    for (m = 0; m < monitors_num; m++)
+        state[off + m] = monitors[m].active_workspace;
     off += monitors_num;
 
     /* Visible layout on each monitor (layout index as int) */
-    for (m = monitors; m; m = m->next)
-        state[off + m->index] = m->layouts[m->active_workspace];
+    for (m = 0; m < monitors_num; m++)
+        state[off + m] = monitors[m].layouts[monitors[m].active_workspace];
     off += monitors_num;
 
     /* Bitmasks for occupied workspaces and urgent hints */
@@ -2683,7 +2658,7 @@ publish_state(void)
             mask <<= 1;
 
         /* Occupied workspaces */
-        i = off + c->mon->index * size_monws + byte_i;
+        i = off + c->mon * size_monws + byte_i;
         byte = state[i];
         byte |= mask;
         state[i] = byte;
@@ -2796,7 +2771,8 @@ setup(void)
     XDefineCursor(dpy, root, cursor_normal);
 
     XWarpPointer(dpy, None, root, 0, 0, 0, 0,
-                 selmon->wx + selmon->ww / 2, selmon->wy + selmon->wh / 2);
+                 monitors[selmon].wx + monitors[selmon].ww / 2,
+                 monitors[selmon].wy + monitors[selmon].wh / 2);
 
     publish_state();
 }
@@ -2825,6 +2801,23 @@ setup_hints(void)
     atom_wm[AtomWMTakeFocus] = XInternAtom(dpy, "WM_TAKE_FOCUS", False);
 }
 
+int
+setup_monitors_compare(const void *a, const void *b)
+{
+    const struct Monitor *ma, *mb;
+
+    ma = (struct Monitor *)a;
+    mb = (struct Monitor *)b;
+
+    if (ma->mx < mb->mx)
+        return -1;
+
+    if (ma->mx > mb->mx)
+        return 1;
+
+    return 0;
+}
+
 bool
 setup_monitors_is_duplicate(XRRCrtcInfo *ci, bool *chosen, XRRScreenResources *sr)
 {
@@ -2850,72 +2843,71 @@ setup_monitors_read(void)
 {
     XRRCrtcInfo *ci;
     XRRScreenResources *sr;
-    struct Monitor *m;
-    int c, cinner;
-    int minx, minindex;
+    int c, mi;
     bool *chosen = NULL;
-
-    /* Note: This method has O(n**3) with n being the number of CRTCs
-     * returned by XRandR. This *should* be okay because you usually
-     * only have a couple of CRTCs in your system.
-     *
-     * If this turns out to be too slow, then the number of X-calls can
-     * be reduced by simply doing them once and them caching them
-     * locally. */
 
     sr = XRRGetScreenResources(dpy, root);
     D fprintf(stderr, __NAME_WM__": XRandR reported %d monitors/CRTCs\n",
               sr->ncrtc);
     assert(sr->ncrtc > 0);
+
+    /* First, we iterate over all monitors and check each monitor if
+     * it's usable and not a duplicate. If it's okay, we mark it for
+     * use. After this loop, we know how many usable monitors there
+     * are, so we can allocate the "monitors" array. */
+
+    monitors_num = 0;
     chosen = calloc(sr->ncrtc, sizeof (bool));
     for (c = 0; c < sr->ncrtc; c++)
     {
-        /* Always sort monitors by their X offset. */
-        minx = -1;
-        minindex = -1;
-        for (cinner = 0; cinner < sr->ncrtc; cinner++)
-        {
-            ci = XRRGetCrtcInfo(dpy, sr, sr->crtcs[cinner]);
-            if (ci == NULL || ci->noutput == 0 || ci->mode == None)
-                continue;
-
-            if (setup_monitors_is_duplicate(ci, chosen, sr))
-                continue;
-
-            if (chosen[cinner] == 0 && (minx == -1 || ci->x < minx))
-            {
-                minx = ci->x;
-                minindex = cinner;
-            }
-        }
-        if (minindex == -1)
+        ci = XRRGetCrtcInfo(dpy, sr, sr->crtcs[c]);
+        if (ci == NULL || ci->noutput == 0 || ci->mode == None)
             continue;
 
-        ci = XRRGetCrtcInfo(dpy, sr, sr->crtcs[minindex]);
-        chosen[minindex] = true;
+        if (setup_monitors_is_duplicate(ci, chosen, sr))
+            continue;
 
-        m = calloc(1, sizeof (struct Monitor));
-        if (selmon == NULL)
-            selmon = m;
-        m->wx = m->mx = ci->x;
-        m->wy = m->my = ci->y;
-        m->ww = m->mw = ci->width;
-        m->wh = m->mh = ci->height;
+        chosen[c] = true;
+        monitors_num++;
+    }
 
-        m->wx += wai.left;
-        m->ww -= wai.left + wai.right;
-        m->wy += wai.top;
-        m->wh -= wai.top + wai.bottom;
+    monitors = calloc(monitors_num, sizeof (struct Monitor));
+    mi = 0;
+    for (c = 0; c < sr->ncrtc; c++)
+    {
+        if (chosen[c])
+        {
+            ci = XRRGetCrtcInfo(dpy, sr, sr->crtcs[c]);
 
-        m->index = monitors_num++;
-        m->active_workspace = m->recent_workspace = WORKSPACE_DEFAULT;
-        m->next = monitors;
-        monitors = m;
-        D fprintf(stderr, __NAME_WM__": monitor: %d %d %d %d\n",
-                  ci->x, ci->y, ci->width, ci->height);
+            monitors[mi].wx = monitors[mi].mx = ci->x;
+            monitors[mi].wy = monitors[mi].my = ci->y;
+            monitors[mi].ww = monitors[mi].mw = ci->width;
+            monitors[mi].wh = monitors[mi].mh = ci->height;
+
+            monitors[mi].wx += wai.left;
+            monitors[mi].ww -= wai.left + wai.right;
+            monitors[mi].wy += wai.top;
+            monitors[mi].wh -= wai.top + wai.bottom;
+
+            monitors[mi].active_workspace = WORKSPACE_DEFAULT;
+            monitors[mi].recent_workspace = WORKSPACE_DEFAULT;
+
+            mi++;
+        }
     }
     free(chosen);
-    D fprintf(stderr, __NAME_WM__": We found %d usable monitors\n", monitors_num);
+
+    /* Always sort monitors by their X offset */
+    qsort(monitors, monitors_num, sizeof (struct Monitor), setup_monitors_compare);
+
+    D
+    {
+        fprintf(stderr, __NAME_WM__": We found %d usable monitors\n", monitors_num);
+        for (mi = 0; mi < monitors_num; mi++)
+            fprintf(stderr, __NAME_WM__": monitor %d: %d %d, %d %d\n", mi,
+                    monitors[mi].mx, monitors[mi].my,
+                    monitors[mi].mw, monitors[mi].mh);
+    }
 }
 
 void
@@ -2979,18 +2971,11 @@ shutdown(void)
 void
 shutdown_monitors_free(void)
 {
-    struct Monitor *m, *n;
-
-    m = monitors;
-    while (m)
-    {
-        n = m->next;
-        free(m);
-        m = n;
-    }
+    free(monitors);
     monitors = NULL;
     monitors_num = 0;
-    selmon = NULL;
+    selmon = 0;
+    prevmon = 0;
 }
 
 int

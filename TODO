@@ -5,14 +5,6 @@
   simplified.
 - Refactor: ipc_client_resize_mouse() duplicates a lot of code from
   ipc_client_move_mouse().
-- ICCCM:
-    - Support aspect ratios and increments.
-        - Once we support ratios and increments, we can allow floaters
-          to resize themselves. (If we don't honour their size hints,
-          then there's a lot of flickering going on when manually
-          resizing such a client: Some clients (VTE) notice that their
-          size hints are being ignored, so they try to fit the window by
-          themselves.)
 
 
 --- Ideas ---

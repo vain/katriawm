@@ -40,6 +40,11 @@ struct Client
     int normal_x, normal_y, normal_w, normal_h;
     int nonhidden_x;
 
+    /* ICCCM 4.1.2.3 size hints */
+    double sh_asp_min, sh_asp_max;
+    int sh_base_w, sh_base_h, sh_inc_w, sh_inc_h;
+    int sh_min_w, sh_min_h, sh_max_w, sh_max_h;
+
     bool floating;
     bool fullscreen;
     bool hidden;
@@ -207,6 +212,7 @@ static void manage_fullscreen(struct Client *c);
 static void manage_goto_monitor(int i, bool force);
 static void manage_goto_workspace(int i, bool force);
 static void manage_hide(struct Client *c);
+static void manage_icccm_apply_size_hints(struct Client *c);
 static void manage_icccm_evaluate_hints(struct Client *c);
 static void manage_raisefocus(struct Client *c);
 static void manage_raisefocus_first_matching(void);
@@ -798,16 +804,40 @@ handle_configurerequest(XEvent *e)
     XConfigureEvent ce;
     XWindowChanges wc;
     struct Client *c = NULL;
+    bool dirty = false;
 
     if ((c = client_get_for_window(ev->window)))
     {
-        /* This is a known client. However, we do not allow the client
-         * to resize or move itself. Hence, we simply inform him about
-         * the last known configuration.
+        /* This is a known client. However, only floating clients are
+         * allowed to resize themselves. If they want to do that,
+         * manage_apply_size() will take care of actually changing their
+         * size.
          *
-         * This calls XSendEvent() and creates a synthetic event, so the
-         * server is not being told to change anything. We just inform
-         * the client about its configuration. */
+         * For all clients, we call XSendEvent(). This creates a
+         * synthetic event, so the server is not being told to change
+         * anything. It merely informs the client about its current
+         * configuration. */
+        if (SOMEHOW_FLOATING(c))
+        {
+            if (ev->value_mask & CWWidth)
+            {
+                c->w = ev->width;
+                dirty = true;
+            }
+            if (ev->value_mask & CWHeight)
+            {
+                c->h = ev->height;
+                dirty = true;
+            }
+
+            if (dirty)
+            {
+                D fprintf(stderr, __NAME_WM__": Client %p resized itself to "
+                          "%d %d\n", (void *)c, c->w, c->h);
+                manage_apply_size(c);
+            }
+        }
+
         ce.type = ConfigureNotify;
         ce.display = dpy;
         ce.event = c->win;
@@ -1926,6 +1956,8 @@ manage_apply_size(struct Client *c)
     c->w = c->w <= 0 ? 10 : c->w;
     c->h = c->h <= 0 ? 10 : c->h;
 
+    manage_icccm_apply_size_hints(c);
+
     if (c->fullscreen && !c->hidden)
     {
         D fprintf(stderr, __NAME_WM__": Fullscreening client %p\n", (void *)c);
@@ -2377,6 +2409,67 @@ manage_hide(struct Client *c)
 }
 
 void
+manage_icccm_apply_size_hints(struct Client *c)
+{
+    bool base_supplied, base_subtracted = false;
+    double aspect;
+
+    if (!SOMEHOW_FLOATING(c) || c->fullscreen)
+        return;
+
+    /* Apply ICCCM 4.1.2.3 size hints. Again, this is taken almost
+     * verbatim from dwm (except for aspect ratios). */
+
+    base_supplied = !(c->sh_base_w == c->sh_min_w && c->sh_base_h == c->sh_min_h);
+
+    if (base_supplied)
+    {
+        /* Remove base sizes when looking at aspect ratios, if they were
+         * specified. ICCCM says not to do this if we stored min sizes
+         * as fallback. */
+        c->w -= c->sh_base_w;
+        c->h -= c->sh_base_h;
+        base_subtracted = true;
+    }
+    if (c->sh_asp_min > 0 && c->sh_asp_max > 0)
+    {
+        /* Honour aspect ratio request by simply adjusting the window's
+         * width */
+        aspect = (double)c->w / c->h;
+        if (aspect < c->sh_asp_min)
+            c->w = c->h * c->sh_asp_min;
+        else if (aspect > c->sh_asp_max)
+            c->w = c->h * c->sh_asp_max;
+    }
+
+    if (!base_subtracted)
+    {
+        /* If we have not yet subtracted the base size, then we must do
+         * so now for increment calculation to work */
+        c->w -= c->sh_base_w;
+        c->h -= c->sh_base_h;
+    }
+    if (c->sh_inc_w > 0)
+        c->w -= c->w % c->sh_inc_w;
+    if (c->sh_inc_h > 0)
+        c->h -= c->h % c->sh_inc_h;
+
+    /* Restore base dimensions and enforce size constraints (min_* is
+     * always >= 0 and that's fine, but we must check whether max_* has
+     * been specified) */
+    c->w += c->sh_base_w;
+    c->h += c->sh_base_h;
+
+    c->w = c->w < c->sh_min_w ? c->sh_min_w : c->w;
+    c->h = c->h < c->sh_min_h ? c->sh_min_h : c->h;
+
+    if (c->sh_max_w > 0)
+        c->w = c->w > c->sh_max_w ? c->sh_max_w : c->w;
+    if (c->sh_max_h > 0)
+        c->h = c->h > c->sh_max_h ? c->sh_max_h : c->h;
+}
+
+void
 manage_icccm_evaluate_hints(struct Client *c)
 {
     XWMHints *wmh;
@@ -2435,10 +2528,63 @@ manage_icccm_evaluate_hints(struct Client *c)
 
     if (XGetWMNormalHints(dpy, c->win, &xsh, &dl))
     {
-        /* We only support "fixed sized windows". Dialogs often set both
-         * min and max size to the same value, indicating they want a
-         * window of a certain size. We honour that request and resize
-         * the window. */
+        /* Store the client's size hints according to ICCCM 4.1.2.3.
+         * This is pretty much taken from dwm, but there's virtually no
+         * other way to do this anyway. */
+        if (xsh.flags & PBaseSize)
+        {
+            c->sh_base_w = xsh.base_width;
+            c->sh_base_h = xsh.base_height;
+        }
+        else if (xsh.flags & PMinSize)
+        {
+            c->sh_base_w = xsh.min_width;
+            c->sh_base_h = xsh.min_height;
+        }
+        else
+            c->sh_base_w = c->sh_base_h = 0;
+
+        if (xsh.flags & PResizeInc)
+        {
+            c->sh_inc_w = xsh.width_inc;
+            c->sh_inc_h = xsh.height_inc;
+        }
+        else
+            c->sh_inc_w = c->sh_inc_h = 0;
+
+        if (xsh.flags & PMaxSize)
+        {
+            c->sh_max_w = xsh.max_width;
+            c->sh_max_h = xsh.max_height;
+        }
+        else
+            c->sh_max_w = c->sh_max_h = 0;
+
+        if (xsh.flags & PMinSize)
+        {
+            c->sh_min_w = xsh.min_width;
+            c->sh_min_h = xsh.min_height;
+        }
+        else if (xsh.flags & PBaseSize)
+        {
+            c->sh_min_w = xsh.base_width;
+            c->sh_min_h = xsh.base_height;
+        }
+        else
+            c->sh_min_w = c->sh_min_h = 0;
+
+        if (xsh.flags & PAspect)
+        {
+            c->sh_asp_min = (double)xsh.min_aspect.x / xsh.min_aspect.y;
+            c->sh_asp_max = (double)xsh.max_aspect.x / xsh.max_aspect.y;
+        }
+        else
+            c->sh_asp_max = c->sh_asp_min = 0.0;
+
+        /* Support "fixed sized windows". Dialogs often set both min and
+         * max size to the same value, indicating they want a window of
+         * a certain size. We honour that request and resize the window.
+         * */
         if (xsh.flags & PMinSize && xsh.flags & PMaxSize &&
             xsh.min_width == xsh.max_width && xsh.min_height == xsh.max_height)
         {

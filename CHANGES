@@ -8,11 +8,16 @@ next
     when moving clients to other workspaces.
   - Floaters will be re-fit to their monitor when changing workspaces.
     We don't want floaters to float away too far ... :-)
+  - Floating clients can resize themselves. This is considered a "fix"
+    since there are some dialog windows which rely on this (e.g.
+    Inkscape or Firefox/GTK+3).
 
   [Added]
   - EWMH fullscreen hint honoured when windows are being mapped (instead
     of only responding to ClientMessages asking for fullscreen mode
     *after* the window has been mapped).
+  - ICCCM size hints (increments, aspect ratio, min/max size) are now
+    being honoured by floating windows.
 
   [Changed]
   - y offset and height taken into account when sorting monitors, the

@@ -45,8 +45,7 @@ resolve_ws_name(int ws_num)
     size_t l = 64;
     char *out;
 
-    out = calloc(l, sizeof (char));
-    assert(out != NULL);
+    out = ecalloc(l, sizeof (char));
 
     if (ws_num >= WORKSPACE_MIN && ws_num <= WORKSPACE_MAX && ws_names[ws_num])
         snprintf(out, l - 1, "%d:%s", ws_num, ws_names[ws_num]);

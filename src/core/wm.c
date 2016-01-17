@@ -1540,7 +1540,7 @@ ipc_placement_store(char arg)
     if (saved_monitors[ai])
         free(saved_monitors[ai]);
 
-    saved_monitors[ai] = calloc(monitors_num, sizeof (struct Monitor));
+    saved_monitors[ai] = ecalloc(monitors_num, sizeof (struct Monitor));
     saved_monitor_nums[ai] = monitors_num;
     memcpy(saved_monitors[ai], monitors, monitors_num * sizeof (struct Monitor));
 
@@ -1779,7 +1779,7 @@ manage(Window win, XWindowAttributes *wa)
         return;
     }
 
-    c = calloc(1, sizeof (struct Client));
+    c = ecalloc(1, sizeof (struct Client));
 
     c->win = win;
     c->mon = selmon;
@@ -2759,12 +2759,7 @@ publish_state(void)
     size_monws = STATE_BYTES_PER_WORKSPACE;
 
     size = 1 + 1 + 1 + monitors_num * 2 + monitors_num * size_monws * 2;
-    state = calloc(size, sizeof (unsigned char));
-    if (state == NULL)
-    {
-        fprintf(stderr, __NAME_WM__": Could not allocate memory for state array\n");
-        return;
-    }
+    state = ecalloc(size, sizeof (unsigned char));
 
     /* Number of detected monitors and currently selected monitor (int) */
     state[0] = monitors_num;
@@ -3005,7 +3000,7 @@ setup_monitors_read(void)
      * are, so we can allocate the "monitors" array. */
 
     monitors_num = 0;
-    chosen = calloc(sr->ncrtc, sizeof (bool));
+    chosen = ecalloc(sr->ncrtc, sizeof (bool));
     for (c = 0; c < sr->ncrtc; c++)
     {
         ci = XRRGetCrtcInfo(dpy, sr, sr->crtcs[c]);
@@ -3019,7 +3014,7 @@ setup_monitors_read(void)
         monitors_num++;
     }
 
-    monitors = calloc(monitors_num, sizeof (struct Monitor));
+    monitors = ecalloc(monitors_num, sizeof (struct Monitor));
     mi = 0;
     for (c = 0; c < sr->ncrtc; c++)
     {

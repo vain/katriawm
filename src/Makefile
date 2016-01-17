@@ -1,6 +1,6 @@
 include config.mk
 
-SRC = core/wm.c core/client.c barinfo/barinfo.c
+SRC = core/wm.c core/client.c barinfo/barinfo.c util/util.c
 OBJ = $(SRC:.c=.o)
 BIN = core/katriawm core/katriac barinfo/katriabi
 
@@ -8,7 +8,7 @@ BIN = core/katriawm core/katriac barinfo/katriabi
 
 all: $(BIN)
 
-core/katriawm: core/wm.o
+core/katriawm: core/wm.o util/util.o
 	@echo $@
 	@$(CC) -o $@ $^ $(LDFLAGS)
 
@@ -16,7 +16,7 @@ core/katriac: core/client.o
 	@echo $@
 	@$(CC) -o $@ $^ $(LDFLAGS)
 
-barinfo/katriabi: barinfo/barinfo.o
+barinfo/katriabi: barinfo/barinfo.o util/util.o
 	@echo $@
 	@$(CC) -o $@ $^ $(LDFLAGS)
 

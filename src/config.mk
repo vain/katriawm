@@ -1,7 +1,6 @@
 # To enable debug output:
-#DEBUGFLAGS = -DDEBUG
-
-CFLAGS += -std=c99 -Wall -Wextra -O3
+#DEBUG_CPPFLAGS = -DDEBUG
+#DEBUG_CFLAGS = -g
 
 INSTALL = install
 INSTALL_PROGRAM = $(INSTALL)
@@ -33,7 +32,7 @@ __NAME_C_CAPITALIZED__ = `echo $(__NAME_C__) | sed 's/^./\U&\E/'`
 __NAME_BI_UPPERCASE__ = `echo $(__NAME_BI__) | sed 's/.*/\U&/'`
 __NAME_BI_CAPITALIZED__ = `echo $(__NAME_BI__) | sed 's/^./\U&\E/'`
 
-__NAME_DEFINES__ = \
+NAME_DEFINES = \
 		-D__NAME__=\"$(__NAME__)\" \
 		-D__NAME_UPPERCASE__=\"$(__NAME_UPPERCASE__)\" \
 		-D__NAME_CAPITALIZED__=\"$(__NAME_CAPITALIZED__)\" \
@@ -46,3 +45,9 @@ __NAME_DEFINES__ = \
 		-D__NAME_BI__=\"$(__NAME_BI__)\" \
 		-D__NAME_BI_UPPERCASE__=\"$(__NAME_BI_UPPERCASE__)\" \
 		-D__NAME_BI_CAPITALIZED__=\"$(__NAME_BI_CAPITALIZED__)\"
+
+# Flags used in rules.
+CPPFLAGS += $(NAME_DEFINES) -DSRVR_$$HOSTNAME $(DEBUG_CPPFLAGS)
+CFLAGS += -std=c99 -Wall -Wextra -O3 $(DEBUG_CFLAGS)
+CFLAGS += -Icore -Iinclude -I/usr/include/freetype2
+LDFLAGS += -lX11 -lXrandr -lXft

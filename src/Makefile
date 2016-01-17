@@ -1,47 +1,50 @@
 include config.mk
 
+SRC = core/wm.c core/client.c barinfo/barinfo.c
+OBJ = $(SRC:.c=.o)
+BIN = core/katriawm core/katriac barinfo/katriabi
+
 .PHONY: all clean install installdirs
 
-all: core/$(__NAME_WM__) core/$(__NAME_C__) barinfo/$(__NAME_BI__)
+all: $(BIN)
 
-core/$(__NAME_WM__): core/wm.c core/config.h core/theme.h \
-	include/ipc.h include/util.h include/theme_types.h
-	$(CC) $(CFLAGS) $(LDFLAGS) \
-		$(__NAME_DEFINES__) $(DEBUGFLAGS) -DSRVR_$$HOSTNAME \
-		-o $@ $< \
-		-Icore -Iinclude -I/usr/include/freetype2 \
-		-lX11 -lXrandr -lXft
+core/katriawm: core/wm.o
+	@echo $@
+	@$(CC) -o $@ $^ $(LDFLAGS)
 
-core/$(__NAME_C__): core/client.c include/ipc.h include/util.h
-	$(CC) $(CFLAGS) $(LDFLAGS) \
-		$(__NAME_DEFINES__) $(DEBUGFLAGS) -DSRVR_$$HOSTNAME \
-		-Iinclude -o $@ $< -lX11
+core/katriac: core/client.o
+	@echo $@
+	@$(CC) -o $@ $^ $(LDFLAGS)
 
-barinfo/$(__NAME_BI__): barinfo/barinfo.c barinfo/config.h \
-	include/ipc.h include/util.h
-	$(CC) $(CFLAGS) $(LDFLAGS) \
-		$(__NAME_DEFINES__) $(DEBUGFLAGS) -DSRVR_$$HOSTNAME \
-		-Iinclude -o $@ $< -lX11
+barinfo/katriabi: barinfo/barinfo.o
+	@echo $@
+	@$(CC) -o $@ $^ $(LDFLAGS)
 
-core/config.h:
-	cp core/config.def.h $@
+%.o: %.c
+	@echo $@
+	@$(CC) -o $@ -c $(CFLAGS) $(CPPFLAGS) $<
+
+$(OBJ): $(wildcard */*.h) core/config.h core/theme.h barinfo/config.h
 
 core/theme.h:
 	../themes/make_theme_h.sh ../themes/motif >$@
+
+core/config.h:
+	cp core/config.def.h $@
 
 barinfo/config.h:
 	cp barinfo/config.def.h $@
 
 install: all installdirs
-	$(INSTALL_PROGRAM) core/$(__NAME_WM__) $(DESTDIR)$(bindir)/$(__NAME_WM__)
-	$(INSTALL_PROGRAM) core/$(__NAME_C__) $(DESTDIR)$(bindir)/$(__NAME_C__)
-	$(INSTALL_PROGRAM) barinfo/$(__NAME_BI__) $(DESTDIR)$(bindir)/$(__NAME_BI__)
-	$(INSTALL_DATA) ../doc/man1/$(__NAME_WM__).1 $(DESTDIR)$(man1dir)/$(__NAME_WM__).1
-	$(INSTALL_DATA) ../doc/man1/$(__NAME_C__).1 $(DESTDIR)$(man1dir)/$(__NAME_C__).1
-	$(INSTALL_DATA) ../doc/man1/$(__NAME_BI__).1 $(DESTDIR)$(man1dir)/$(__NAME_BI__).1
+	$(INSTALL_PROGRAM) core/katriawm $(DESTDIR)$(bindir)/katriawm
+	$(INSTALL_PROGRAM) core/katriac $(DESTDIR)$(bindir)/katriac
+	$(INSTALL_PROGRAM) barinfo/katriabi $(DESTDIR)$(bindir)/katriabi
+	$(INSTALL_DATA) ../doc/man1/katriawm.1 $(DESTDIR)$(man1dir)/katriawm.1
+	$(INSTALL_DATA) ../doc/man1/katriac.1 $(DESTDIR)$(man1dir)/katriac.1
+	$(INSTALL_DATA) ../doc/man1/katriabi.1 $(DESTDIR)$(man1dir)/katriabi.1
 
 installdirs:
 	mkdir -p $(DESTDIR)$(bindir) $(DESTDIR)$(man1dir)
 
 clean:
-	rm -f core/$(__NAME_WM__) core/$(__NAME_C__) barinfo/$(__NAME_BI__)
+	rm -f $(OBJ) $(BIN)

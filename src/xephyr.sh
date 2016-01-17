@@ -1,6 +1,6 @@
 #!/bin/bash
 
-make DEBUGFLAGS='-DDEBUG -g' || exit 1
+make DEBUG_CPPFLAGS=-DDEBUG DEBUG_CFLAGS=-g || exit 1
 
 Xephyr :80 &
 sleep 1

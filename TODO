@@ -1,8 +1,6 @@
 --- Near Future ---
 
 - Test on different architectures
-- Refactor: manage_apply_rules() is bad. This can be shortened and
-  simplified.
 - Refactor: ipc_client_resize_mouse() duplicates a lot of code from
   ipc_client_move_mouse().
 

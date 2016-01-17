@@ -1886,9 +1886,9 @@ manage_apply_gaps(struct Client *c)
 void
 manage_apply_rules(struct Client *c)
 {
-    size_t i;
+    size_t i, class_s, insta_s;
     XClassHint ch;
-    bool match_class, match_instance;
+    char *class, *insta;
 
     D fprintf(stderr, __NAME_WM__": rules: Testing client %p\n", (void *)c);
 
@@ -1907,23 +1907,17 @@ manage_apply_rules(struct Client *c)
 
             /* A window matches a rule if class and instance match. If
              * the rule's class or instance is NULL, then this field
-             * matches everything. */
+             * matches everything. (strncmp returns 0 if n is 0 because
+             * an empty string matches any "other" empty string.) */
 
-            match_class = false;
-            if (rules[i].class == NULL)
-                match_class = true;
-            else if (ch.res_class && strncmp(rules[i].class, ch.res_class,
-                                             strlen(rules[i].class)) == 0)
-                match_class = true;
+            class = ch.res_class ? ch.res_class : "";
+            insta = ch.res_name ? ch.res_name : "";
 
-            match_instance = false;
-            if (rules[i].instance == NULL)
-                match_instance = true;
-            else if (ch.res_name && strncmp(rules[i].instance, ch.res_name,
-                                            strlen(rules[i].instance)) == 0)
-                match_instance = true;
+            class_s = rules[i].class ? strlen(rules[i].class) : 0;
+            insta_s = rules[i].instance ? strlen(rules[i].instance) : 0;
 
-            if (match_class && match_instance)
+            if (strncmp(class, rules[i].class, class_s) == 0 &&
+                strncmp(insta, rules[i].instance, insta_s) == 0)
             {
                 D fprintf(stderr, __NAME_WM__": rules: %lu matches for %p\n", i,
                           (void *)c);

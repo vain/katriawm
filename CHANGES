@@ -18,6 +18,7 @@ next
     *after* the window has been mapped).
   - ICCCM size hints (increments, aspect ratio, min/max size) are now
     being honoured by floating windows.
+  - Initial workspaces can be configured in config.h.
 
   [Changed]
   - y offset and height taken into account when sorting monitors, the

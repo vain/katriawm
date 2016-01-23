@@ -20,7 +20,6 @@
 #include "theme.h"
 
 #define SAVE_SLOTS 8
-#define WORKSPACE_DEFAULT 1
 #define WM_NAME_UNKNOWN "<name unknown>"
 #define VIS_ON_SELMON(c) ((c)->mon == selmon && \
                           (c)->workspace == monitors[selmon].active_workspace)
@@ -230,6 +229,7 @@ static int setup_monitors_compare(const void *a, const void *b);
 static bool setup_monitors_is_duplicate(XRRCrtcInfo *ci, bool *chosen,
                                         XRRScreenResources *sr);
 static void setup_monitors_read(void);
+static int setup_monitors_wsdef(int mi, int monitors_num);
 static void shutdown(void);
 static void shutdown_monitors_free(void);
 static int xerror(Display *dpy, XErrorEvent *ee);
@@ -3026,15 +3026,18 @@ setup_monitors_read(void)
             monitors[mi].wy += wai.top;
             monitors[mi].wh -= wai.top + wai.bottom;
 
-            monitors[mi].active_workspace = WORKSPACE_DEFAULT;
-            monitors[mi].recent_workspace = WORKSPACE_DEFAULT;
-
             mi++;
         }
     }
     free(chosen);
 
     qsort(monitors, monitors_num, sizeof (struct Monitor), setup_monitors_compare);
+
+    for (mi = 0; mi < monitors_num; mi++)
+    {
+        monitors[mi].active_workspace = setup_monitors_wsdef(mi, monitors_num);
+        monitors[mi].recent_workspace = monitors[mi].active_workspace;
+    }
 
     D
     {
@@ -3044,6 +3047,24 @@ setup_monitors_read(void)
                     monitors[mi].mx, monitors[mi].my,
                     monitors[mi].mw, monitors[mi].mh);
     }
+}
+
+int
+setup_monitors_wsdef(int mi, int monitors_num)
+{
+    size_t i = 0;
+
+    /* See explanation and examples in config.def.h */
+
+    while (i < sizeof initial_workspaces / sizeof initial_workspaces[0])
+    {
+        if (initial_workspaces[i] == monitors_num)
+            return initial_workspaces[i + 1 + mi];
+
+        i += initial_workspaces[i];
+    }
+
+    return default_workspace;
 }
 
 void

@@ -7,15 +7,12 @@
 
 --- Ideas ---
 
-- katriac could check for _KATRIA_STATE being present on the root
-  window. If not, sleep for 0.5 seconds and try again.
 - katriarc, a client for supplying runtime configuration. Would have to
   work the way herbstclient does (creating a window). Would free you
   from the need to recompile and reexec katriawm. Adds a lot of
   complexity, though.
 - More IPC calls:
-    - Jump to workspace N on monitor M.
-    - Show workspace N on monitor M without jumping to it.
+    - Jump to workspace N on monitor M?
     - Wipe all save slots?
     - Move all clients to selected monitor (keeping their workspaces).
 - EWMH:

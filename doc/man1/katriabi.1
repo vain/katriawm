@@ -4,7 +4,7 @@
 katriabi \- Bar information for katriawm
 .\" --------------------------------------------------------------------
 .SH SYNOPSIS
-\fBkatriabi\fP
+\fBkatriabi\fP [\fIformat\fP]
 .\" --------------------------------------------------------------------
 .SH DESCRIPTION
 \fBkatriawm\fP(1) creates a property on the root window. This property
@@ -12,16 +12,38 @@ contains some of \fBkatriawm\fP's internal state. It can be used to draw
 a bar or \(lqpager\(rq.
 .P
 \fBkatriabi\fP can monitor said property and create output suitable for
-display in a bar. Currently, \fBkatriabi\fP only supports
-\fBlemonbar\fP(1).
-.P
-For each update of the property, \fBkatriabi\fP will print one line to
-\fISTDOUT\fP.
+display in a bar. That is, you should pipe the output of \fBkatriabi\fP
+into the bar of your choice.
 .\" --------------------------------------------------------------------
 .SH OPTIONS
-There are no options to specify or files to read. Only the
-$\fIDISPLAY\fP environment variable tells the program to which display
-to connect to.
+.TP
+\fIformat\fP
+Can be one of \fBbevelbar\fP, \fBlemonbar\fP. The default is
+\fBlemonbar\fP.
+.P
+When \fBbevelbar\fP is selected, \fBkatriabi\fP uses the following
+styles:
+.TP
+0
+Unselected layout icon.
+.TP
+1
+Selected layout icon. This is used to indicate the current monitor.
+.TP
+2
+Occupied workspace.
+.TP
+3
+Current workspace.
+.TP
+4
+Urgent workspace.
+.TP
+5
+Current workspace if urgent.
+.P
+When \fBlemonbar\fP is selected, \fBkatriabi\fP uses format strings as
+configured in your \fIconfig.h\fP at compile time.
 .\" --------------------------------------------------------------------
 .SH ENVIRONMENT
 .TP
@@ -38,4 +60,5 @@ was started in December 2015.
 .\" --------------------------------------------------------------------
 .SH "SEE ALSO"
 .BR katriawm (1),
+.BR bevelbar (1),
 .BR lemonbar (1).

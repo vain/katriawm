@@ -19,6 +19,7 @@ next
   - ICCCM size hints (increments, aspect ratio, min/max size) are now
     being honoured by floating windows.
   - Initial workspaces can be configured in config.h.
+  - katriabi can produce output suitable for bevelbar.
 
   [Changed]
   - y offset and height taken into account when sorting monitors, the

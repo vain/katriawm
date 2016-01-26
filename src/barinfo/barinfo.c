@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <X11/Xatom.h>
 #include <X11/Xlib.h>
 
@@ -9,6 +10,14 @@
 #include "ipc.h"
 
 #include "config.h"
+
+enum OutputFormat
+{
+    OutputBevelbar,
+    OutputLemonbar,
+
+    OutputLAST,
+};
 
 static bool
 check_size(unsigned char *state, unsigned long nitems, unsigned long *size,
@@ -76,6 +85,80 @@ state_read(Display *dpy, Window root, Atom atom, unsigned long *nitems)
     }
 
     return NULL;
+}
+
+static void
+state_to_bevelbar(unsigned char *state, unsigned long nitems)
+{
+    /* See state_to_lemonbar() for more details */
+
+    int monitors_num, selmon_i, size_monws, i;
+    int offset_ws, ws_num, byte_i, bit, active_workspace;
+    unsigned long size;
+    unsigned char byte, ubyte, slots_mask, mask;
+    char *ws_num_display = NULL;
+
+    if (!check_size(state, nitems, &size, &size_monws))
+        return;
+
+    monitors_num = state[0];
+    selmon_i = state[1];
+    slots_mask = state[2];
+
+    for (i = 0; i < monitors_num; i++)
+    {
+        active_workspace = state[3 + i];
+
+        printf("%d\n", i);
+        printf("%d%s\n", i == selmon_i ? 1 : 0,
+               layout_names[state[3 + i + monitors_num]]);
+        printf("-\n");
+
+        offset_ws = 3 + monitors_num + monitors_num + i * size_monws;
+        ws_num = 0;
+        for (byte_i = 0; byte_i < size_monws; byte_i++)
+        {
+            byte = state[offset_ws + byte_i];
+            ubyte = state[offset_ws + byte_i + monitors_num * size_monws];
+            mask = 1;
+            for (bit = 0; bit < 8; bit++)
+            {
+                if (ws_num_display)
+                    free(ws_num_display);
+                ws_num_display = resolve_ws_name(ws_num);
+
+                if (ubyte & mask)
+                    printf("%d%s\n", ws_num == active_workspace ? 5 : 4,
+                           ws_num_display);
+                else
+                {
+                    if (ws_num == active_workspace)
+                        printf("%d%s\n", 3, ws_num_display);
+                    else if (byte & mask)
+                        printf("%d%s\n", 2, ws_num_display);
+                }
+
+                ws_num++;
+                mask <<= 1;
+            }
+        }
+
+        /* Save slots */
+        if (i == selmon_i && slots_mask)
+        {
+            printf("-\n");
+            mask = 1;
+            for (bit = 0; bit < 8; bit++)
+            {
+                if (slots_mask & mask)
+                    printf("%d%d\n", 2, bit);
+                mask <<= 1;
+            }
+        }
+        printf("e\n");
+    }
+    printf("f\n");
+    fflush(stdout);
 }
 
 static void
@@ -159,7 +242,7 @@ state_to_lemonbar(unsigned char *state, unsigned long nitems)
 }
 
 int
-main()
+main(int argc, char **argv)
 {
     Display *dpy;
     Window root;
@@ -168,9 +251,17 @@ main()
     Atom atom_state;
     unsigned char *state = NULL;
     unsigned long state_nitems, i;
+    enum OutputFormat of = OutputLemonbar;
+    void (*formatter[OutputLAST])(unsigned char *state, unsigned long nitems) = {
+        [OutputBevelbar] = state_to_bevelbar,
+        [OutputLemonbar] = state_to_lemonbar,
+    };
 
     if (!(dpy = XOpenDisplay(NULL)))
         return 1;
+
+    if (argc >= 2 && strncmp(argv[1], "bevelbar", strlen("bevelbar")) == 0)
+        of = OutputBevelbar;
 
     root = DefaultRootWindow(dpy);
     atom_state = XInternAtom(dpy, IPC_ATOM_STATE, False);
@@ -179,7 +270,7 @@ main()
 
     state = state_read(dpy, root, atom_state, &state_nitems);
     if (state)
-        state_to_lemonbar(state, state_nitems);
+        formatter[of](state, state_nitems);
 
     /* All we do is sit here and wait for the property to change */
     for (;;)
@@ -205,7 +296,7 @@ main()
                 }
 
                 if (state)
-                    state_to_lemonbar(state, state_nitems);
+                    formatter[of](state, state_nitems);
             }
         }
     }

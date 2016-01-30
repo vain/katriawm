@@ -137,5 +137,5 @@ main(int argc, char **argv)
     }
 
     fprintf(stderr, __NAME_C__": Unknown command '%s'\n", argv[1]);
-        exit(EXIT_FAILURE);
+    exit(EXIT_FAILURE);
 }

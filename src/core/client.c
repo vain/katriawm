@@ -102,6 +102,7 @@ main(int argc, char **argv)
     size_t i;
     enum IPCCommand cmd = IPCLast;
     char arg = 0;
+    int ii;
 
     if (argc < 2)
     {
@@ -136,6 +137,9 @@ main(int argc, char **argv)
         }
     }
 
-    fprintf(stderr, __NAME_C__": Unknown command '%s'\n", argv[1]);
+    fprintf(stderr, __NAME_C__": Unknown command: ");
+    for (ii = 1; ii < argc; ii++)
+        fprintf(stderr, "'%s' ", argv[ii]);
+    fprintf(stderr, "\n");
     exit(EXIT_FAILURE);
 }

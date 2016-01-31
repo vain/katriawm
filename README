@@ -63,14 +63,16 @@ client. Here's an example:
     ...
 
 katriawm publishes some of its internal state as a property on the root
-window. You can use this to draw a "pager". I suggest using lemonbar:
+window. You can use this to draw a "pager". I suggest using lemonbar or
+my own bevelbar:
 
+    https://github.com/vain/bevelbar
     https://github.com/LemonBoy/bar
 
 A tool, which you can use in your ~/.xinitrc to read and evaluate that
 property, is provided:
 
-    $ katriabi | lemonbar -d ...
+    $ katriabi | bevelbar ...
 
 As real world examples, you can have a look at my setup:
 

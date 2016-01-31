@@ -199,8 +199,9 @@ This property can be read by external tools in order to draw a pager or
 a bar. This can be done using a shell script and the `xprop` utility.
 
 As an example, there is a tool that reads this property and produces
-output suitable to be fed into [lemonbar]. See also
-[`LEMONBAR.md`][lbdoc].
+output suitable to be fed into [bevelbar] or [lemonbar]. See also
+[`BARS.md`][bardoc].
 
+[bevelbar]: https://github.com/vain/bevelbar
 [lemonbar]: https://github.com/LemonBoy/bar
-[lbdoc]: LEMONBAR.md
+[bardoc]: BARS.md

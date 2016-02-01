@@ -1,6 +1,6 @@
 Release history for katriawm
 
-next
+v16.02  2016-02-01
   [Fixed]
   - Less flickering when changing workspaces on the same monitor.
   - Less flickering when mapping new windows.

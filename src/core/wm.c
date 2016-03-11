@@ -129,7 +129,7 @@ static Atom atom_net[AtomNetLAST], atom_wm[AtomWMLAST], atom_state, atom_ipc;
 static Cursor cursor_normal;
 static Display *dpy;
 static Pixmap dec_tiles[DecTintLAST][DecLAST];
-static Window root;
+static Window nofocus, root;
 static XftColor font_color[DecTintLAST];
 static XftFont *font[FontLAST];
 static int monitors_num = 0, selmon = 0, prevmon = 0;
@@ -2676,7 +2676,7 @@ manage_xfocus(struct Client *c)
         manage_xsend_icccm(c, atom_wm[AtomWMTakeFocus]);
     }
     else
-        XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);
+        XSetInputFocus(dpy, nofocus, RevertToParent, CurrentTime);
 }
 
 void
@@ -2840,6 +2840,7 @@ void
 setup(void)
 {
     size_t i;
+    XSetWindowAttributes wa = { .override_redirect = True };
 
     if (!setlocale(LC_CTYPE, "") || !XSupportsLocale())
         fprintf(stderr, __NAME_WM__": Could not set locale\n");
@@ -2908,6 +2909,14 @@ setup(void)
     XWarpPointer(dpy, None, root, 0, 0, 0, 0,
                  monitors[selmon].wx + monitors[selmon].ww / 2,
                  monitors[selmon].wy + monitors[selmon].wh / 2);
+
+    /* Create a window which will receive input focus when no real
+     * window has focus. We do this to avoid any kind of "*PointerRoot"
+     * usage. Focusing the root window confuses applications and kind of
+     * returns to sloppy focus. */
+    nofocus = XCreateSimpleWindow(dpy, root, -10, -10, 1, 1, 0, 0, 0);
+    XChangeWindowAttributes(dpy, nofocus, CWOverrideRedirect, &wa);
+    XMapWindow(dpy, nofocus);
 
     publish_state();
 }

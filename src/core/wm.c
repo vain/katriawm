@@ -789,8 +789,8 @@ handle_configurenotify(XEvent *e)
         if (VIS_ON_SELMON(c))
             manage_show(c);
 
-    manage_arrange(selmon);
     manage_raisefocus_first_matching();
+    manage_arrange(selmon);
 
     XWarpPointer(dpy, None, root, 0, 0, 0, 0,
                  monitors[selmon].wx + monitors[selmon].ww / 2,
@@ -1379,9 +1379,9 @@ ipc_client_switch_monitor_adjacent(char arg)
      * manage_arrange() afterwards. */
     manage_fit_on_monitor(focus);
 
+    manage_raisefocus_first_matching();
     manage_arrange(old_mon);
     manage_arrange(i);
-    manage_raisefocus_first_matching();
 }
 
 void
@@ -2011,7 +2011,7 @@ manage_clear_urgency(struct Client *c)
 void
 manage_client_gone(struct Client *c, bool rearrange)
 {
-    struct Client *old_focus, **tc;
+    struct Client **tc;
 
     D fprintf(stderr, __NAME_WM__": No longer managing window %lu (%p)\n",
               c->win, (void *)c);
@@ -2025,19 +2025,34 @@ manage_client_gone(struct Client *c, bool rearrange)
 
     /* Remove client from focus list. Note that manage_focus_remove()
      * changes "focus". */
-    old_focus = focus;
     manage_focus_remove(c);
 
     if (rearrange)
     {
+        /* There are the following possibilites:
+         *
+         *   1. The destroyed window had focus and VIS_ON_SELMON(c) is
+         *      true. The right thing to do is to focus the next window
+         *      in our focus history.
+         *   2. The destroyed window did not have focus and
+         *      VIS_ON_SELMON(c) is true. Now, the currently focused
+         *      window shall retain focus. The call below does not
+         *      violate this requirement because the currently focused
+         *      client is equivalent to the first matching client (if
+         *      neither monitor nor workspace have been changed).
+         *   3. VIS_ON_SELMON(c) is false. Implicitly, the destroyed
+         *      window did not have input focus. We must now do the same
+         *      thing as in #2.
+         *
+         * As always, do this before moving windows around. This is
+         * especially important in this function because when a window
+         * is gone, focus reverts back to the root window. If we now
+         * move windows around, we could accidentally move a window
+         * below the mouse pointer -- this would generate an EnterNotify
+         * event with "focus YES" which confuses some applications.
+         */
+        manage_raisefocus_first_matching();
         manage_arrange(c->mon);
-
-        /* If c was the focused/selected client (this implies "selmon ==
-         * c->mon"), then we have to select a new client: We choose the
-         * first matching client in the focus list -- "matching" means
-         * it's the correct workspace and monitor */
-        if (c == old_focus)
-            manage_raisefocus_first_matching();
     }
 
     /* Once the client is gone, ICCCM 4.1.3.1 says that we can remove
@@ -2333,18 +2348,13 @@ manage_goto_monitor(int i, bool force)
     if (i < 0 || i >= monitors_num)
         return;
 
-    /* XXX Quirk for suckless tabbed
-     * Without this call, tabbed sometimes does not recognize that it
-     * has focus after changing workspaces or monitors. */
-    manage_xfocus(NULL);
-
     prevmon = selmon;
     selmon = i;
 
+    manage_raisefocus_first_matching();
     XWarpPointer(dpy, None, root, 0, 0, 0, 0,
                  monitors[selmon].wx + monitors[selmon].ww / 2,
                  monitors[selmon].wy + monitors[selmon].wh / 2);
-    manage_raisefocus_first_matching();
 
     publish_state();
 }
@@ -2362,10 +2372,13 @@ manage_goto_workspace(int i, bool force)
 
     D fprintf(stderr, __NAME_WM__": Changing to workspace %d\n", i);
 
-    /* XXX Quirk for suckless tabbed
-     * Without this call, tabbed sometimes does not recognize that it
-     * has focus after changing workspaces or monitors. */
-    manage_xfocus(NULL);
+    monitors[selmon].recent_workspace = monitors[selmon].active_workspace;
+    monitors[selmon].active_workspace = i;
+
+    /* Before moving windows around, transfer input focus to the correct
+     * window. This avoids creating EnterNotify events before FocusIn
+     * events. */
+    manage_raisefocus_first_matching();
 
     /* First make new clients visible (and re-fit any floaters in the
      * process), then hide old clients. This way, the root window won't
@@ -2382,11 +2395,7 @@ manage_goto_workspace(int i, bool force)
         if (c->mon == selmon && c->workspace != i)
             manage_hide(c);
 
-    monitors[selmon].recent_workspace = monitors[selmon].active_workspace;
-    monitors[selmon].active_workspace = i;
-
     manage_arrange(selmon);
-    manage_raisefocus_first_matching();
 }
 
 void

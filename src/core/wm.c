@@ -2969,6 +2969,7 @@ setup(void)
     nofocus = XCreateSimpleWindow(dpy, root, -10, -10, 1, 1, 0, 0, 0);
     XChangeWindowAttributes(dpy, nofocus, CWOverrideRedirect, &wa);
     XMapWindow(dpy, nofocus);
+    manage_xfocus(NULL);
 
     publish_state();
 }

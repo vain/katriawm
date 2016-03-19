@@ -44,7 +44,7 @@ or similar:
     $ katriawm
 
 katriawm provides no means of specifying key bindings. I suggest using
-sxhkd:
+sxhkd (version 0.5.5 is recommended):
 
     https://github.com/baskerville/sxhkd
 

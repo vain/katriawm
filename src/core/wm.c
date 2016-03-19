@@ -2680,7 +2680,50 @@ manage_xfocus(struct Client *c)
         publish_state();
 
         if (!c->never_focus)
+        {
+            /* XXX This might lead to EnterNotify events with "focus
+             * YES" and I don't think there is a fix.
+             *
+             * Here's the scenario. Window B overlaps window A. The
+             * position of window C does not matter. The focus history
+             * is "B, C, A", so when window B dies, we are going to
+             * focus window C and window A is NOT to receive focus.
+             *
+             * Now move the mouse pointer to a position inside of window
+             * B where, would we remove window B, the mouse would be
+             * inside of window A (remember, the two windows overlap).
+             *
+             * Now close window B. We get an UnmapNotify event and move
+             * focus to window C. In the meantime, however, window A
+             * received an EnterNotify event because the mouse is now
+             * inside of its area. That's correct. However, that
+             * EnterNotify event also says "focus YES" which some
+             * applications interpret as "I AM FOCUSED". Even though we
+             * do transfer the focus afterwards and the applications in
+             * question get a FocusOut event, said applications don't
+             * "respond" to that FocusOut event. They still assume to be
+             * focused.
+             *
+             * This buggy behaviour can be observed best with VTE
+             * applications such as sakura or xiate.
+             *
+             * There is no way to tell the X server to revert the input
+             * focus to *one particular window* ("nofocus" in our case)
+             * when a window dies. I speculate that this is a corner
+             * case where we would *need* reparenting: We could then
+             * revert the focus to the parent window of the dying window
+             * which is *our* frame window. Now, we would be able to
+             * properly transfer the focus to another window. After
+             * that, we can kill the frame window. Now finally, window A
+             * does still receive an EnterNotify event but with "focus
+             * NO".
+             *
+             * Note that, while all of this is very annoying, it does
+             * not lead to malfunctioning applications. The VTE
+             * applications I mentioned before simply render a solid
+             * cursor instead of a hollow one. That's all. */
             XSetInputFocus(dpy, c->win, RevertToParent, CurrentTime);
+        }
 
         manage_xsend_icccm(c, atom_wm[AtomWMTakeFocus]);
     }

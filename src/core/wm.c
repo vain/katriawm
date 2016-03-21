@@ -2681,7 +2681,7 @@ manage_xfocus(struct Client *c)
 
         if (!c->never_focus)
         {
-            /* XXX This might lead to EnterNotify events with "focus
+            /* XXX This leads to EnterNotify events with "focus
              * YES" and I don't think there is a fix.
              *
              * Here's the scenario. Window B overlaps window A. The
@@ -2698,14 +2698,12 @@ manage_xfocus(struct Client *c)
              * received an EnterNotify event because the mouse is now
              * inside of its area. That's correct. However, that
              * EnterNotify event also says "focus YES" which some
-             * applications interpret as "I AM FOCUSED". Even though we
-             * do transfer the focus afterwards and the applications in
-             * question get a FocusOut event, said applications don't
-             * "respond" to that FocusOut event. They still assume to be
+             * applications could interpret as "I AM FOCUSED". Even
+             * though we do transfer the focus afterwards and the
+             * applications in question get a FocusOut event, said
+             * applications might be confused enough not to "respond" to
+             * that FocusOut event. They might still assume to be
              * focused.
-             *
-             * This buggy behaviour can be observed best with VTE
-             * applications such as sakura or xiate.
              *
              * There is no way to tell the X server to revert the input
              * focus to *one particular window* ("nofocus" in our case)
@@ -2716,12 +2714,7 @@ manage_xfocus(struct Client *c)
              * properly transfer the focus to another window. After
              * that, we can kill the frame window. Now finally, window A
              * does still receive an EnterNotify event but with "focus
-             * NO".
-             *
-             * Note that, while all of this is very annoying, it does
-             * not lead to malfunctioning applications. The VTE
-             * applications I mentioned before simply render a solid
-             * cursor instead of a hollow one. That's all. */
+             * NO". */
             XSetInputFocus(dpy, c->win, RevertToParent, CurrentTime);
         }
 

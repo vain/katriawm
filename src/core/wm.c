@@ -94,6 +94,7 @@ struct WorkareaInsets
 enum AtomsNet
 {
     AtomNetSupported,
+    AtomNetSupportingWMCheck,
     AtomNetWMName,
     AtomNetWMState,
     AtomNetWMStateFullscreen,
@@ -2970,6 +2971,16 @@ setup(void)
     XMapWindow(dpy, nofocus);
     manage_xfocus(NULL);
 
+    /* Set up _NET_SUPPORTING_WM_CHECK. */
+    XChangeProperty(dpy, root, atom_net[AtomNetSupportingWMCheck], XA_WINDOW,
+                    32, PropModeReplace, (unsigned char *)&nofocus, 1);
+    XChangeProperty(dpy, nofocus, atom_net[AtomNetSupportingWMCheck], XA_WINDOW,
+                    32, PropModeReplace, (unsigned char *)&nofocus, 1);
+    XChangeProperty(dpy, nofocus, atom_net[AtomNetWMName],
+                    XInternAtom(dpy, "UTF8_STRING", False), 8,
+                    PropModeReplace, (unsigned char *)__NAME_WM__,
+                    strlen(__NAME_WM__));
+
     publish_state();
 }
 
@@ -2977,6 +2988,7 @@ void
 setup_hints(void)
 {
     atom_net[AtomNetSupported] = XInternAtom(dpy, "_NET_SUPPORTED", False);
+    atom_net[AtomNetSupportingWMCheck] = XInternAtom(dpy, "_NET_SUPPORTING_WM_CHECK", False);
     atom_net[AtomNetWMName] = XInternAtom(dpy, "_NET_WM_NAME", False);
     atom_net[AtomNetWMState] = XInternAtom(dpy, "_NET_WM_STATE", False);
     atom_net[AtomNetWMStateFullscreen] = XInternAtom(dpy, "_NET_WM_STATE_FULLSCREEN", False);

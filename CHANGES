@@ -10,6 +10,7 @@ next
 
   [Added]
   - "default_layout" was added to config.h.
+  - Support _NET_SUPPORTING_WM_CHECK.
 
 v16.02  2016-02-01
   [Fixed]

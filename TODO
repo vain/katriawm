@@ -10,5 +10,3 @@
 - EWMH:
     - _NET_ACTIVE_WINDOW and _NET_CLIENT_LIST if there's a really good
       reason to support them.
-        - If we do this, we should also set _NET_SUPPORTING_WM_CHECK,
-          see also: http://lists.suckless.org/hackers/1601/9641.html

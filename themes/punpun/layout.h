@@ -14,7 +14,7 @@ static struct SubImage dec_coords[] = {
     { .x = 74, .y = 41, .w = 10, .h = 1 },  /* DecRight */
 
     { .x = 0,  .y = 39, .w = 10, .h = 10 },  /* DecBottomLeft */
-    { .x = 10, .y = 31, .w = 1,  .h = 10 },  /* DecBottom */
+    { .x = 10, .y = 30, .w = 1,  .h = 10 },  /* DecBottom */
     { .x = 74, .y = 39, .w = 10, .h = 10 },  /* DecBottomRight */
 };
 

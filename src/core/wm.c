@@ -1791,8 +1791,8 @@ manage(Window win, XWindowAttributes *wa)
         c->saved_workspaces[i] = -1;
     }
 
-    c->x = wa->x;
-    c->y = wa->y;
+    c->x = 200;
+    c->y = 200;
     c->w = wa->width;
     c->h = wa->height;
 

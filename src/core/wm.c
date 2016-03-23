@@ -275,7 +275,6 @@ static void (*x11_handler[LASTEvent])(XEvent *e) = {
 };
 
 static void (*layouts[LALast])(int m) = {
-    /* Index 0 is the default layout, see ipc.h */
     [LAFloat] = layout_float,
     [LAMonocle] = layout_monocle,
     [LATile] = layout_tile,
@@ -3043,6 +3042,7 @@ setup_monitors_read(void)
     XRRCrtcInfo *ci;
     XRRScreenResources *sr;
     int c, mi;
+    size_t li;
     bool *chosen = NULL;
 
     sr = XRRGetScreenResources(dpy, root);
@@ -3099,6 +3099,12 @@ setup_monitors_read(void)
     {
         monitors[mi].active_workspace = setup_monitors_wsdef(mi, monitors_num);
         monitors[mi].recent_workspace = monitors[mi].active_workspace;
+        for (li = 0;
+             li < sizeof monitors[mi].layouts / sizeof monitors[mi].layouts[0];
+             li++)
+        {
+            monitors[mi].layouts[li] = default_layout;
+        }
     }
 
     D

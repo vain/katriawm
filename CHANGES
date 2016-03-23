@@ -8,6 +8,9 @@ next
     focus. Sometimes, they have drawn a solid cursor instead of a hollow
     one.
 
+  [Added]
+  - "default_layout" was added to config.h.
+
 v16.02  2016-02-01
   [Fixed]
   - Less flickering when changing workspaces on the same monitor.

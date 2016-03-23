@@ -11,11 +11,27 @@ Design Principles
 Monitors and Workspaces
 =======================
 
-We use XRandR to detect the currently detected monitors. The internal
-list of monitors is always sorted by their offset in `x` direction
-because that’s the most common way of setting up multiple monitors. The
-monitor on the left gets index 0, the one right next to it gets index 1,
-and so on.
+We use XRandR to detect the currently active monitors. To maintain
+compatibility, the internal list of monitors is sorted in the same way
+[lemonbar] sorts monitors. If you’re using a horizontal setup, then your
+monitors will be numbered from left to right:
+
+    +---+ +---+ +---+
+    | 0 | | 1 | | 2 |
+    +---+ +---+ +---+
+
+And if you’re using a vertical setup, monitors will be numbered from top
+to bottom:
+
+    +---+
+    | 0 |
+    +---+
+    +---+
+    | 1 |
+    +---+
+    +---+
+    | 2 |
+    +---+
 
 Each monitor has its own set of workspaces. This means, when you change
 the active workspace, it only changes on the current monitor. A

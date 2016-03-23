@@ -3010,7 +3010,7 @@ setup_monitors_compare(const void *a, const void *b)
     ma = (struct Monitor *)a;
     mb = (struct Monitor *)b;
 
-    /* Sort monitors lemonbar/neeasade stlye: left-to-right and top-to-bottom */
+    /* Sort monitors lemonbar/neeasade style */
 
     if (ma->mx < mb->mx || ma->my + ma->mh <= mb->my)
         return -1;

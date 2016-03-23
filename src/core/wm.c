@@ -1767,6 +1767,9 @@ layout_tile(int m)
 void
 manage(Window win, XWindowAttributes *wa)
 {
+    int x, y, di;
+    unsigned int dui;
+    Window child, dummy;
     struct Client *c, *tc;
     Window transient_for;
     size_t i;
@@ -1791,10 +1794,20 @@ manage(Window win, XWindowAttributes *wa)
         c->saved_workspaces[i] = -1;
     }
 
-    c->x = 200;
-    c->y = 200;
-    c->w = wa->width;
-    c->h = wa->height;
+    if (SOMEHOW_FLOATING(c))
+    {
+        XQueryPointer(dpy, root, &dummy, &child, &x, &y, &di, &di, &dui);
+
+        c->x = x - wa->width / 2;
+        c->y = y - wa->height / 2;
+        c->w = wa->width;
+        c->h = wa->height;
+    } else {
+        c->x = wa->x;
+        c->y = wa->y;
+        c->w = wa->width;
+        c->h = wa->height;
+    }
 
     XSetWindowBorderWidth(dpy, c->win, 0);
 

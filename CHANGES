@@ -1,6 +1,6 @@
 Release history for katriawm
 
-next
+v16.05  2016-05-01
   [Fixed]
   - Fix more focus issues. When "no window" is to be focused, we now
     transfer focus to an invisible window instead of to the root window.

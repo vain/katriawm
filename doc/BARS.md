@@ -43,9 +43,6 @@ to do a `killall bevelbar` or `killall lemonbar`. A loop like the one
 above ensures that the bar will be restarted automatically and continues
 to read status information.
 
-bevelbar requires many command line arguments. Please see its
-documentation.
-
 For lemonbar, you have to use the `-d` flag to make lemonbar use the
 `override_redirect` flag on its windows, so it docks properly.
 

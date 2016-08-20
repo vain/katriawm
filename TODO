@@ -18,3 +18,5 @@ TODO items and future ideas.
 - EWMH:
     - _NET_ACTIVE_WINDOW and _NET_CLIENT_LIST if there's a really good
       reason to support them.
+- Motif WM hints and add the concept of undecorated windows? (Think
+  Gtk's CSDs or Chromium or some Java popups ...)

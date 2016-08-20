@@ -183,7 +183,7 @@ of the existing pagers out there. We show more than one virtual desktop
 at a time. Or in other words: When changing the active workspace in
 katriawm, this only happens on *one* monitor, not on all monitors
 simultaneously. This breaks EWMH. EWMH thinks of one large desktop that
-spans all screens, while we then of each screen having their own set of
+spans all screens, while we think of each screen having its own set of
 virtual desktops.
 
 katriawm introduces a new property on the root window called

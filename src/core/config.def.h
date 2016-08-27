@@ -9,6 +9,7 @@ struct WorkareaInsets wai = {
 };
 
 int gap_pixels = 5;
+bool center_title = false;
 
 struct Rule rules[] = {
     /* xprop(1):  WM_CLASS(STRING) = instance, class  */

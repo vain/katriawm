@@ -9,6 +9,10 @@ next
   - The "modern" theme has been removed (or rather, not ported to the
     new theming system).
 
+  [Added]
+  - Window titles can now be centered horizontally, see "center_title"
+    in config.h.
+
 v16.05  2016-05-01
   [Fixed]
   - Fix more focus issues. When "no window" is to be focused, we now

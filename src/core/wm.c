@@ -160,7 +160,7 @@ static void decorations_load(void);
 static void decorations_map(struct Client *c);
 static XImage *decorations_to_ximg(char *data, uint32_t width, uint32_t height);
 static void draw_text(Drawable d, XftFont *xfont, XftColor *col, int x, int y,
-                      int w, char *s);
+                      int w, bool centered, char *s);
 static void handle_clientmessage(XEvent *e);
 static void handle_configurenotify(XEvent *e);
 static void handle_configurerequest(XEvent *e);
@@ -530,7 +530,8 @@ decorations_draw(struct Client *c, enum DecorationWindowLocation which)
         y = dec_title.baseline_top_offset;
         w = (dgeo.left_width + c->w + dgeo.right_width) - dec_title.left_offset
             - dec_title.right_offset;
-        draw_text(dec_pm, font[FontTitle], &font_color[state], x, y, w, c->title);
+        draw_text(dec_pm, font[FontTitle], &font_color[state], x, y, w,
+                  center_title, c->title);
     }
 
     /* Pixmap drawing complete, now copy those areas onto the windows */
@@ -683,7 +684,8 @@ decorations_to_ximg(char *data, uint32_t width, uint32_t height)
 }
 
 void
-draw_text(Drawable d, XftFont *xfont, XftColor *col, int x, int y, int w, char *s)
+draw_text(Drawable d, XftFont *xfont, XftColor *col, int x, int y, int w,
+          bool centered, char *s)
 {
     XftDraw *xd;
     XGlyphInfo ext;
@@ -705,6 +707,9 @@ draw_text(Drawable d, XftFont *xfont, XftColor *col, int x, int y, int w, char *
 
     if (len == 0)
         return;
+
+    if (centered)
+        x = x + 0.5 * (w - ext.xOff);
 
     xd = XftDrawCreate(dpy, d, DefaultVisual(dpy, screen),
                        DefaultColormap(dpy, screen));

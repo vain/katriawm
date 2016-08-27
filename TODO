@@ -10,6 +10,9 @@ TODO items and future ideas.
       reason to support them.
 - Motif WM hints and add the concept of undecorated windows? (Think
   Gtk's CSDs or Chromium or some Java popups ...)
+- Theming:
+    - Allow for different layout (dec_coords and maybe dgeo) depending
+      on window state.
 - Very unlikely to happen: katriarc, a client for supplying runtime
   configuration. Would have to work the way herbstclient does (creating
   a window). Would free you from the need to recompile and reexec

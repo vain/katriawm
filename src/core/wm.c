@@ -130,9 +130,9 @@ static int mouse_dx, mouse_dy, mouse_ocx, mouse_ocy, mouse_ocw, mouse_och;
 static Atom atom_net[AtomNetLAST], atom_wm[AtomWMLAST], atom_state, atom_ipc;
 static Cursor cursor_normal;
 static Display *dpy;
-static Pixmap dec_tiles[DecTintLAST][DecLAST];
+static Pixmap dec_tiles[DecStateLAST][DecLAST];
 static Window nofocus, root;
-static XftColor font_color[DecTintLAST];
+static XftColor font_color[DecStateLAST];
 static XftFont *font[FontLAST];
 static int monitors_num = 0, selmon = 0, prevmon = 0;
 static bool running = true;
@@ -152,10 +152,10 @@ static void decorations_create(struct Client *c);
 static void decorations_destroy(struct Client *c);
 static void decorations_draw(struct Client *c,
                              enum DecorationWindowLocation which);
-static char *decorations_ff_to_x(enum DecTint t, uint32_t *width,
+static char *decorations_ff_to_x(enum DecState s, uint32_t *width,
                                  uint32_t *height);
 static Pixmap decorations_get_pm(GC gc, XImage **ximg, enum DecorationLocation l,
-                                 enum DecTint t);
+                                 enum DecState s);
 static void decorations_load(void);
 static void decorations_map(struct Client *c);
 static XImage *decorations_to_ximg(char *data, uint32_t width, uint32_t height);
@@ -292,7 +292,7 @@ cleanup(void)
     while (clients != NULL)
         manage_client_gone(clients, false);
 
-    for (i = DecTintNormal; i <= DecTintUrgent; i++)
+    for (i = DecStateNormal; i <= DecStateUrgent; i++)
         for (j = DecTopLeft; j <= DecBottomRight; j++)
             XFreePixmap(dpy, dec_tiles[i][j]);
 
@@ -449,7 +449,7 @@ void
 decorations_draw(struct Client *c, enum DecorationWindowLocation which)
 {
     int x, y, w, h;
-    enum DecTint tint = DecTintNormal;
+    enum DecState state = DecStateNormal;
     GC gc, gc_tiled;
     Pixmap dec_pm;
 
@@ -472,9 +472,9 @@ decorations_draw(struct Client *c, enum DecorationWindowLocation which)
      * "which"). */
 
     if (c->urgent)
-        tint = DecTintUrgent;
+        state = DecStateUrgent;
     else if (c == focus && c->mon == selmon && VIS_ON_SELMON(c))
-        tint = DecTintSelect;
+        state = DecStateSelect;
 
     w = dgeo.left_width + c->w + dgeo.right_width;
     h = dgeo.top_height + c->h + dgeo.bottom_height;
@@ -485,41 +485,41 @@ decorations_draw(struct Client *c, enum DecorationWindowLocation which)
 
     XSetFillStyle(dpy, gc_tiled, FillTiled);
 
-    XSetTile(dpy, gc_tiled, dec_tiles[tint][DecTop]);
+    XSetTile(dpy, gc_tiled, dec_tiles[state][DecTop]);
     XSetTSOrigin(dpy, gc_tiled, 0, 0);
     XFillRectangle(dpy, dec_pm, gc_tiled, 0, 0, w, dec_coords[DecTop].h);
 
-    XSetTile(dpy, gc_tiled, dec_tiles[tint][DecBottom]);
+    XSetTile(dpy, gc_tiled, dec_tiles[state][DecBottom]);
     XSetTSOrigin(dpy, gc_tiled, 0, h - dgeo.bottom_height);
     XFillRectangle(dpy, dec_pm, gc_tiled, 0, h - dgeo.bottom_height,
                    w, dec_coords[DecBottom].h);
 
-    XSetTile(dpy, gc_tiled, dec_tiles[tint][DecLeft]);
+    XSetTile(dpy, gc_tiled, dec_tiles[state][DecLeft]);
     XSetTSOrigin(dpy, gc_tiled, 0, dgeo.top_height);
     XFillRectangle(dpy, dec_pm, gc_tiled, 0, dgeo.top_height,
                    dec_coords[DecLeft].w, c->h);
 
-    XSetTile(dpy, gc_tiled, dec_tiles[tint][DecRight]);
+    XSetTile(dpy, gc_tiled, dec_tiles[state][DecRight]);
     XSetTSOrigin(dpy, gc_tiled, w - dgeo.right_width, dgeo.top_height);
     XFillRectangle(dpy, dec_pm, gc_tiled, w - dgeo.right_width, dgeo.top_height,
                    dec_coords[DecRight].w, c->h);
 
-    XCopyArea(dpy, dec_tiles[tint][DecTopLeft], dec_pm, gc,
+    XCopyArea(dpy, dec_tiles[state][DecTopLeft], dec_pm, gc,
               0, 0,
               dec_coords[DecTopLeft].w, dec_coords[DecTopLeft].h,
               0, 0);
 
-    XCopyArea(dpy, dec_tiles[tint][DecTopRight], dec_pm, gc,
+    XCopyArea(dpy, dec_tiles[state][DecTopRight], dec_pm, gc,
               0, 0,
               dec_coords[DecTopRight].w, dec_coords[DecTopRight].h,
               w - dec_coords[DecTopRight].w, 0);
 
-    XCopyArea(dpy, dec_tiles[tint][DecBottomLeft], dec_pm, gc,
+    XCopyArea(dpy, dec_tiles[state][DecBottomLeft], dec_pm, gc,
               0, 0,
               dec_coords[DecBottomLeft].w, dec_coords[DecBottomLeft].h,
               0, h - dec_coords[DecBottomLeft].h);
 
-    XCopyArea(dpy, dec_tiles[tint][DecBottomRight], dec_pm, gc,
+    XCopyArea(dpy, dec_tiles[state][DecBottomRight], dec_pm, gc,
               0, 0,
               dec_coords[DecBottomRight].w, dec_coords[DecBottomRight].h,
               w - dec_coords[DecBottomRight].w, h - dec_coords[DecBottomLeft].h);
@@ -530,7 +530,7 @@ decorations_draw(struct Client *c, enum DecorationWindowLocation which)
         y = dec_title.baseline_top_offset;
         w = (dgeo.left_width + c->w + dgeo.right_width) - dec_title.left_offset
             - dec_title.right_offset;
-        draw_text(dec_pm, font[FontTitle], &font_color[tint], x, y, w, c->title);
+        draw_text(dec_pm, font[FontTitle], &font_color[state], x, y, w, c->title);
     }
 
     /* Pixmap drawing complete, now copy those areas onto the windows */
@@ -565,7 +565,7 @@ decorations_draw(struct Client *c, enum DecorationWindowLocation which)
 }
 
 char *
-decorations_ff_to_x(enum DecTint t, uint32_t *width, uint32_t *height)
+decorations_ff_to_x(enum DecState s, uint32_t *width, uint32_t *height)
 {
     uint32_t x, y;
     uint8_t *ff_img = NULL;
@@ -575,14 +575,14 @@ decorations_ff_to_x(enum DecTint t, uint32_t *width, uint32_t *height)
     /* Read size from farbfeld header and convert the farbfeld image to
      * something XCreateImage can understand. */
 
-    switch (t)
+    switch (s)
     {
-        case DecTintNormal:  ff_img = dec_img_normal;  break;
-        case DecTintSelect:  ff_img = dec_img_select;  break;
-        case DecTintUrgent:  ff_img = dec_img_urgent;  break;
+        case DecStateNormal:  ff_img = dec_img_normal;  break;
+        case DecStateSelect:  ff_img = dec_img_select;  break;
+        case DecStateUrgent:  ff_img = dec_img_urgent;  break;
         default:
-            D fprintf(stderr, __NAME_WM__": Tint %d in decorations_ff_to_x() "
-                      "is not a known tint\n", t);
+            D fprintf(stderr, __NAME_WM__": State %d in decorations_ff_to_x() "
+                      "is not a known value\n", s);
     }
 
     /* ff_img is an array of bytes, so we do some little pointer
@@ -611,13 +611,13 @@ decorations_ff_to_x(enum DecTint t, uint32_t *width, uint32_t *height)
 
 Pixmap
 decorations_get_pm(GC gc, XImage **ximg, enum DecorationLocation l,
-                   enum DecTint t)
+                   enum DecState s)
 {
     Pixmap p;
 
     p = XCreatePixmap(dpy, root, dec_coords[l].w, dec_coords[l].h,
                       DefaultDepth(dpy, screen));
-    XPutImage(dpy, p, gc, ximg[t],
+    XPutImage(dpy, p, gc, ximg[s],
               dec_coords[l].x, dec_coords[l].y,
               0, 0,
               dec_coords[l].w, dec_coords[l].h);
@@ -628,8 +628,8 @@ decorations_get_pm(GC gc, XImage **ximg, enum DecorationLocation l,
 void
 decorations_load(void)
 {
-    char *convertible_to_ximg[DecTintLAST];
-    XImage *ximg[DecTintLAST];
+    char *convertible_to_ximg[DecStateLAST];
+    XImage *ximg[DecStateLAST];
     size_t i, j;
     uint32_t width, height;
     GC gc;
@@ -649,19 +649,19 @@ decorations_load(void)
      * on). Each tile will become a Pixmap. Later on, we will only use
      * those Pixmaps to actually draw decorations. */
 
-    for (i = DecTintNormal; i <= DecTintUrgent; i++)
+    for (i = DecStateNormal; i <= DecStateUrgent; i++)
     {
         convertible_to_ximg[i] = decorations_ff_to_x(i, &width, &height);
         ximg[i] = decorations_to_ximg(convertible_to_ximg[i], width, height);
     }
 
     gc = XCreateGC(dpy, root, 0, NULL);
-    for (i = DecTintNormal; i <= DecTintUrgent; i++)
+    for (i = DecStateNormal; i <= DecStateUrgent; i++)
         for (j = DecTopLeft; j <= DecBottomRight; j++)
             dec_tiles[i][j] = decorations_get_pm(gc, ximg, j, i);
     XFreeGC(dpy, gc);
 
-    for (i = DecTintNormal; i <= DecTintUrgent; i++)
+    for (i = DecStateNormal; i <= DecStateUrgent; i++)
         /* Note: This also frees convertible_to_ximg[i] */
         XDestroyImage(ximg[i]);
 }
@@ -2950,7 +2950,7 @@ setup(void)
         }
         D fprintf(stderr, __NAME_WM__": Loaded font '%s'\n", dec_fonts[i]);
     }
-    for (i = DecTintNormal; i <= DecTintUrgent; i++)
+    for (i = DecStateNormal; i <= DecStateUrgent; i++)
     {
         if (!XftColorAllocName(dpy, DefaultVisual(dpy, screen),
                                DefaultColormap(dpy, screen), dec_font_colors[i],

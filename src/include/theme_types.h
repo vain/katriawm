@@ -20,13 +20,13 @@ enum DecorationWindowLocation
     DecWinLAST = 4,
 };
 
-enum DecTint
+enum DecState
 {
-    DecTintNormal = 0,
-    DecTintSelect = 1,
-    DecTintUrgent = 2,
+    DecStateNormal = 0,
+    DecStateSelect = 1,
+    DecStateUrgent = 2,
 
-    DecTintLAST = 3,
+    DecStateLAST = 3,
 };
 
 enum Font

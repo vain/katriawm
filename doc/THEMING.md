@@ -60,13 +60,13 @@ For drawing the title bars, you need to define a font:
 
 As you can see, you must use Xft font descriptions.
 
-Fonts have colors, too. One color for each tinting color. They’re
-defined in another array:
+Fonts have colors, too. One color for each window state. They’re defined
+in another array:
 
     static char *dec_font_colors[] = {
-        "#AFAFAF",  /* DecTintNormal */
-        "#000000",  /* DecTintSelect */
-        "#000000",  /* DecTintUrgent */
+        "#AFAFAF",  /* DecStateNormal */
+        "#000000",  /* DecStateSelect */
+        "#000000",  /* DecStateUrgent */
     };
 
 Note that you can use Xft color names here.

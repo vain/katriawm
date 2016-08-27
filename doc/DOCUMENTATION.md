@@ -127,26 +127,17 @@ decorations. It does so by drawing to extra windows which are simply
 moved right next to the window.
 
 The window decorations are read from `theme.h` and compiled into the
-final binary. The format of `dec_img[]` is simply an array of unsigned
-32 bit integers, one for each pixel. That integer will be interpreted as
-RGB. For example, the value `0x11223344` will be interpreted as:
-
--   Red channel: `22`
--   Green channel: `33`
--   Blue channel: `44`
--   The leading `11` will be ignored. We don’t support an alpha channel.
-
-You can use colors, but `dec_img[]` is expected to be a grayscale image,
-i.e. red = green = blue. The actual tints for normal, selected, and
-urgent windows are specified in `dec_tints[]`. The resulting tinted
-images will be created on the fly at runtime.
-
-Yes, this is large. We could have used just one byte per pixel. It’s a
-trade-off, you know. By storing 32 bits, we can save the code to convert
-the image from 8 bits to 32 bits.
+final binary. See [`THEMING.md`][themedoc] on how to create a theme.
+Short version: Decorations are stored as [farbfeld] images (both in the
+source code and in the final binary), each window state is associated
+with a full RGB color image (as opposed to the “tinting” model used in
+earlier versions of katriawm).
 
 See `decorations_load()` and `decorations_draw_for_client()` for further
 details.
+
+[farbfeld]: http://tools.suckless.org/farbfeld/
+[themedoc]: THEMING.md
 
 
 IPC

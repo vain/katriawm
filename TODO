@@ -2,9 +2,6 @@ TODO items and future ideas.
 
 - Test on different architectures
 - improve theming
-    - pixmaps and colorization
-        - base pixmap (RGB)
-        - grayscale overlay pixmap, tinted
     - centered text
     - fix rendering of tiny windows (overlapping parts)
 - katriarc, a client for supplying runtime configuration. Would have to

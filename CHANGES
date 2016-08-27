@@ -1,5 +1,14 @@
 Release history for katriawm
 
+next
+  [Changed]
+  - Theming: The "tinting" model has been removed. Instead, each window
+    state (normal, selected, urgency flag set) now requires one
+    individual image. This means that you can use the full RGB color
+    range for each state.
+  - The "modern" theme has been removed (or rather, not ported to the
+    new theming system).
+
 v16.05  2016-05-01
   [Fixed]
   - Fix more focus issues. When "no window" is to be focused, we now

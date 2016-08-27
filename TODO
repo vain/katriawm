@@ -1,10 +1,6 @@
 TODO items and future ideas.
 
 - Test on different architectures
-- katriarc, a client for supplying runtime configuration. Would have to
-  work the way herbstclient does (creating a window). Would free you
-  from the need to recompile and reexec katriawm. Adds a lot of
-  complexity, though.
 - More IPC calls:
     - Jump to workspace N on monitor M?
     - Wipe all save slots?
@@ -14,3 +10,7 @@ TODO items and future ideas.
       reason to support them.
 - Motif WM hints and add the concept of undecorated windows? (Think
   Gtk's CSDs or Chromium or some Java popups ...)
+- Very unlikely to happen: katriarc, a client for supplying runtime
+  configuration. Would have to work the way herbstclient does (creating
+  a window). Would free you from the need to recompile and reexec
+  katriawm. Adds a lot of complexity, though.

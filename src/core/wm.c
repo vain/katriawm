@@ -127,6 +127,7 @@ static struct Monitor *saved_monitors[SAVE_SLOTS] = { 0 };
 static int saved_monitor_nums[SAVE_SLOTS] = { 0 };
 static int screen_w = -1, screen_h = -1;
 static int mouse_dx, mouse_dy, mouse_ocx, mouse_ocy, mouse_ocw, mouse_och;
+static int winsize_min_w, winsize_min_h;
 static Atom atom_net[AtomNetLAST], atom_wm[AtomWMLAST], atom_state, atom_ipc;
 static Cursor cursor_normal;
 static Display *dpy;
@@ -634,6 +635,8 @@ decorations_load(void)
     size_t i, j;
     uint32_t width, height;
     GC gc;
+    int left_corner_w, right_corner_w;
+    int top_corner_h, bottom_corner_h;
 
     /* The decorations are embedded in the final binary and can be
      * accessed using variable names like "dec_img_normal". They are
@@ -665,6 +668,27 @@ decorations_load(void)
     for (i = DecStateNormal; i <= DecStateUrgent; i++)
         /* Note: This also frees convertible_to_ximg[i] */
         XDestroyImage(ximg[i]);
+
+    /* Find the minimum window size that allows for the decorations to
+     * be fully drawn. Smaller window size might result in visual
+     * artifacts. Windows must be at least 1x1 pixels big, though. */
+    left_corner_w = dec_coords[DecTopLeft].w > dec_coords[DecBottomLeft].w ?
+                    dec_coords[DecTopLeft].w : dec_coords[DecBottomLeft].w;
+    right_corner_w = dec_coords[DecTopRight].w > dec_coords[DecBottomRight].w ?
+                     dec_coords[DecTopRight].w : dec_coords[DecBottomRight].w;
+
+    top_corner_h = dec_coords[DecTopLeft].h > dec_coords[DecTopRight].h ?
+                   dec_coords[DecTopLeft].h : dec_coords[DecTopRight].h;
+    bottom_corner_h = dec_coords[DecBottomLeft].h > dec_coords[DecBottomRight].h ?
+                      dec_coords[DecBottomLeft].h : dec_coords[DecBottomRight].h;
+
+    winsize_min_w = (left_corner_w - dgeo.left_width) +
+                    (right_corner_w - dgeo.right_width);
+    winsize_min_h = (top_corner_h - dgeo.top_height) +
+                    (bottom_corner_h - dgeo.bottom_height);
+
+    winsize_min_w = winsize_min_w < 1 ? 1 : winsize_min_w;
+    winsize_min_h = winsize_min_h < 1 ? 1 : winsize_min_h;
 }
 
 void
@@ -1982,10 +2006,13 @@ manage_apply_rules(struct Client *c)
 void
 manage_apply_size(struct Client *c)
 {
-    if (c->w <= 0 || c->h <= 0)
-        fprintf(stderr, __NAME_WM__": manage_apply_size(): w or h <= 0\n");
-    c->w = c->w <= 0 ? 10 : c->w;
-    c->h = c->h <= 0 ? 10 : c->h;
+    if (c->w < winsize_min_w || c->h < winsize_min_h)
+        fprintf(stderr, __NAME_WM__": manage_apply_size(): w or h "
+                "<= winsize_min_* (client size %dx%d, winsize_min %dx%d)\n",
+                c->w, c->h, winsize_min_w, winsize_min_h);
+
+    c->w = c->w < winsize_min_w ? winsize_min_w : c->w;
+    c->h = c->h < winsize_min_h ? winsize_min_h : c->h;
 
     manage_icccm_apply_size_hints(c);
 

@@ -1,6 +1,11 @@
 Release history for katriawm
 
 next
+  [Fixed]
+  - Limit the minimum size of windows: They can no longer be so small
+    that there is not enough room left for the decorations to be drawn.
+    This fixes black artifacts on tiny windows.
+
   [Changed]
   - Theming: The "tinting" model has been removed. Instead, each window
     state (normal, selected, urgency flag set) now requires one

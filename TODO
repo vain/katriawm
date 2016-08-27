@@ -1,8 +1,6 @@
 TODO items and future ideas.
 
 - Test on different architectures
-- improve theming
-    - fix rendering of tiny windows (overlapping parts)
 - katriarc, a client for supplying runtime configuration. Would have to
   work the way herbstclient does (creating a window). Would free you
   from the need to recompile and reexec katriawm. Adds a lot of

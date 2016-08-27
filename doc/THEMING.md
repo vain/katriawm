@@ -13,41 +13,44 @@ Drafting and basic files
 
 You start a tool like GIMP and begin drafting the decorations. You
 should start with an image of about 60x60 pixels. Just draw a tiny
-little window with all black content. Only use a greyscale palette. See
-next paragraph on how colors will be interpreted.
+little window with all black content. You can use RGB color.
 
-Once that’s done, save the image as a raw PPM image with a depth of 8
-bits per channel. Its format must be RGB color, even though the image
-itself is greyscale. The file name of this image must be
-`decorations.ppm`.
+You need to create three files:
 
-Right next to it, create a file called `metadata`. This is a short shell
-snippet. It must define the following variables:
+-   `dec_img_normal.ff`: Decorations for the window when not being
+    selected.
+-   `dec_img_select.ff`: A selected (“focused”) window.
+-   `dec_img_urgent.ff`: An unselected window with the urgency flag set.
 
--   `image_width`: Width of the image in pixels.
--   `image_height`: Height of the image in pixels.
+Each file contains the full decorations, not only parts of it like “the
+top left corner”. See below on how katriawm will interpret your image
+files.
+
+As `.ff` indicates, these files must use the [farbfeld] image format.
+Although it’s unlikely to change any time soon, here’s a copy of the
+format specification:
+
+    FARBFELD IMAGE FORMAT SPECIFICATION
+
+    +--------+---------------------------------------------------------+
+    | Bytes  | Description                                             |
+    +--------+---------------------------------------------------------+
+    | 8      | "farbfeld" magic value                                  |
+    +--------+---------------------------------------------------------+
+    | 4      | 32-Bit BE unsigned integer (width)                      |
+    +--------+---------------------------------------------------------+
+    | 4      | 32-Bit BE unsigned integer (height)                     |
+    +--------+---------------------------------------------------------+
+    | [2222] | 4*16-Bit BE unsigned integers [RGBA] / pixel, row-major |
+    +--------+---------------------------------------------------------+
+
+If your image editing tool does not support saving farbfeld images, just
+save them as a PNG and use the farbfeld tools to convert the files.
+
+[farbfeld]: http://tools.suckless.org/farbfeld/
 
 Colors and Fonts: `colorsfonts.h`
 ---------------------------------
-
-The image you’ve drawn should only consist of a greyscale palette. This
-image will be tinted at runtime according to window state.
-
-Create a file called `colorsfonts.h`. First, define your tints:
-
-    static uint32_t dec_tints[] = {
-        0x6a3f3f,  /* DecTintNormal */
-        0xffcb38,  /* DecTintSelect */
-        0xff0000,  /* DecTintUrgent */
-    };
-
-A normal window border will be tinted with the color `#6a3f3f`, some
-kind of dark red. “Tinting” means: Each pixel in your greyscale image
-will be multiplied with the tint color. So, if you have an all white
-pixel in your image, the it will get the full tint color. A grey pixel
-with the color `#7f7f7f` will, after tinting with `#6a3f3f`, result in a
-pixel with the color `#341f1f`. See `decorations_tint()` in `wm.c` for
-more details.
 
 For drawing the title bars, you need to define a font:
 

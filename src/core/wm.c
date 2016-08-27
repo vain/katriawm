@@ -1,3 +1,4 @@
+#include <arpa/inet.h>
 #include <assert.h>
 #include <locale.h>
 #include <stdbool.h>
@@ -139,6 +140,7 @@ static bool restart = false;
 static int screen;
 static int (*xerrorxlib)(Display *, XErrorEvent *);
 
+static void cleanup(void);
 static struct Client *client_get_for_decoration(
         Window win,
         enum DecorationWindowLocation *which
@@ -150,12 +152,13 @@ static void decorations_create(struct Client *c);
 static void decorations_destroy(struct Client *c);
 static void decorations_draw(struct Client *c,
                              enum DecorationWindowLocation which);
+static char *decorations_ff_to_x(enum DecTint t, uint32_t *width,
+                                 uint32_t *height);
 static Pixmap decorations_get_pm(GC gc, XImage **ximg, enum DecorationLocation l,
                                  enum DecTint t);
 static void decorations_load(void);
 static void decorations_map(struct Client *c);
-static char *decorations_tint(uint32_t color);
-static XImage *decorations_to_ximg(char *data);
+static XImage *decorations_to_ximg(char *data, uint32_t width, uint32_t height);
 static void draw_text(Drawable d, XftFont *xfont, XftColor *col, int x, int y,
                       int w, char *s);
 static void handle_clientmessage(XEvent *e);
@@ -231,7 +234,6 @@ static bool setup_monitors_is_duplicate(XRRCrtcInfo *ci, bool *chosen,
                                         XRRScreenResources *sr);
 static void setup_monitors_read(void);
 static int setup_monitors_wsdef(int mi, int monitors_num);
-static void shutdown(void);
 static void shutdown_monitors_free(void);
 static int xerror(Display *dpy, XErrorEvent *ee);
 
@@ -280,6 +282,26 @@ static void (*layouts[LALast])(int m) = {
     [LAMonocle] = layout_monocle,
     [LATile] = layout_tile,
 };
+
+
+void
+cleanup(void)
+{
+    size_t i, j;
+
+    while (clients != NULL)
+        manage_client_gone(clients, false);
+
+    for (i = DecTintNormal; i <= DecTintUrgent; i++)
+        for (j = DecTopLeft; j <= DecBottomRight; j++)
+            XFreePixmap(dpy, dec_tiles[i][j]);
+
+    XDeleteProperty(dpy, root, atom_state);
+    XDeleteProperty(dpy, root, atom_net[AtomNetSupported]);
+    XFreeCursor(dpy, cursor_normal);
+
+    XCloseDisplay(dpy);
+}
 
 struct Client *
 client_get_for_decoration(Window win, enum DecorationWindowLocation *which)
@@ -542,6 +564,51 @@ decorations_draw(struct Client *c, enum DecorationWindowLocation which)
     XFreeGC(dpy, gc_tiled);
 }
 
+char *
+decorations_ff_to_x(enum DecTint t, uint32_t *width, uint32_t *height)
+{
+    uint32_t x, y;
+    uint8_t *ff_img = NULL;
+    uint16_t *ff_img_data = NULL;
+    uint32_t *ximg_data = NULL;
+
+    /* Read size from farbfeld header and convert the farbfeld image to
+     * something XCreateImage can understand. */
+
+    switch (t)
+    {
+        case DecTintNormal:  ff_img = dec_img_normal;  break;
+        case DecTintSelect:  ff_img = dec_img_select;  break;
+        case DecTintUrgent:  ff_img = dec_img_urgent;  break;
+        default:
+            D fprintf(stderr, __NAME_WM__": Tint %d in decorations_ff_to_x() "
+                      "is not a known tint\n", t);
+    }
+
+    /* ff_img is an array of bytes, so we do some little pointer
+     * arithmetic to get to the actual data and the header. */
+    ff_img_data = (uint16_t *)&ff_img[16];
+
+    *width = ntohl(*((uint32_t *)&ff_img[8]));
+    *height = ntohl(*((uint32_t *)&ff_img[12]));
+
+    ximg_data = calloc(*width * *height, sizeof (uint32_t));
+    assert(ximg_data != NULL);
+
+    for (y = 0; y < *height; y++)
+    {
+        for (x = 0; x < *width; x++)
+        {
+            ximg_data[y * *width + x] =
+                ((ntohs(ff_img_data[(y * *width + x) * 4    ]) / 256) << 16) |
+                ((ntohs(ff_img_data[(y * *width + x) * 4 + 1]) / 256) << 8) |
+                 (ntohs(ff_img_data[(y * *width + x) * 4 + 2]) / 256);
+        }
+    }
+
+    return (char *)ximg_data;
+}
+
 Pixmap
 decorations_get_pm(GC gc, XImage **ximg, enum DecorationLocation l,
                    enum DecTint t)
@@ -561,24 +628,31 @@ decorations_get_pm(GC gc, XImage **ximg, enum DecorationLocation l,
 void
 decorations_load(void)
 {
-    char *tinted[DecTintLAST];
+    char *convertible_to_ximg[DecTintLAST];
     XImage *ximg[DecTintLAST];
     size_t i, j;
+    uint32_t width, height;
     GC gc;
 
-    /* The source image of our decorations is grey scale, but it's
-     * already 24 bits. This allows us to easily tint the image. Then,
-     * an XImage will be created for each tinted source image.
+    /* The decorations are embedded in the final binary and can be
+     * accessed using variable names like "dec_img_normal". They are
+     * arrays of bytes. File format is farbfeld:
      *
-     * XImages live in client memory, so we can pass xlib a pointer to
-     * our data. XImages can then be copied to Pixmaps which live on the
-     * server. Later on, we will only use those Pixmaps to draw
-     * decorations. */
+     * http://tools.suckless.org/farbfeld/
+     *
+     * We now first convert each farbfeld image into an XImage. XImages
+     * live in client memory, so we can pass xlib a pointer to our data.
+     *
+     * XImages will then be copied to Pixmaps, which live on the server.
+     * Note that we do some slicing and dicing first, splitting each
+     * XImage into the individual tiles ("top left", "top right", and so
+     * on). Each tile will become a Pixmap. Later on, we will only use
+     * those Pixmaps to actually draw decorations. */
 
     for (i = DecTintNormal; i <= DecTintUrgent; i++)
     {
-        tinted[i] = decorations_tint(dec_tints[i]);
-        ximg[i] = decorations_to_ximg(tinted[i]);
+        convertible_to_ximg[i] = decorations_ff_to_x(i, &width, &height);
+        ximg[i] = decorations_to_ximg(convertible_to_ximg[i], width, height);
     }
 
     gc = XCreateGC(dpy, root, 0, NULL);
@@ -588,7 +662,7 @@ decorations_load(void)
     XFreeGC(dpy, gc);
 
     for (i = DecTintNormal; i <= DecTintUrgent; i++)
-        /* Note: This also frees tinted[i] */
+        /* Note: This also frees convertible_to_ximg[i] */
         XDestroyImage(ximg[i]);
 }
 
@@ -601,53 +675,11 @@ decorations_map(struct Client *c)
         XMapRaised(dpy, c->decwin[i]);
 }
 
-char *
-decorations_tint(uint32_t color)
-{
-    uint32_t r, g, b, tr, tg, tb;
-    uint32_t *out;
-    size_t i;
-
-    out = (uint32_t *)malloc(sizeof dec_img);
-    assert(out != NULL);
-
-    tr = (0xFF0000 & color) >> 16;
-    tg = (0x00FF00 & color) >> 8;
-    tb = (0x0000FF & color);
-
-    for (i = 0; i < sizeof dec_img / sizeof dec_img[0]; i++)
-    {
-        /* r = original_r * tint / 255, i.e. a pixel with value 255 in
-         * the source image will have the full tint color, pixels with
-         * less than 255 will dim the tint color */
-
-        r = (0xFF0000 & dec_img[i]) >> 16;
-        g = (0x00FF00 & dec_img[i]) >> 8;
-        b = (0x0000FF & dec_img[i]);
-
-        r *= tr;
-        g *= tg;
-        b *= tb;
-
-        r /= 255;
-        g /= 255;
-        b /= 255;
-
-        r = r > 255 ? 255 : r;
-        g = g > 255 ? 255 : g;
-        b = b > 255 ? 255 : b;
-
-        out[i] = (r << 16) | (g << 8) | b;
-    }
-
-    return (char *)out;
-}
-
 XImage *
-decorations_to_ximg(char *data)
+decorations_to_ximg(char *data, uint32_t width, uint32_t height)
 {
     return XCreateImage(dpy, DefaultVisual(dpy, screen), 24, ZPixmap, 0,
-                        data, dec_img_w, dec_img_h, 32, 0);
+                        data, width, height, 32, 0);
 }
 
 void
@@ -3180,25 +3212,6 @@ scan(void)
 }
 
 void
-shutdown(void)
-{
-    size_t i, j;
-
-    while (clients != NULL)
-        manage_client_gone(clients, false);
-
-    for (i = DecTintNormal; i <= DecTintUrgent; i++)
-        for (j = DecTopLeft; j <= DecBottomRight; j++)
-            XFreePixmap(dpy, dec_tiles[i][j]);
-
-    XDeleteProperty(dpy, root, atom_state);
-    XDeleteProperty(dpy, root, atom_net[AtomNetSupported]);
-    XFreeCursor(dpy, cursor_normal);
-
-    XCloseDisplay(dpy);
-}
-
-void
 shutdown_monitors_free(void)
 {
     free(monitors);
@@ -3241,7 +3254,7 @@ main(int argc, char **argv)
     setup();
     scan();
     run();
-    shutdown();
+    cleanup();
 
     if (restart)
         execvp(argv[0], argv);

@@ -1,12 +1,6 @@
 #!/bin/sh
 
 dir=$1
-image=decorations.ppm
-
-# Reads:
-#  - $image_width
-#  - $image_height
-. "$dir"/metadata || exit 1
 
 echo '#ifndef _WM_THEME_H'
 echo '#define _WM_THEME_H'
@@ -16,26 +10,26 @@ echo
 
 cat "$dir"/layout.h
 echo
-echo "static unsigned int dec_img_w = $image_width;"
-echo "static unsigned int dec_img_h = $image_height;"
 
-echo 'static uint32_t dec_img[] = {'
+for i in 'normal' 'select' 'urgent'
+do
+    echo 'static uint8_t dec_img_'$i'[] = {'
 
-# Our input file is expected to be a raw color PPM file with 8 bit
-# depth per channel. We will now convert this into an uint32_t array.
-# First, we create a hexdump using od. tr + grep will transform this
-# into one byte per line. sed will group it in packs of three bytes and
-# prepend a "0x". "s/[^a-zA-Z0-9]//g" is a simple way to remove newlines
-# from the pattern buffer in a portable way. paste + fold will then
-# transform this into a nicely formatted C array with comma separators.
+    # Our input file is expected to be a farbfeld image file. We will
+    # now convert this into a uint8_t array.
+    #
+    # (We could use "xxd -i" here but that would add a dependency on
+    # Vim.)
 
-tail -c `echo $image_width \* $image_height \* 3 | bc` "$dir"/"$image" |
-od -vt x1 -An |
-tr ' ' '\n' | grep -v '^$' |
-sed 's/^/0x/; N; N; s/[^a-zA-Z0-9]//g' |
-paste -sd, - | fold -sw 72
+    od -vt x1 -An <"$dir"/dec_img_$i.ff |
+    tr ' ' '\n' |
+    grep -v '^$' |
+    sed 's/^/0x/' |
+    paste -sd, - |
+    fold -sw 70
 
-echo '};'
+    echo '};'
+    echo
+done
 
-echo
 echo '#endif /* _WM_THEME_H */'

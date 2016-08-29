@@ -52,6 +52,7 @@ struct Client
     bool fullscreen;
     bool hidden;
     bool never_focus;
+    bool undecorated;
     bool urgent;
 
     char title[512];
@@ -2024,9 +2025,9 @@ manage_apply_size(struct Client *c)
 
     manage_icccm_apply_size_hints(c);
 
-    if (c->fullscreen && !c->hidden)
+    if (!c->hidden && (c->fullscreen || c->undecorated))
     {
-        D fprintf(stderr, __NAME_WM__": Fullscreening client %p\n", (void *)c);
+        D fprintf(stderr, __NAME_WM__": Hiding deco of client %p\n", (void *)c);
 
         XMoveResizeWindow(dpy, c->decwin[DecWinTop], -15, 0, 10, 10);
         XMoveResizeWindow(dpy, c->decwin[DecWinLeft], -15, 0, 10, 10);

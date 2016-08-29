@@ -17,6 +17,8 @@ next
   [Added]
   - Window titles can now be centered horizontally, see "center_title"
     in config.h.
+  - _MOTIF_WM_HINTS is now evaluated (partially). We check for the
+    "undecorated" hint.
 
 v16.05  2016-05-01
   [Fixed]

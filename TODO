@@ -1,5 +1,14 @@
 TODO items and future ideas.
 
+- Simplify "gap" and "margin" code
+    - There already is manage_apply_gaps() and almost nothing has to
+      deal with gaps directly. Can we get rid of manual usage of
+      "gap_pixels" entirely?
+    - There should be a function similar to manage_apply_gaps() that
+      deals with the margin reserved for window decorations. Nothing
+      should have to deal with "m_left" and friends manually.
+    - Maybe rethink the idea of c->x and friends being the *internal*
+      size?
 - Test on different architectures
 - More IPC calls:
     - Jump to workspace N on monitor M?
@@ -8,8 +17,6 @@ TODO items and future ideas.
 - EWMH:
     - _NET_ACTIVE_WINDOW and _NET_CLIENT_LIST if there's a really good
       reason to support them.
-- Motif WM hints and add the concept of undecorated windows? (Think
-  Gtk's CSDs or Chromium or some Java popups ...)
 - Theming:
     - Allow for different layout (dec_coords and maybe dgeo) depending
       on window state.

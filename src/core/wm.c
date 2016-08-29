@@ -132,7 +132,8 @@ static int saved_monitor_nums[SAVE_SLOTS] = { 0 };
 static int screen_w = -1, screen_h = -1;
 static int mouse_dx, mouse_dy, mouse_ocx, mouse_ocy, mouse_ocw, mouse_och;
 static int winsize_min_w, winsize_min_h;
-static Atom atom_net[AtomNetLAST], atom_wm[AtomWMLAST], atom_state, atom_ipc;
+static Atom atom_net[AtomNetLAST], atom_wm[AtomWMLAST], atom_motif, atom_state,
+            atom_ipc;
 static Cursor cursor_normal;
 static Display *dpy;
 static Pixmap dec_tiles[DecStateLAST][DecLAST];
@@ -222,8 +223,10 @@ static void manage_goto_workspace(int i, bool force);
 static void manage_hide(struct Client *c);
 static void manage_icccm_apply_size_hints(struct Client *c);
 static void manage_icccm_evaluate_hints(struct Client *c);
+static void manage_motif_evaluate_hints(struct Client *c, bool rearrange);
 static void manage_raisefocus(struct Client *c);
 static void manage_raisefocus_first_matching(void);
+static void manage_set_decorations(struct Client *c, bool decorated);
 static void manage_show(struct Client *c);
 static void manage_unfullscreen(struct Client *c);
 static void manage_xfocus(struct Client *c);
@@ -1008,6 +1011,12 @@ handle_propertynotify(XEvent *e)
             D fprintf(stderr, __NAME_WM__": Client %p has changed its "
                       "WM_NORMAL_HINTS, updating\n", (void *)c);
             manage_icccm_evaluate_hints(c);
+        }
+        else if (ev->atom == atom_motif)
+        {
+            D fprintf(stderr, __NAME_WM__": Client %p has changed its "
+                      "_MOTIF_WM_HINTS, updating\n", (void *)c);
+            manage_motif_evaluate_hints(c, true);
         }
         /* XXX ev->atom == XA_WM_TRANSIENT_FOR
          * dwm indicates that there might be changes to the
@@ -1860,11 +1869,7 @@ manage(Window win, XWindowAttributes *wa)
     c->y = wa->y;
     c->w = wa->width;
     c->h = wa->height;
-
-    c->m_top = dgeo.top_height;
-    c->m_left = dgeo.left_width;
-    c->m_right = dgeo.right_width;
-    c->m_bottom = dgeo.bottom_height;
+    manage_set_decorations(c, true);
 
     XSetWindowBorderWidth(dpy, c->win, 0);
 
@@ -1900,8 +1905,14 @@ manage(Window win, XWindowAttributes *wa)
         }
     }
 
+    /* Evaluate various hints.
+     *
+     * Note that we inhibit rearrangement here because the client is not
+     * yet saved. And we call manage_arrange() at the end of this
+     * function anyway. */
     manage_ewmh_evaluate_hints(c);
     manage_icccm_evaluate_hints(c);
+    manage_motif_evaluate_hints(c, false);
     manage_apply_rules(c);
 
     D fprintf(stderr, __NAME_WM__": Client %p lives on WS %d on monitor %d\n",
@@ -2676,6 +2687,53 @@ manage_icccm_evaluate_hints(struct Client *c)
 }
 
 void
+manage_motif_evaluate_hints(struct Client *c, bool rearrange)
+{
+    Atom da;
+    unsigned long *prop_ret = NULL;
+    int di;
+    unsigned long dl, ni;
+
+    /* Check _MOTIF_WM_HINTS for the "decorations" byte.
+     *
+     * That "5" is PROP_MOTIF_WM_HINTS_ELEMENTS in MwmUtil.h. Once we
+     * got the property, we need to check the third byte
+     * (PropMwmHints.decorations). */
+    if (XGetWindowProperty(dpy, c->win, atom_motif, 0, 5, False, atom_motif,
+                           &da, &di, &ni, &dl, (unsigned char **)&prop_ret)
+        == Success)
+    {
+        if (ni >= 3 && prop_ret)
+        {
+            if (prop_ret[2] == 0)
+            {
+                D fprintf(stderr, __NAME_WM__": MWM hints indicate undecorated "
+                          "window for client %p\n", (void *)c);
+                manage_set_decorations(c, false);
+            }
+            else
+            {
+                D fprintf(stderr, __NAME_WM__": MWM hints indicate normal "
+                          "window decorations for client %p\n", (void *)c);
+                manage_set_decorations(c, true);
+            }
+        }
+
+        if (prop_ret)
+            XFree(prop_ret);
+    }
+
+    /* Move window decorations away now, or restore them. This only
+     * really matters for floating clients and only when the property
+     * changes, because for non-floaters or newly mapped clients,
+     * manage_arrange() is usually called afterwards. */
+    manage_apply_size(c);
+
+    if (rearrange)
+        manage_arrange(c->mon);
+}
+
+void
 manage_raisefocus(struct Client *c)
 {
     if (c && !VIS_ON_SELMON(c))
@@ -2710,6 +2768,27 @@ manage_raisefocus_first_matching(void)
      * workspace or ...), we must now unfocus the previously selected
      * client. */
     manage_raisefocus(NULL);
+}
+
+void
+manage_set_decorations(struct Client *c, bool decorated)
+{
+    if (decorated)
+    {
+        c->undecorated = false;
+        c->m_top = dgeo.top_height;
+        c->m_left = dgeo.left_width;
+        c->m_right = dgeo.right_width;
+        c->m_bottom = dgeo.bottom_height;
+    }
+    else
+    {
+        c->undecorated = true;
+        c->m_top = 0;
+        c->m_left = 0;
+        c->m_right = 0;
+        c->m_bottom = 0;
+    }
 }
 
 void
@@ -3073,6 +3152,8 @@ setup_hints(void)
     atom_wm[AtomWMProtocols] = XInternAtom(dpy, "WM_PROTOCOLS", False);
     atom_wm[AtomWMState] = XInternAtom(dpy, "WM_STATE", False);
     atom_wm[AtomWMTakeFocus] = XInternAtom(dpy, "WM_TAKE_FOCUS", False);
+
+    atom_motif = XInternAtom(dpy, "_MOTIF_WM_HINTS", False);
 }
 
 int

@@ -40,6 +40,9 @@ struct Client
     int normal_x, normal_y, normal_w, normal_h;
     int nonhidden_x;
 
+    /* Space to reserve for window decorations */
+    int m_top, m_left, m_right, m_bottom;
+
     /* ICCCM 4.1.2.3 size hints */
     double sh_asp_min, sh_asp_max;
     int sh_base_w, sh_base_h, sh_inc_w, sh_inc_h;
@@ -1056,12 +1059,12 @@ ipc_client_center_floating(char arg)
         return;
 
     focus->x = monitors[focus->mon].wx + 0.5 * (monitors[focus->mon].ww - focus->w
-                                                - dgeo.left_width - dgeo.right_width);
+                                                - focus->m_left - focus->m_right);
     focus->y = monitors[focus->mon].wy + 0.5 * (monitors[focus->mon].wh - focus->h
-                                                - dgeo.top_height - dgeo.bottom_height);
+                                                - focus->m_top - focus->m_bottom);
 
-    focus->x += dgeo.left_width;
-    focus->y += dgeo.top_height;
+    focus->x += focus->m_left;
+    focus->y += focus->m_top;
 
     manage_apply_size(focus);
 }
@@ -1133,10 +1136,10 @@ ipc_client_maximize_floating(char arg)
     focus->w = monitors[focus->mon].ww;
     focus->h = monitors[focus->mon].wh;
 
-    focus->x += dgeo.left_width;
-    focus->y += dgeo.top_height;
-    focus->w -= dgeo.left_width + dgeo.right_width;
-    focus->h -= dgeo.top_height + dgeo.bottom_height;
+    focus->x += focus->m_left;
+    focus->y += focus->m_top;
+    focus->w -= focus->m_left + focus->m_right;
+    focus->h -= focus->m_top + focus->m_bottom;
 
     manage_apply_gaps(focus);
     manage_apply_size(focus);
@@ -1735,10 +1738,10 @@ layout_monocle(int m)
     {
         if (VIS_ON_M(c, m) && !c->floating && !c->fullscreen)
         {
-            c->x = monitors[c->mon].wx + dgeo.left_width;
-            c->y = monitors[c->mon].wy + dgeo.top_height;
-            c->w = monitors[c->mon].ww - dgeo.left_width - dgeo.right_width;
-            c->h = monitors[c->mon].wh - dgeo.top_height - dgeo.bottom_height;
+            c->x = monitors[c->mon].wx + c->m_left;
+            c->y = monitors[c->mon].wy + c->m_top;
+            c->w = monitors[c->mon].ww - c->m_left - c->m_right;
+            c->h = monitors[c->mon].wh - c->m_top - c->m_bottom;
             manage_apply_gaps(c);
             manage_apply_size(c);
         }
@@ -1772,10 +1775,10 @@ layout_tile(int m)
             if (num_clients == 1)
             {
                 /* Only one client total, just maximize it */
-                c->x = monitors[m].wx + dgeo.left_width;
-                c->y = monitors[m].wy + dgeo.top_height;
-                c->w = monitors[m].ww - dgeo.left_width - dgeo.right_width;
-                c->h = monitors[m].wh - dgeo.top_height - dgeo.bottom_height;
+                c->x = monitors[m].wx + c->m_left;
+                c->y = monitors[m].wy + c->m_top;
+                c->w = monitors[m].ww - c->m_left - c->m_right;
+                c->h = monitors[m].wh - c->m_top - c->m_bottom;
             }
             else
             {
@@ -1795,10 +1798,10 @@ layout_tile(int m)
                     c->w = monitors[m].ww - master_w;
                 }
 
-                c->x += dgeo.left_width;
-                c->w -= dgeo.left_width + dgeo.right_width;
+                c->x += c->m_left;
+                c->w -= c->m_left + c->m_right;
 
-                c->y = at_y + dgeo.top_height;
+                c->y = at_y + c->m_top;
 
                 /* Clients in the last row get the remaining space in
                  * order to avoid rounding issues. Note that we need to
@@ -1814,7 +1817,7 @@ layout_tile(int m)
                 else
                     slave_h = monitors[m].wh / (num_clients - master_n);
 
-                c->h = slave_h - dgeo.top_height - dgeo.bottom_height;
+                c->h = slave_h - c->m_top - c->m_bottom;
                 at_y += slave_h;
             }
 
@@ -1856,6 +1859,11 @@ manage(Window win, XWindowAttributes *wa)
     c->y = wa->y;
     c->w = wa->width;
     c->h = wa->height;
+
+    c->m_top = dgeo.top_height;
+    c->m_left = dgeo.left_width;
+    c->m_right = dgeo.right_width;
+    c->m_bottom = dgeo.bottom_height;
 
     XSetWindowBorderWidth(dpy, c->win, 0);
 
@@ -2031,19 +2039,19 @@ manage_apply_size(struct Client *c)
                   "%d, %d\n", (void *)c, c->x, c->y, c->w, c->h);
 
         XMoveResizeWindow(dpy, c->decwin[DecWinTop],
-                          c->x - dgeo.left_width, c->y - dgeo.top_height,
-                          dgeo.left_width + c->w + dgeo.right_width,
-                          dgeo.top_height);
+                          c->x - c->m_left, c->y - c->m_top,
+                          c->m_left + c->w + c->m_right,
+                          c->m_top);
         XMoveResizeWindow(dpy, c->decwin[DecWinLeft],
-                          c->x - dgeo.left_width, c->y,
-                          dgeo.left_width, c->h);
+                          c->x - c->m_left, c->y,
+                          c->m_left, c->h);
         XMoveResizeWindow(dpy, c->decwin[DecWinRight],
                           c->x + c->w, c->y,
-                          dgeo.right_width, c->h);
+                          c->m_right, c->h);
         XMoveResizeWindow(dpy, c->decwin[DecWinBottom],
-                          c->x - dgeo.left_width, c->y + c->h,
-                          dgeo.left_width + c->w + dgeo.right_width,
-                          dgeo.bottom_height);
+                          c->x - c->m_left, c->y + c->h,
+                          c->m_left + c->w + c->m_right,
+                          c->m_bottom);
     }
 
     XMoveResizeWindow(dpy, c->win, c->x, c->y, c->w, c->h);
@@ -2227,25 +2235,25 @@ manage_fit_on_monitor(struct Client *c)
         return;
 
     /* Right and bottom */
-    if (c->x + c->w + dgeo.right_width + gap_pixels >=
+    if (c->x + c->w + c->m_right + gap_pixels >=
         monitors[c->mon].wx + monitors[c->mon].ww)
     {
         c->x = monitors[c->mon].wx + monitors[c->mon].ww - c->w -
-               dgeo.right_width - gap_pixels;
+               c->m_right - gap_pixels;
     }
 
-    if (c->y + c->h + dgeo.bottom_height + gap_pixels >=
+    if (c->y + c->h + c->m_bottom + gap_pixels >=
         monitors[c->mon].wy + monitors[c->mon].wh)
     {
         c->y = monitors[c->mon].wy + monitors[c->mon].wh - c->h -
-               dgeo.bottom_height - gap_pixels;
+               c->m_bottom - gap_pixels;
     }
 
     /* Top and left */
-    if (c->x - dgeo.left_width - gap_pixels < monitors[c->mon].wx)
-        c->x = monitors[c->mon].wx + dgeo.left_width + gap_pixels;
-    if (c->y - dgeo.top_height - gap_pixels < monitors[c->mon].wy)
-        c->y = monitors[c->mon].wy + dgeo.top_height + gap_pixels;
+    if (c->x - c->m_left - gap_pixels < monitors[c->mon].wx)
+        c->x = monitors[c->mon].wx + c->m_left + gap_pixels;
+    if (c->y - c->m_top - gap_pixels < monitors[c->mon].wy)
+        c->y = monitors[c->mon].wy + c->m_top + gap_pixels;
 
     manage_apply_size(c);
 }

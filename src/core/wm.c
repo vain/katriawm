@@ -2036,7 +2036,7 @@ manage_apply_size(struct Client *c)
 
     manage_icccm_apply_size_hints(c);
 
-    if (!c->hidden && (c->fullscreen || c->undecorated))
+    if ((!c->hidden && c->fullscreen) || c->undecorated)
     {
         D fprintf(stderr, __NAME_WM__": Hiding deco of client %p\n", (void *)c);
 

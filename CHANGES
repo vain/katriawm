@@ -5,6 +5,9 @@ next
   - Limit the minimum size of windows: They can no longer be so small
     that there is not enough room left for the decorations to be drawn.
     This fixes black artifacts on tiny windows.
+  - We no longer try to "optimize" the detection of changes to the
+    screen layout. This fixes bugs where katriawm indeed missed some of
+    these changes.
 
   [Changed]
   - Theming: The "tinting" model has been removed. Instead, each window

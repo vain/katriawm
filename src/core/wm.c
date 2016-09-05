@@ -129,7 +129,6 @@ static struct Client *clients = NULL, *focus = NULL, *mouse_dc = NULL;
 static struct Monitor *monitors = NULL;
 static struct Monitor *saved_monitors[SAVE_SLOTS] = { 0 };
 static int saved_monitor_nums[SAVE_SLOTS] = { 0 };
-static int screen_w = -1, screen_h = -1;
 static int mouse_dx, mouse_dy, mouse_ocx, mouse_ocy, mouse_ocw, mouse_och;
 static int winsize_min_w, winsize_min_h;
 static Atom atom_net[AtomNetLAST], atom_wm[AtomWMLAST], atom_motif, atom_state,
@@ -829,13 +828,6 @@ handle_configurenotify(XEvent *e)
     if (ev->window != root)
         return;
 
-    /* screen_w and screen_h don't really matter to us. We use XRandR to
-     * detect monitors. However, sometimes there are multiple identical
-     * ConfigureNotify events. In order to avoid unnecessary
-     * reconfiguration on our part, we try to filter those. */
-    if (ev->width == screen_w && ev->height == screen_h)
-        return;
-
     D fprintf(stderr, __NAME_WM__": ConfigureNotify received, reconfiguring "
               "monitors \n");
 
@@ -844,9 +836,6 @@ handle_configurenotify(XEvent *e)
 
     for (c = clients; c; c = c->next)
         c->mon = selmon;
-
-    screen_w = ev->width;
-    screen_h = ev->height;
 
     /* Hide everything, then unhide what should be visible on the
      * default workspace */

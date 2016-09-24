@@ -1,6 +1,6 @@
 Release history for katriawm
 
-next
+v16.09  2016-09-24
   [Fixed]
   - Limit the minimum size of windows: They can no longer be so small
     that there is not enough room left for the decorations to be drawn.

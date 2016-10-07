@@ -22,7 +22,6 @@
 
 #define SAVE_SLOTS 8
 #define WM_NAME_UNKNOWN "<name unknown>"
-#define SOMETHING_FOCUSED (focus && is_vis_on_selmon(focus))
 
 struct Client
 {
@@ -195,6 +194,7 @@ static void ipc_workspace_select(char arg);
 static void ipc_workspace_select_adjacent(char arg);
 static void ipc_workspace_select_recent(char arg);
 static bool is_somehow_floating(struct Client *c);
+static bool is_something_focused(void);
 static bool is_vis_on_mon(struct Client *c, int m);
 static bool is_vis_on_selmon(struct Client *c);
 static void layout_float(int m);
@@ -1048,7 +1048,7 @@ ipc_client_center_floating(char arg)
 {
     (void)arg;
 
-    if (!SOMETHING_FOCUSED)
+    if (!is_something_focused())
         return;
 
     if (!is_somehow_floating(focus))
@@ -1070,7 +1070,7 @@ ipc_client_close(char arg)
 {
     (void)arg;
 
-    if (!SOMETHING_FOCUSED)
+    if (!is_something_focused())
         return;
 
     /* This call asks the client to please close itself gracefully */
@@ -1082,7 +1082,7 @@ ipc_client_floating_toggle(char arg)
 {
     (void)arg;
 
-    if (!SOMETHING_FOCUSED)
+    if (!is_something_focused())
         return;
 
     focus->floating = !focus->floating;
@@ -1094,7 +1094,7 @@ ipc_client_fullscreen_toggle(char arg)
 {
     (void)arg;
 
-    if (!SOMETHING_FOCUSED)
+    if (!is_something_focused())
         return;
 
     if (focus->fullscreen)
@@ -1108,7 +1108,7 @@ ipc_client_kill(char arg)
 {
     (void)arg;
 
-    if (!SOMETHING_FOCUSED)
+    if (!is_something_focused())
         return;
 
     /* This brutally kills the X11 connection of the client. Use only as
@@ -1121,7 +1121,7 @@ ipc_client_maximize_floating(char arg)
 {
     (void)arg;
 
-    if (!SOMETHING_FOCUSED)
+    if (!is_something_focused())
         return;
 
     if (!is_somehow_floating(focus))
@@ -1148,7 +1148,7 @@ ipc_client_move_list(char arg)
     struct Client *c, *one = NULL, *two = NULL,
                   *before_one = NULL, *before_two = NULL;
 
-    if (!SOMETHING_FOCUSED)
+    if (!is_something_focused())
         return;
 
     if (focus->fullscreen)
@@ -1351,7 +1351,7 @@ ipc_client_select_adjacent(char arg)
     /* Select the previous/next client which is visible, wrapping
      * around. Once again, props to dwm. */
 
-    if (!SOMETHING_FOCUSED)
+    if (!is_something_focused())
         return;
 
     if (arg > 0)
@@ -1418,7 +1418,7 @@ ipc_client_switch_monitor_adjacent(char arg)
     /* Move currently selected client to an adjacent monitor, causing
      * both monitors to be re-arranged */
 
-    if (!SOMETHING_FOCUSED)
+    if (!is_something_focused())
         return;
 
     if (focus->fullscreen)
@@ -1449,7 +1449,7 @@ ipc_client_switch_workspace(char arg)
 {
     int i;
 
-    if (!SOMETHING_FOCUSED)
+    if (!is_something_focused())
         return;
 
     if (focus->fullscreen)
@@ -1471,7 +1471,7 @@ ipc_client_switch_workspace_adjacent(char arg)
 {
     int i;
 
-    if (!SOMETHING_FOCUSED)
+    if (!is_something_focused())
         return;
 
     if (focus->fullscreen)
@@ -1723,6 +1723,12 @@ bool
 is_somehow_floating(struct Client *c)
 {
     return c->floating || monitors[c->mon].layouts[c->workspace] == LAFloat;
+}
+
+bool
+is_something_focused(void)
+{
+    return focus && is_vis_on_selmon(focus);
 }
 
 bool

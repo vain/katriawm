@@ -1740,7 +1740,7 @@ is_vis_on_mon(struct Client *c, int m)
 bool
 is_vis_on_selmon(struct Client *c)
 {
-    return c->mon == selmon && c->workspace == monitors[selmon].active_workspace;
+    return is_vis_on_mon(c, selmon);
 }
 
 void

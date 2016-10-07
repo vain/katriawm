@@ -22,8 +22,6 @@
 
 #define SAVE_SLOTS 8
 #define WM_NAME_UNKNOWN "<name unknown>"
-#define VIS_ON_M(c, m) ((c)->mon == (m) && \
-                        (c)->workspace == monitors[(m)].active_workspace)
 #define SOMEHOW_FLOATING(c) ((c)->floating || \
                              monitors[(c)->mon].layouts[(c)->workspace] == LAFloat)
 #define SOMETHING_FOCUSED (focus && is_vis_on_selmon(focus))
@@ -198,6 +196,7 @@ static void ipc_wm_restart(char arg);
 static void ipc_workspace_select(char arg);
 static void ipc_workspace_select_adjacent(char arg);
 static void ipc_workspace_select_recent(char arg);
+static bool is_vis_on_mon(struct Client *c, int m);
 static bool is_vis_on_selmon(struct Client *c);
 static void layout_float(int m);
 static void layout_monocle(int m);
@@ -1557,7 +1556,7 @@ ipc_urgency_clear_visible(char arg)
         visible = false;
 
         for (m = 0; !visible && m < monitors_num; m++)
-            if (VIS_ON_M(c, m))
+            if (is_vis_on_mon(c, m))
                 visible = true;
 
         if (visible)
@@ -1722,6 +1721,12 @@ ipc_workspace_select_recent(char arg)
 }
 
 bool
+is_vis_on_mon(struct Client *c, int m)
+{
+    return c->mon == m && c->workspace == monitors[m].active_workspace;
+}
+
+bool
 is_vis_on_selmon(struct Client *c)
 {
     return c->mon == selmon && c->workspace == monitors[selmon].active_workspace;
@@ -1740,7 +1745,7 @@ layout_monocle(int m)
 
     for (c = clients; c; c = c->next)
     {
-        if (VIS_ON_M(c, m) && !c->floating && !c->fullscreen)
+        if (is_vis_on_mon(c, m) && !c->floating && !c->fullscreen)
         {
             c->x = monitors[c->mon].wx + c->m_left;
             c->y = monitors[c->mon].wy + c->m_top;
@@ -1766,7 +1771,7 @@ layout_tile(int m)
     at_y = monitors[m].wy;
 
     for (c = clients; c; c = c->next)
-        if (VIS_ON_M(c, m) && !c->floating && !c->fullscreen)
+        if (is_vis_on_mon(c, m) && !c->floating && !c->fullscreen)
             num_clients++;
 
     master_w = monitors[m].ww / 2;
@@ -1774,7 +1779,7 @@ layout_tile(int m)
 
     for (c = clients; c; c = c->next)
     {
-        if (VIS_ON_M(c, m) && !c->floating && !c->fullscreen)
+        if (is_vis_on_mon(c, m) && !c->floating && !c->fullscreen)
         {
             if (num_clients == 1)
             {

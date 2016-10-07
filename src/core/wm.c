@@ -2809,6 +2809,23 @@ manage_unfullscreen(struct Client *c)
         XDeleteProperty(dpy, c->win, atom_net[AtomNetWMState]);
 
         manage_apply_size(c);
+
+        /* Scenario: You use the tiling layout, several clients are
+         * visible right now. You put one client to fullscreen. You
+         * switch to another workspace, then switch back. The full-
+         * screened client is now visible. You un-fullscreen it, so it
+         * snaps back into its previous position.
+         *
+         * Problem is, that previous position might not be up to date
+         * anymore, because the number of tiled clients might have
+         * changed. Moreover, due to the change of workspaces,
+         * manage_arrange() has been called in the meantime -- this call
+         * ignored the fullscreen client, of course, so another client
+         * has taken over the space which was previously occupied by our
+         * client right here ...
+         *
+         * Long story short, we have to rearrange the current workspace. */
+        manage_arrange(selmon);
     }
 }
 

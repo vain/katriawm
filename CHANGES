@@ -1,5 +1,11 @@
 Release history for katriawm
 
+next
+  [Fixed]
+  - Un-fullscreening clients now causes the current workspace to be
+    rearranged. This fixes several bugs where you ended up with a
+    "broken" tiled layout after un-fullscreening a client.
+
 v16.09  2016-09-24
   [Fixed]
   - Limit the minimum size of windows: They can no longer be so small

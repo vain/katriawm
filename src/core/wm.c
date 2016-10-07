@@ -22,8 +22,6 @@
 
 #define SAVE_SLOTS 8
 #define WM_NAME_UNKNOWN "<name unknown>"
-#define SOMEHOW_FLOATING(c) ((c)->floating || \
-                             monitors[(c)->mon].layouts[(c)->workspace] == LAFloat)
 #define SOMETHING_FOCUSED (focus && is_vis_on_selmon(focus))
 
 struct Client
@@ -196,6 +194,7 @@ static void ipc_wm_restart(char arg);
 static void ipc_workspace_select(char arg);
 static void ipc_workspace_select_adjacent(char arg);
 static void ipc_workspace_select_recent(char arg);
+static bool is_somehow_floating(struct Client *c);
 static bool is_vis_on_mon(struct Client *c, int m);
 static bool is_vis_on_selmon(struct Client *c);
 static void layout_float(int m);
@@ -872,7 +871,7 @@ handle_configurerequest(XEvent *e)
          * synthetic event, so the server is not being told to change
          * anything. It merely informs the client about its current
          * configuration. */
-        if (SOMEHOW_FLOATING(c))
+        if (is_somehow_floating(c))
         {
             if (ev->value_mask & CWWidth)
             {
@@ -1052,7 +1051,7 @@ ipc_client_center_floating(char arg)
     if (!SOMETHING_FOCUSED)
         return;
 
-    if (!SOMEHOW_FLOATING(focus))
+    if (!is_somehow_floating(focus))
         return;
 
     focus->x = monitors[focus->mon].wx + 0.5 * (monitors[focus->mon].ww - focus->w
@@ -1125,7 +1124,7 @@ ipc_client_maximize_floating(char arg)
     if (!SOMETHING_FOCUSED)
         return;
 
-    if (!SOMEHOW_FLOATING(focus))
+    if (!is_somehow_floating(focus))
         return;
 
     focus->x = monitors[focus->mon].wx;
@@ -1498,7 +1497,7 @@ ipc_floaters_collect(char arg)
     (void)arg;
 
     for (c = clients; c; c = c->next)
-        if (is_vis_on_selmon(c) && SOMEHOW_FLOATING(c))
+        if (is_vis_on_selmon(c) && is_somehow_floating(c))
             manage_fit_on_monitor(c);
 }
 
@@ -1718,6 +1717,12 @@ ipc_workspace_select_recent(char arg)
     (void)arg;
 
     manage_goto_workspace(monitors[selmon].recent_workspace, false);
+}
+
+bool
+is_somehow_floating(struct Client *c)
+{
+    return c->floating || monitors[c->mon].layouts[c->workspace] == LAFloat;
 }
 
 bool
@@ -2500,7 +2505,7 @@ manage_icccm_apply_size_hints(struct Client *c)
     bool base_supplied, base_subtracted = false;
     double aspect;
 
-    if (!SOMEHOW_FLOATING(c) || c->fullscreen)
+    if (!is_somehow_floating(c) || c->fullscreen)
         return;
 
     /* Apply ICCCM 4.1.2.3 size hints. Again, this is taken almost

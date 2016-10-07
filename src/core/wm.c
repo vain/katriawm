@@ -1865,6 +1865,8 @@ manage(Window win, XWindowAttributes *wa)
 
     c = ecalloc(1, sizeof (struct Client));
 
+    D fprintf(stderr, __NAME_WM__": manage(): New client %p\n", (void *)c);
+
     c->win = win;
     c->mon = selmon;
     c->workspace = monitors[selmon].active_workspace;

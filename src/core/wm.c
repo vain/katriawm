@@ -22,13 +22,11 @@
 
 #define SAVE_SLOTS 8
 #define WM_NAME_UNKNOWN "<name unknown>"
-#define VIS_ON_SELMON(c) ((c)->mon == selmon && \
-                          (c)->workspace == monitors[selmon].active_workspace)
 #define VIS_ON_M(c, m) ((c)->mon == (m) && \
                         (c)->workspace == monitors[(m)].active_workspace)
 #define SOMEHOW_FLOATING(c) ((c)->floating || \
                              monitors[(c)->mon].layouts[(c)->workspace] == LAFloat)
-#define SOMETHING_FOCUSED (focus && VIS_ON_SELMON(focus))
+#define SOMETHING_FOCUSED (focus && is_vis_on_selmon(focus))
 
 struct Client
 {
@@ -200,6 +198,7 @@ static void ipc_wm_restart(char arg);
 static void ipc_workspace_select(char arg);
 static void ipc_workspace_select_adjacent(char arg);
 static void ipc_workspace_select_recent(char arg);
+static bool is_vis_on_selmon(struct Client *c);
 static void layout_float(int m);
 static void layout_monocle(int m);
 static void layout_tile(int m);
@@ -480,7 +479,7 @@ decorations_draw(struct Client *c, enum DecorationWindowLocation which)
 
     if (c->urgent)
         state = DecStateUrgent;
-    else if (c == focus && c->mon == selmon && VIS_ON_SELMON(c))
+    else if (c == focus && c->mon == selmon && is_vis_on_selmon(c))
         state = DecStateSelect;
 
     w = dgeo.left_width + c->w + dgeo.right_width;
@@ -843,7 +842,7 @@ handle_configurenotify(XEvent *e)
         manage_hide(c);
 
     for (c = clients; c; c = c->next)
-        if (VIS_ON_SELMON(c))
+        if (is_vis_on_selmon(c))
             manage_show(c);
 
     manage_raisefocus_first_matching();
@@ -1162,7 +1161,7 @@ ipc_client_move_list(char arg)
         /* Find visible client before "focus" */
         for (c = clients; c; c = c->next)
         {
-            if (VIS_ON_SELMON(c))
+            if (is_vis_on_selmon(c))
             {
                 if (c == focus)
                     break;
@@ -1180,7 +1179,7 @@ ipc_client_move_list(char arg)
         /* Find visible client after "focus" */
         for (c = focus; c; c = c->next)
         {
-            if (VIS_ON_SELMON(c))
+            if (is_vis_on_selmon(c))
             {
                 if (c == focus)
                     use_next = true;
@@ -1362,11 +1361,11 @@ ipc_client_select_adjacent(char arg)
         /* Start at "focus" and search the next visible client. If that
          * doesn't work, then start from the beginning of the list. */
 
-        for (c = focus->next; c && !VIS_ON_SELMON(c); c = c->next)
+        for (c = focus->next; c && !is_vis_on_selmon(c); c = c->next)
             /* nop */;
 
         if (!c)
-            for (c = clients; c && !VIS_ON_SELMON(c); c = c->next)
+            for (c = clients; c && !is_vis_on_selmon(c); c = c->next)
                 /* nop */;
 
         to_select = c;
@@ -1378,7 +1377,7 @@ ipc_client_select_adjacent(char arg)
          * "focus", we will not enter the loop body, thus to_select will
          * still point to the visible client before c. */
         for (c = clients; c != focus; c = c->next)
-            if (VIS_ON_SELMON(c))
+            if (is_vis_on_selmon(c))
                 to_select = c;
 
         /* Nothing found? Then start at "focus" and look at all clients
@@ -1386,7 +1385,7 @@ ipc_client_select_adjacent(char arg)
          * visible client in the list. */
         if (!to_select)
             for (c = focus->next; c; c = c->next)
-                if (VIS_ON_SELMON(c))
+                if (is_vis_on_selmon(c))
                     to_select = c;
     }
 
@@ -1406,7 +1405,7 @@ ipc_client_select_recent(char arg)
      * client is "focus" itself, so we can easily skip it. */
 
     for (c = focus->focus_next; c; c = c->focus_next)
-        if (VIS_ON_SELMON(c))
+        if (is_vis_on_selmon(c))
             break;
 
     if (c)
@@ -1500,7 +1499,7 @@ ipc_floaters_collect(char arg)
     (void)arg;
 
     for (c = clients; c; c = c->next)
-        if (VIS_ON_SELMON(c) && SOMEHOW_FLOATING(c))
+        if (is_vis_on_selmon(c) && SOMEHOW_FLOATING(c))
             manage_fit_on_monitor(c);
 }
 
@@ -1720,6 +1719,12 @@ ipc_workspace_select_recent(char arg)
     (void)arg;
 
     manage_goto_workspace(monitors[selmon].recent_workspace, false);
+}
+
+bool
+is_vis_on_selmon(struct Client *c)
+{
+    return c->mon == selmon && c->workspace == monitors[selmon].active_workspace;
 }
 
 void
@@ -2104,16 +2109,16 @@ manage_client_gone(struct Client *c, bool rearrange)
     {
         /* There are the following possibilites:
          *
-         *   1. The destroyed window had focus and VIS_ON_SELMON(c) is
-         *      true. The right thing to do is to focus the next window
-         *      in our focus history.
+         *   1. The destroyed window had focus and is_vis_on_selmon(c)
+         *      is true. The right thing to do is to focus the next
+         *      window in our focus history.
          *   2. The destroyed window did not have focus and
-         *      VIS_ON_SELMON(c) is true. Now, the currently focused
+         *      is_vis_on_selmon(c) is true. Now, the currently focused
          *      window shall retain focus. The call below does not
          *      violate this requirement because the currently focused
          *      client is equivalent to the first matching client (if
          *      neither monitor nor workspace have been changed).
-         *   3. VIS_ON_SELMON(c) is false. Implicitly, the destroyed
+         *   3. is_vis_on_selmon(c) is false. Implicitly, the destroyed
          *      window did not have input focus. We must now do the same
          *      thing as in #2.
          *
@@ -2556,7 +2561,7 @@ manage_icccm_evaluate_hints(struct Client *c)
     {
         if (wmh->flags & XUrgencyHint)
         {
-            if (c == focus && VIS_ON_SELMON(c))
+            if (c == focus && is_vis_on_selmon(c))
             {
                 /* Setting the urgency hint on the currently selected
                  * window shall have no effect */
@@ -2725,7 +2730,7 @@ manage_motif_evaluate_hints(struct Client *c, bool rearrange)
 void
 manage_raisefocus(struct Client *c)
 {
-    if (c && !VIS_ON_SELMON(c))
+    if (c && !is_vis_on_selmon(c))
     {
         D fprintf(stderr, __NAME_WM__": Client %p should have been "
                   "focused/raised, but it's not currently visible. Ignoring.\n",
@@ -2745,7 +2750,7 @@ manage_raisefocus_first_matching(void)
 
     for (c = focus; c; c = c->focus_next)
     {
-        if (VIS_ON_SELMON(c))
+        if (is_vis_on_selmon(c))
         {
             manage_raisefocus(c);
             return;

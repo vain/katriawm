@@ -2123,6 +2123,13 @@ manage_client_gone(struct Client *c, bool rearrange)
      * changes "focus". */
     manage_focus_remove(c);
 
+    if (mouse_dc == c)
+    {
+        D fprintf(stderr, __NAME_WM__": Active mouse_dc %p reset to NULL\n",
+                  (void *)c);
+        mouse_dc = NULL;
+    }
+
     if (rearrange)
     {
         /* There are the following possibilites:

@@ -2,6 +2,8 @@ Release history for katriawm
 
 next
   [Fixed]
+  - Fix data corruption and possible crash when a client, which is
+    currently being moved by the mouse, disappears.
   - Un-fullscreening clients now causes the current workspace to be
     rearranged. This fixes several bugs where you ended up with a
     "broken" tiled layout after un-fullscreening a client.

@@ -2340,7 +2340,7 @@ manage_focus_add_tail(struct Client *nc)
 }
 
 void
-manage_focus_remove(struct Client *new_focus)
+manage_focus_remove(struct Client *to_remove)
 {
     bool found = false;
     struct Client **tc, *c;
@@ -2348,14 +2348,14 @@ manage_focus_remove(struct Client *new_focus)
     /* Remove client from focus list (if present) */
 
     for (c = focus; !found && c; c = c->focus_next)
-        if (c == new_focus)
+        if (c == to_remove)
             found = true;
 
     if (!found)
         return;
 
-    for (tc = &focus; *tc && *tc != new_focus; tc = &(*tc)->focus_next);
-    *tc = new_focus->focus_next;
+    for (tc = &focus; *tc && *tc != to_remove; tc = &(*tc)->focus_next);
+    *tc = to_remove->focus_next;
 }
 
 void

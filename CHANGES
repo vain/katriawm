@@ -1,6 +1,6 @@
 Release history for katriawm
 
-next
+v16.10  2016-10-29
   [Fixed]
   - Fix data corruption and possible crash when a client, which is
     currently being moved by the mouse, disappears.

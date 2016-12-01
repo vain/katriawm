@@ -597,8 +597,7 @@ decorations_ff_to_x(enum DecState s, uint32_t *width, uint32_t *height)
     *width = ntohl(*((uint32_t *)&ff_img[8]));
     *height = ntohl(*((uint32_t *)&ff_img[12]));
 
-    ximg_data = calloc(*width * *height, sizeof (uint32_t));
-    assert(ximg_data != NULL);
+    ximg_data = ecalloc(*width * *height, sizeof (uint32_t));
 
     for (y = 0; y < *height; y++)
     {

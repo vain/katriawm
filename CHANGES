@@ -1,5 +1,9 @@
 Release history for katriawm
 
+v16.12  2016-12-31
+  - Minor maintenance release. No user-visible changes. I just wanted a
+    clean start for 2017. :-)
+
 v16.10  2016-10-29
   [Fixed]
   - Fix data corruption and possible crash when a client, which is

@@ -4,7 +4,7 @@
 katriabi \- Bar information for katriawm
 .\" --------------------------------------------------------------------
 .SH SYNOPSIS
-\fBkatriabi\fP [\fIformat\fP]
+\fBkatriabi\fP
 .\" --------------------------------------------------------------------
 .SH DESCRIPTION
 \fBkatriawm\fP(1) creates a property on the root window. This property
@@ -16,13 +16,13 @@ display in a bar. That is, you should pipe the output of \fBkatriabi\fP
 into the bar of your choice.
 .\" --------------------------------------------------------------------
 .SH OPTIONS
-.TP
-\fIformat\fP
-Can be one of \fBbevelbar\fP, \fBlemonbar\fP. The default is
-\fBlemonbar\fP.
+There are no command line options.
+.\" --------------------------------------------------------------------
+.SH "OUTPUT FORMAT"
+Currently, \fBkatriabi\fP can only create output that can be fed to
+\fBbevelbar\fP(1). No other formats are supported.
 .P
-When \fBbevelbar\fP is selected, \fBkatriabi\fP uses the following
-styles:
+\fBkatriabi\fP uses the following bevelbar styles:
 .TP
 0
 Unselected layout icon.
@@ -41,9 +41,6 @@ Urgent workspace.
 .TP
 5
 Current workspace if urgent.
-.P
-When \fBlemonbar\fP is selected, \fBkatriabi\fP uses format strings as
-configured in your \fIconfig.h\fP at compile time.
 .\" --------------------------------------------------------------------
 .SH ENVIRONMENT
 .TP
@@ -60,5 +57,4 @@ was started in December 2015.
 .\" --------------------------------------------------------------------
 .SH "SEE ALSO"
 .BR katriawm (1),
-.BR bevelbar (1),
-.BR lemonbar (1).
+.BR bevelbar (1).

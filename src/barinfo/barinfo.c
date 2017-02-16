@@ -14,7 +14,6 @@
 enum OutputFormat
 {
     OutputBevelbar,
-    OutputLemonbar,
 
     OutputLAST,
 };
@@ -90,7 +89,8 @@ state_read(Display *dpy, Window root, Atom atom, unsigned long *nitems)
 static void
 state_to_bevelbar(unsigned char *state, unsigned long nitems)
 {
-    /* See state_to_lemonbar() for more details */
+    /* This function depends on the format used in publish_state() in
+     * core/wm.c, which is also documented in doc/DOCUMENTATION.md */
 
     int monitors_num, selmon_i, size_monws, i;
     int offset_ws, ws_num, byte_i, bit, active_workspace;
@@ -98,9 +98,12 @@ state_to_bevelbar(unsigned char *state, unsigned long nitems)
     unsigned char byte, ubyte, slots_mask, mask;
     char *ws_num_display = NULL;
 
+    /* First check if nitems matches what we expect. Also sets "size"
+     * and "size_monws". */
     if (!check_size(state, nitems, &size, &size_monws))
         return;
 
+    /* We're good to go, so decode the beast */
     monitors_num = state[0];
     selmon_i = state[1];
     slots_mask = state[2];
@@ -109,11 +112,13 @@ state_to_bevelbar(unsigned char *state, unsigned long nitems)
     {
         active_workspace = state[3 + i];
 
+        /* Layout icon and monitor selection */
         printf("%d\n", i);
         printf("%d%s\n", i == selmon_i ? 1 : 0,
                layout_names[state[3 + i + monitors_num]]);
         printf("-\n");
 
+        /* Occupied tags, urgency hints */
         offset_ws = 3 + monitors_num + monitors_num + i * size_monws;
         ws_num = 0;
         for (byte_i = 0; byte_i < size_monws; byte_i++)
@@ -161,86 +166,6 @@ state_to_bevelbar(unsigned char *state, unsigned long nitems)
     fflush(stdout);
 }
 
-static void
-state_to_lemonbar(unsigned char *state, unsigned long nitems)
-{
-    /* This function depends on the format used in publish_state() in
-     * core/wm.c, which is also documented in doc/DOCUMENTATION.md */
-
-    int monitors_num, selmon_i, size_monws, i;
-    int offset_ws, ws_num, byte_i, bit, active_workspace;
-    unsigned long size;
-    unsigned char byte, ubyte, slots_mask, mask;
-    char *ws_num_display = NULL;
-
-    /* First check if nitems matches what we expect. Also sets "size"
-     * and "size_monws". */
-    if (!check_size(state, nitems, &size, &size_monws))
-        return;
-
-    /* We're good to go, so decode the beast */
-    monitors_num = state[0];
-    selmon_i = state[1];
-    slots_mask = state[2];
-
-    for (i = 0; i < monitors_num; i++)
-    {
-        active_workspace = state[3 + i];
-
-        /* Layout icon and monitor selection */
-        printf("%%{S%d}%%{l}%s", i, s_lemonbar_norm);
-        if (i == selmon_i)
-            printf("%s", s_lemonbar_selmon);
-        printf(" %s ", layout_names[state[3 + i + monitors_num]]);
-        printf("%s", s_lemonbar_norm);
-
-        /* Occupied tags, urgency hints */
-        offset_ws = 3 + monitors_num + monitors_num + i * size_monws;
-        ws_num = 0;
-        for (byte_i = 0; byte_i < size_monws; byte_i++)
-        {
-            byte = state[offset_ws + byte_i];
-            ubyte = state[offset_ws + byte_i + monitors_num * size_monws];
-            mask = 1;
-            for (bit = 0; bit < 8; bit++)
-            {
-                if (ws_num_display)
-                    free(ws_num_display);
-                ws_num_display = resolve_ws_name(ws_num);
-
-                if (ubyte & mask)
-                    printf("%s %s %s", s_lemonbar_urg, ws_num_display,
-                           s_lemonbar_norm);
-                else if (ws_num == active_workspace)
-                    printf("%s %s %s", s_lemonbar_sele, ws_num_display,
-                           s_lemonbar_norm);
-                else if (byte & mask)
-                    printf(" %s ", ws_num_display);
-                ws_num++;
-                mask <<= 1;
-            }
-        }
-        printf("%%{B-}%%{F-}");
-
-        /* Save slots */
-        if (i == selmon_i && slots_mask)
-        {
-            printf("%%{r}%s ", s_lemonbar_norm);
-            mask = 1;
-            for (bit = 0; bit < 8; bit++)
-            {
-                if (slots_mask & mask)
-                    printf("%d", bit);
-                mask <<= 1;
-            }
-            printf(" ");
-        }
-        printf("%%{B-}%%{F-}");
-    }
-    printf("\n");
-    fflush(stdout);
-}
-
 int
 main(int argc, char **argv)
 {
@@ -251,17 +176,18 @@ main(int argc, char **argv)
     Atom atom_state;
     unsigned char *state = NULL;
     unsigned long state_nitems, i;
-    enum OutputFormat of = OutputLemonbar;
+    enum OutputFormat of = OutputBevelbar;
     void (*formatter[OutputLAST])(unsigned char *state, unsigned long nitems) = {
         [OutputBevelbar] = state_to_bevelbar,
-        [OutputLemonbar] = state_to_lemonbar,
     };
+
+    /* Currently, there is no formatter other than the one for bevelbar,
+     * so we don't evaluate argv at all */
+    (void)argc;
+    (void)argv;
 
     if (!(dpy = XOpenDisplay(NULL)))
         return 1;
-
-    if (argc >= 2 && strncmp(argv[1], "bevelbar", strlen("bevelbar")) == 0)
-        of = OutputBevelbar;
 
     root = DefaultRootWindow(dpy);
     atom_state = XInternAtom(dpy, IPC_ATOM_STATE, False);

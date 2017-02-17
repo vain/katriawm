@@ -79,6 +79,9 @@ As real world examples, you can have a look at my setup:
     https://github.com/vain/dotfiles-pub/blob/master/sxhkdrc
     https://github.com/vain/bin-pub/blob/master/katriawm-launch
 
+There is also a detailed how-to on setting up katriawm. Have a look at
+"doc/HOW-TO-SETUP.md".
+
 
 Customization
 -------------

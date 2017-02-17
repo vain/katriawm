@@ -5,6 +5,9 @@ next
   - All code specific to lemonbar has been removed, since it has been
     unmaintained for over a year.
 
+  [Added]
+  - The tutorial HOW-TO-SETUP.md has been added.
+
 v16.12  2016-12-31
   - Minor maintenance release. No user-visible changes. I just wanted a
     clean start for 2017. :-)

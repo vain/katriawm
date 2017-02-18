@@ -146,11 +146,15 @@ This means that we have to write a config file for sxhkd. Save it as
     super + {j,k,Tab}
         katriac client_select {next,prev,recent}
 
+    super + {1,2,3,4}
+        katriac workspace_select {1,2,3,4}
+
     super + shift + BackSpace
         katriac wm_quit
 
 Now you have a hotkey to launch a new window, some hotkeys to change the
-current window, and a hotkey to quit katriawm.
+current window, some hotkeys to change the active workspace, and a
+hotkey to quit katriawm.
 
 There are many more commands available. I suggest you have a look at my
 config file:
@@ -182,6 +186,11 @@ If you now hit `Super + Return`, a new terminal window should appear. If
 you hit that hotkey again, another terminal should appear. katriawm
 should be in tiling mode, thus automatically arranging the windows for
 you.
+
+By hitting `Super + 2`, you change to the second workspace. The windows
+that you previously opened are no longer visible. Notice how you might
+feel lost, because you have no indicator which workspace is currently
+active – that’s where a bar will come in handy.
 
 Congratulations! This is a basic katriawm setup.
 

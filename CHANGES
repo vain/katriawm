@@ -1,6 +1,6 @@
 Release history for katriawm
 
-next
+v17.02  2017-02-26
   [Changed]
   - All code specific to lemonbar has been removed, since it has been
     unmaintained for over a year.

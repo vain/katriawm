@@ -2523,7 +2523,7 @@ manage_icccm_apply_size_hints(struct Client *c)
         return;
 
     /* Apply ICCCM 4.1.2.3 size hints. Again, this is taken almost
-     * verbatim from dwm (except for aspect ratios). */
+     * verbatim from dwm (except for the comments). */
 
     base_supplied = !(c->sh_base_w == c->sh_min_w && c->sh_base_h == c->sh_min_h);
 
@@ -2538,11 +2538,39 @@ manage_icccm_apply_size_hints(struct Client *c)
     }
     if (c->sh_asp_min > 0 && c->sh_asp_max > 0)
     {
-        /* Honour aspect ratio request by simply adjusting the window's
-         * width */
+        /* Honour aspect ratio request.
+         *
+         * The client requests a range of valid aspect ratios, i.e.
+         * sh_asp_min = w1 / h1 and sh_asp_max = w2 / h2, where
+         * sh_asp_min <= sh_asp_max.
+         *
+         * If the current aspect ratio is less than what the client
+         * requested, then this means that the window currently is too
+         * high. We could correct that in two ways: We could reduce
+         * height or we could increase width. Either way, there is only
+         * one equation to do so: a = w / h. Solving this for either w
+         * or h will automatically do the correct thing: Reduce height
+         * or increase width. There is no way for this to ever
+         * *increase* height or *reduce* width in this scenario.
+         *
+         * Similarly, if the current aspect ratio is greater than what
+         * the client requested, then the window is too wide. We could
+         * fix that by reducing width or increasing height. But the same
+         * logic as above applies: We must use a = w / h and solving
+         * this for w or h will do the right thing. (It will do the
+         * opposite as above, so solving for h would increase height
+         * this time.)
+         *
+         * In both cases, we choose the option that *shrinks* the
+         * window. This is important for operations like "maximize
+         * window on screen": We first set the window size to the screen
+         * size (ignoring aspect ratio) and then correct for aspect
+         * ratio afterwards. In that situation we must never *increase*
+         * the size of the window, or it would be larger than the
+         * screen. */
         aspect = (double)c->w / c->h;
         if (aspect < c->sh_asp_min)
-            c->w = c->h * c->sh_asp_min;
+            c->h = c->w / c->sh_asp_min;
         else if (aspect > c->sh_asp_max)
             c->w = c->h * c->sh_asp_max;
     }

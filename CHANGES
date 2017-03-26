@@ -1,5 +1,12 @@
 Release history for katriawm
 
+next
+  [Fixed]
+  - Aspect ratio size hints: We now only *shrink* windows when
+    correcting the aspect ratio (if a certain aspect ratio is requested
+    by a client). This fixes a bug where floating windows were larger
+    than the screen after they have been maximized.
+
 v17.02  2017-02-26
   [Changed]
   - All code specific to lemonbar has been removed, since it has been

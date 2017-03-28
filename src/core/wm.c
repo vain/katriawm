@@ -2984,7 +2984,7 @@ manage_xsend_icccm(struct Client *c, Atom atom)
                   atom, (void *)c);
     }
     else
-        D fprintf(stderr, __NAME_WM__": ICCCM: Atom NOT %lu sent to client %p\n",
+        D fprintf(stderr, __NAME_WM__": ICCCM: Atom %lu NOT sent to client %p\n",
                   atom, (void *)c);
     return exists;
 }

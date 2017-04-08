@@ -1,6 +1,6 @@
 Release history for katriawm
 
-next
+v17.04  2017-04-08
   [Fixed]
   - Aspect ratio size hints: We now only *shrink* windows when
     correcting the aspect ratio (if a certain aspect ratio is requested

@@ -2469,13 +2469,15 @@ manage_goto_workspace(int i, bool force)
     i = i < WORKSPACE_MIN ? WORKSPACE_MIN : i;
     i = i > WORKSPACE_MAX ? WORKSPACE_MAX : i;
 
-    if (!force && monitors[selmon].active_workspace == i)
-        return;
-
     D fprintf(stderr, __NAME_WM__": Changing to workspace %d\n", i);
 
-    monitors[selmon].recent_workspace = monitors[selmon].active_workspace;
-    monitors[selmon].active_workspace = i;
+    if (monitors[selmon].active_workspace != i)
+    {
+        monitors[selmon].recent_workspace = monitors[selmon].active_workspace;
+        monitors[selmon].active_workspace = i;
+    }
+    else if (!force)
+        return;
 
     /* Before moving windows around, transfer input focus to the correct
      * window. This avoids creating EnterNotify events before FocusIn

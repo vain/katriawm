@@ -1,5 +1,10 @@
 Release history for katriawm
 
+next
+  [Fixed]
+  - Moving the selected client to another workspace no longer breaks the
+    function "switch to recent workspace".
+
 v17.04  2017-04-08
   [Fixed]
   - Aspect ratio size hints: We now only *shrink* windows when

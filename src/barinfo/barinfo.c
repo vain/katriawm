@@ -97,6 +97,7 @@ state_to_bevelbar(unsigned char *state, unsigned long nitems)
     unsigned long size;
     unsigned char byte, ubyte, slots_mask, mask;
     char *ws_num_display = NULL;
+    size_t num_static_flags;
 
     /* First check if nitems matches what we expect. Also sets "size"
      * and "size_monws". */
@@ -108,19 +109,20 @@ state_to_bevelbar(unsigned char *state, unsigned long nitems)
     selmon_i = state[1];
     slots_mask = state[2];
     mute_urgency = state[3];
+    num_static_flags = 4;
 
     for (i = 0; i < monitors_num; i++)
     {
-        active_workspace = state[4 + i];
+        active_workspace = state[num_static_flags + i];
 
         /* Layout icon and monitor selection */
         printf("%d\n", i);
         printf("%d%s\n", i == selmon_i ? 1 : 0,
-               layout_names[state[4 + i + monitors_num]]);
+               layout_names[state[num_static_flags + i + monitors_num]]);
         printf("-\n");
 
         /* Occupied tags, urgency hints */
-        offset_ws = 4 + monitors_num + monitors_num + i * size_monws;
+        offset_ws = num_static_flags + monitors_num + monitors_num + i * size_monws;
         ws_num = 0;
         for (byte_i = 0; byte_i < size_monws; byte_i++)
         {

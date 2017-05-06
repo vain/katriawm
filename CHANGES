@@ -12,6 +12,10 @@ next
     This changes the format of the property _KATRIA_STATE on the root
     window!
 
+  - katriabi now prints an actual error message if the size of
+    _KATRIA_STATE doesn't match what it expects. This used to be a debug
+    message, which is not helpful.
+
 v17.04  2017-04-08
   [Fixed]
   - Aspect ratio size hints: We now only *shrink* windows when

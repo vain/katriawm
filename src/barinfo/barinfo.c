@@ -39,8 +39,8 @@ check_size(unsigned char *state, unsigned long nitems, unsigned long *size,
 
     if (nitems != *size)
     {
-        D fprintf(stderr, __NAME_BI__": Expected %lu bytes, got %lu\n", *size,
-                  nitems);
+        fprintf(stderr, __NAME_BI__": Expected %lu bytes, got %lu\n", *size,
+                nitems);
         return false;
     }
 

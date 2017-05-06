@@ -35,7 +35,7 @@ check_size(unsigned char *state, unsigned long nitems, unsigned long *size,
     monitors_num = state[0];
 
     /* This must match publish_state() in wm.c */
-    *size = 1 + 1 + 1 + monitors_num * 2 + monitors_num * *size_monws * 2;
+    *size = 1 + 1 + 1 + 1 + monitors_num * 2 + monitors_num * *size_monws * 2;
 
     if (nitems != *size)
     {
@@ -92,7 +92,7 @@ state_to_bevelbar(unsigned char *state, unsigned long nitems)
     /* This function depends on the format used in publish_state() in
      * core/wm.c, which is also documented in doc/DOCUMENTATION.md */
 
-    int monitors_num, selmon_i, size_monws, i;
+    int monitors_num, selmon_i, size_monws, mute_urgency, i;
     int offset_ws, ws_num, byte_i, bit, active_workspace;
     unsigned long size;
     unsigned char byte, ubyte, slots_mask, mask;
@@ -107,19 +107,20 @@ state_to_bevelbar(unsigned char *state, unsigned long nitems)
     monitors_num = state[0];
     selmon_i = state[1];
     slots_mask = state[2];
+    mute_urgency = state[3];
 
     for (i = 0; i < monitors_num; i++)
     {
-        active_workspace = state[3 + i];
+        active_workspace = state[4 + i];
 
         /* Layout icon and monitor selection */
         printf("%d\n", i);
         printf("%d%s\n", i == selmon_i ? 1 : 0,
-               layout_names[state[3 + i + monitors_num]]);
+               layout_names[state[4 + i + monitors_num]]);
         printf("-\n");
 
         /* Occupied tags, urgency hints */
-        offset_ws = 3 + monitors_num + monitors_num + i * size_monws;
+        offset_ws = 4 + monitors_num + monitors_num + i * size_monws;
         ws_num = 0;
         for (byte_i = 0; byte_i < size_monws; byte_i++)
         {
@@ -160,6 +161,14 @@ state_to_bevelbar(unsigned char *state, unsigned long nitems)
                 mask <<= 1;
             }
         }
+
+        /* Urgency muted? */
+        if (i == selmon_i && mute_urgency)
+        {
+            printf("-\n");
+            printf("%dmute\n", 2);
+        }
+
         printf("e\n");
     }
     printf("f\n");

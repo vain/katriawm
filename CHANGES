@@ -5,6 +5,13 @@ next
   - Moving the selected client to another workspace no longer breaks the
     function "switch to recent workspace".
 
+  [Changed]
+  - Urgency hints can now be temporarily "ignored" by katriawm, meaning
+    there won't be any visual indicators showing urgency.
+
+    This changes the format of the property _KATRIA_STATE on the root
+    window!
+
 v17.04  2017-04-08
   [Fixed]
   - Aspect ratio size hints: We now only *shrink* windows when

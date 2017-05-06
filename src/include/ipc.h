@@ -49,6 +49,7 @@ enum IPCCommand
     IPCPlacementStore,
     IPCPlacementUse,
     IPCUrgencyClearVisible,
+    IPCUrgencyMuteToggle,
     IPCWMQuit,
     IPCWMRestart,
     IPCWorkspaceSelect,

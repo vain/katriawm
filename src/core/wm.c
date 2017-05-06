@@ -129,6 +129,7 @@ static Atom atom_net[AtomNetLAST], atom_wm[AtomWMLAST], atom_motif, atom_state,
 static Cursor cursor_normal;
 static Display *dpy;
 static Pixmap dec_tiles[DecStateLAST][DecLAST];
+static bool mute_urgency = false;
 static Window nofocus, root;
 static XftColor font_color[DecStateLAST];
 static XftFont *font[FontLAST];
@@ -188,6 +189,7 @@ static void ipc_monitor_select_recent(char arg);
 static void ipc_placement_store(char arg);
 static void ipc_placement_use(char arg);
 static void ipc_urgency_clear_visible(char arg);
+static void ipc_urgency_mute_toggle(char arg);
 static void ipc_wm_quit(char arg);
 static void ipc_wm_restart(char arg);
 static void ipc_workspace_select(char arg);
@@ -263,6 +265,7 @@ static void (*ipc_handler[IPCLast])(char arg) = {
     [IPCPlacementStore] = ipc_placement_store,
     [IPCPlacementUse] = ipc_placement_use,
     [IPCUrgencyClearVisible] = ipc_urgency_clear_visible,
+    [IPCUrgencyMuteToggle] = ipc_urgency_mute_toggle,
     [IPCWMQuit] = ipc_wm_quit,
     [IPCWMRestart] = ipc_wm_restart,
     [IPCWorkspaceSelect] = ipc_workspace_select,
@@ -475,7 +478,7 @@ decorations_draw(struct Client *c, enum DecorationWindowLocation which)
      * it might actually be copied onto a real window (see parameter
      * "which"). */
 
-    if (c->urgent)
+    if (c->urgent && !mute_urgency)
         state = DecStateUrgent;
     else if (c == focus && c->mon == selmon && is_vis_on_selmon(c))
         state = DecStateSelect;
@@ -1563,6 +1566,21 @@ ipc_urgency_clear_visible(char arg)
             decorations_draw(c, DecWinLAST);
         }
     }
+
+    publish_state();
+}
+
+void
+ipc_urgency_mute_toggle(char arg)
+{
+    struct Client *c;
+
+    (void)arg;
+
+    mute_urgency = !mute_urgency;
+
+    for (c = clients; c; c = c->next)
+        decorations_draw(c, DecWinLAST);
 
     publish_state();
 }
@@ -3002,19 +3020,20 @@ publish_state(void)
     /* The very first byte indicates the number of monitors detected by
      * us. The second byte indicates the index of the currently selected
      * monitor. The third byte is a bitmask where each bit indicates
-     * whether the corresponding save slot is occupied. Then, the next
-     * monitors_num bytes indicate the active workspace on each monitor.
-     * The next monitors_num bytes indicate the active layout on each
-     * monitor (note: different layouts might be active on different
-     * workspaces on each monitor, but they are not visible anyway, so
-     * they're not included). Following that, we need WORKSPACE_MAX / 8
-     * = ~16 bytes per monitor to indicate whether that workspace is
-     * occupied. We need the same amount of data to indicate whether a
-     * workspace has the urgency hint set. */
+     * whether the corresponding save slot is occupied. The fourth byte
+     * indicates mute mode. Then, the next monitors_num bytes indicate
+     * the active workspace on each monitor. The next monitors_num
+     * bytes indicate the active layout on each monitor (note: different
+     * layouts might be active on different workspaces on each monitor,
+     * but they are not visible anyway, so they're not included).
+     * Following that, we need WORKSPACE_MAX / 8 = ~16 bytes per monitor
+     * to indicate whether that workspace is occupied. We need the same
+     * amount of data to indicate whether a workspace has the urgency
+     * hint set. */
 
     size_monws = STATE_BYTES_PER_WORKSPACE;
 
-    size = 1 + 1 + 1 + monitors_num * 2 + monitors_num * size_monws * 2;
+    size = 1 + 1 + 1 + 1 + monitors_num * 2 + monitors_num * size_monws * 2;
     state = ecalloc(size, sizeof (unsigned char));
 
     /* Number of detected monitors and currently selected monitor (int) */
@@ -3030,6 +3049,10 @@ publish_state(void)
             state[off] |= mask;
         mask <<= 1;
     }
+    off++;
+
+    /* Indicate current state of 'mute_urgency' */
+    state[off] = mute_urgency ? 1 : 0;
     off++;
 
     /* Active workspace on each monitor (int) */
@@ -3061,7 +3084,7 @@ publish_state(void)
         state[i] = byte;
 
         /* Urgency hints */
-        if (c->urgent)
+        if (c->urgent && !mute_urgency)
         {
             i += monitors_num * size_monws;
             byte = state[i];

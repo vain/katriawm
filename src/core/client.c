@@ -56,6 +56,7 @@ static struct Command c[] = {
     {  {  "placement_store",           ANY        },  IPCPlacementStore,                 fn_atoi,  0          },
     {  {  "placement_use",             ANY        },  IPCPlacementUse,                   fn_atoi,  0          },
     {  {  "urgency_clear_visible",     ANY        },  IPCUrgencyClearVisible,            NULL,     0          },
+    {  {  "urgency_mute_toggle",       ANY        },  IPCUrgencyMuteToggle,              NULL,     0          },
     {  {  "wm_quit",                   ANY        },  IPCWMQuit,                         NULL,     0          },
     {  {  "wm_restart",                ANY        },  IPCWMRestart,                      NULL,     0          },
     {  {  "workspace_select",          "next"     },  IPCWorkspaceSelectAdjacent,        fn_int,   +1         },

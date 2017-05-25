@@ -1,6 +1,6 @@
 Release history for katriawm
 
-next
+v17.05  2017-05-25
   [Fixed]
   - Moving the selected client to another workspace no longer breaks the
     function "switch to recent workspace".

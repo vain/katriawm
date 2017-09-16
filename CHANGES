@@ -1,5 +1,11 @@
 Release history for katriawm
 
+next
+  [LICENSING]
+  - The project has been relicensed under the MIT license (more
+    precisely called "Expat License", but everyone calls it "MIT
+    license" these days).
+
 v17.05  2017-05-25
   [Fixed]
   - Moving the selected client to another workspace no longer breaks the

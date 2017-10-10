@@ -3294,8 +3294,29 @@ setup_monitors_read(void)
 
     moninf = XRRGetMonitors(dpy, root, True, &nmon);
     D fprintf(stderr, __NAME_WM__": XRandR reported %d monitors\n", nmon);
-    assert(nmon > 0);
-    assert(moninf != NULL);
+    if (nmon <= 0 || moninf == NULL)
+    {
+        /* XRandR reported no active screens. This can happen when you
+         * reconfigure your monitor layout and temporarily disable all
+         * outputs.
+         *
+         * Issue a warning to the user in case his XRandR is broken and
+         * always returns 0 monitors.
+         *
+         * However, the rest of the code expects that at least one
+         * monitor is present at ALL times. We thus create a dummy
+         * monitor object. (Not setting .layout here. Having it at 0 is
+         * a valid layout index. Same goes for .*_workspace.) */
+        fprintf(stderr, __NAME_WM__": XRandR reported no active monitors\n");
+        D fprintf(stderr, __NAME_WM__": Creating dummy monitor\n");
+
+        monitors = ecalloc(1, sizeof (struct Monitor));
+        monitors[0].wx = monitors[0].mx = 0;
+        monitors[0].wy = monitors[0].my = 0;
+        monitors[0].ww = monitors[0].mw = 1024;
+        monitors[0].wh = monitors[0].mh = 1024;
+        return;
+    }
 
     /* First, we iterate over all monitors and check each monitor if
      * it's not a duplicate. If it's okay, we mark it for use. After

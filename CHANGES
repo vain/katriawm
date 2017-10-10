@@ -5,6 +5,9 @@ next
   - We now use XRRGetMonitors(). In contrast to XRRGetScreenResources(),
     it does not cause the X server to hang for a few hundred
     milliseconds.
+  - There was a potential crash if your XRandR reported no active
+    monitors. This *can* happen during reconfiguration of your monitor
+    layout. 
 
 v17.09  2017-09-16
   [LICENSING]

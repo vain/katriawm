@@ -1,5 +1,11 @@
 Release history for katriawm
 
+next
+  [Fixed]
+  - We now use XRRGetMonitors(). In contrast to XRRGetScreenResources(),
+    it does not cause the X server to hang for a few hundred
+    milliseconds.
+
 v17.09  2017-09-16
   [LICENSING]
   - The project has been relicensed under the MIT license (more

@@ -236,8 +236,8 @@ static void scan(void);
 static void setup(void);
 static void setup_hints(void);
 static int setup_monitors_compare(const void *a, const void *b);
-static bool setup_monitors_is_duplicate(XRRCrtcInfo *ci, bool *chosen,
-                                        XRRScreenResources *sr);
+static bool setup_monitors_is_duplicate(XRRMonitorInfo *allmons, int testmon,
+                                        bool *chosen, int nmon);
 static void setup_monitors_read(void);
 static int setup_monitors_wsdef(int mi, int monitors_num);
 static void shutdown_monitors_free(void);
@@ -3264,18 +3264,19 @@ setup_monitors_compare(const void *a, const void *b)
 }
 
 bool
-setup_monitors_is_duplicate(XRRCrtcInfo *ci, bool *chosen, XRRScreenResources *sr)
+setup_monitors_is_duplicate(XRRMonitorInfo *allmons, int testmon, bool *chosen,
+                            int nmon)
 {
-    XRRCrtcInfo *o;
     int i;
 
-    for (i = 0; i < sr->ncrtc; i++)
+    for (i = 0; i < nmon; i++)
     {
         if (chosen[i])
         {
-            o = XRRGetCrtcInfo(dpy, sr, sr->crtcs[i]);
-            if (o->x == ci->x && o->y == ci->y &&
-                o->width == ci->width && o->height == ci->height)
+            if (allmons[i].x == allmons[testmon].x &&
+                allmons[i].y == allmons[testmon].y &&
+                allmons[i].width == allmons[testmon].width &&
+                allmons[i].height == allmons[testmon].height)
                 return true;
         }
     }
@@ -3286,49 +3287,40 @@ setup_monitors_is_duplicate(XRRCrtcInfo *ci, bool *chosen, XRRScreenResources *s
 void
 setup_monitors_read(void)
 {
-    XRRCrtcInfo *ci;
-    XRRScreenResources *sr;
-    int c, mi;
+    XRRMonitorInfo *moninf;
+    int i, mi, nmon;
     size_t li;
     bool *chosen = NULL;
 
-    sr = XRRGetScreenResources(dpy, root);
-    D fprintf(stderr, __NAME_WM__": XRandR reported %d monitors/CRTCs\n",
-              sr->ncrtc);
-    assert(sr->ncrtc > 0);
+    moninf = XRRGetMonitors(dpy, root, True, &nmon);
+    D fprintf(stderr, __NAME_WM__": XRandR reported %d monitors\n", nmon);
+    assert(nmon > 0);
+    assert(moninf != NULL);
 
     /* First, we iterate over all monitors and check each monitor if
-     * it's usable and not a duplicate. If it's okay, we mark it for
-     * use. After this loop, we know how many usable monitors there
-     * are, so we can allocate the "monitors" array. */
+     * it's not a duplicate. If it's okay, we mark it for use. After
+     * this loop, we know how many usable monitors there are, so we can
+     * allocate the "monitors" array. */
 
-    monitors_num = 0;
-    chosen = ecalloc(sr->ncrtc, sizeof (bool));
-    for (c = 0; c < sr->ncrtc; c++)
+    chosen = ecalloc(nmon, sizeof (bool));
+    for (monitors_num = 0, i = 0; i < nmon; i++)
     {
-        ci = XRRGetCrtcInfo(dpy, sr, sr->crtcs[c]);
-        if (ci == NULL || ci->noutput == 0 || ci->mode == None)
-            continue;
-
-        if (setup_monitors_is_duplicate(ci, chosen, sr))
-            continue;
-
-        chosen[c] = true;
-        monitors_num++;
+        if (!setup_monitors_is_duplicate(moninf, i, chosen, nmon))
+        {
+            chosen[i] = true;
+            monitors_num++;
+        }
     }
 
     monitors = ecalloc(monitors_num, sizeof (struct Monitor));
-    mi = 0;
-    for (c = 0; c < sr->ncrtc; c++)
+    for (mi = 0, i = 0; i < nmon; i++)
     {
-        if (chosen[c])
+        if (chosen[i])
         {
-            ci = XRRGetCrtcInfo(dpy, sr, sr->crtcs[c]);
-
-            monitors[mi].wx = monitors[mi].mx = ci->x;
-            monitors[mi].wy = monitors[mi].my = ci->y;
-            monitors[mi].ww = monitors[mi].mw = ci->width;
-            monitors[mi].wh = monitors[mi].mh = ci->height;
+            monitors[mi].wx = monitors[mi].mx = moninf[i].x;
+            monitors[mi].wy = monitors[mi].my = moninf[i].y;
+            monitors[mi].ww = monitors[mi].mw = moninf[i].width;
+            monitors[mi].wh = monitors[mi].mh = moninf[i].height;
 
             monitors[mi].wx += wai.left;
             monitors[mi].ww -= wai.left + wai.right;
@@ -3339,6 +3331,7 @@ setup_monitors_read(void)
         }
     }
     free(chosen);
+    XRRFreeMonitors(moninf);
 
     qsort(monitors, monitors_num, sizeof (struct Monitor), setup_monitors_compare);
 

@@ -49,6 +49,7 @@ static struct Command c[] = {
     {  {  "floaters_collect",          ANY        },  IPCFloatersCollect,                NULL,     0          },
     {  {  "layout_set",                "float"    },  IPCLayoutSet,                      fn_int,   LAFloat    },
     {  {  "layout_set",                "monocle"  },  IPCLayoutSet,                      fn_int,   LAMonocle  },
+    {  {  "layout_set",                "stack"    },  IPCLayoutSet,                      fn_int,   LAStack    },
     {  {  "layout_set",                "tile"     },  IPCLayoutSet,                      fn_int,   LATile     },
     {  {  "monitor_select",            "left"     },  IPCMonitorSelectAdjacent,          fn_int,   -1         },
     {  {  "monitor_select",            "recent"   },  IPCMonitorSelectRecent,            NULL,     0          },

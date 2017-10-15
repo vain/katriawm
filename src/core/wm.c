@@ -201,6 +201,7 @@ static bool is_vis_on_mon(struct Client *c, int m);
 static bool is_vis_on_selmon(struct Client *c);
 static void layout_float(int m);
 static void layout_monocle(int m);
+static void layout_stack(int m);
 static void layout_tile(int m);
 static void manage(Window win, XWindowAttributes *wa);
 static void manage_apply_gaps(struct Client *c);
@@ -287,6 +288,7 @@ static void (*x11_handler[LASTEvent])(XEvent *e) = {
 static void (*layouts[LALast])(int m) = {
     [LAFloat] = layout_float,
     [LAMonocle] = layout_monocle,
+    [LAStack] = layout_stack,
     [LATile] = layout_tile,
 };
 
@@ -1784,6 +1786,54 @@ layout_monocle(int m)
         }
     }
 }
+
+void
+layout_stack(int m)
+{
+    struct Client *c;
+    int i, num_clients, at_y, slave_h;
+
+    i = 0;
+    num_clients = 0;
+    at_y = monitors[m].wy;
+
+    for (c = clients; c; c = c->next)
+        if (is_vis_on_mon(c, m) && !c->floating && !c->fullscreen)
+            num_clients++;
+
+    for (c = clients; c; c = c->next)
+    {
+        if (is_vis_on_mon(c, m) && !c->floating && !c->fullscreen)
+        {
+            /* Positioning in x direction is easy: Just use all the
+             * space that's available. */
+            c->x = monitors[c->mon].wx + c->m_left;
+            c->w = monitors[c->mon].ww - c->m_left - c->m_right;
+
+            /* Clients at the bottom of the stack get the remaining
+             * space to avoid rounding issues.
+             *
+             * Just like layout_tile(), it might be confusing to read
+             * that we add monitors[m].wy here. To understand why this
+             * is needed, consider that at_y does not start at 0 but at
+             * monitors[m].wy. Still confused? Run an example on paper. */
+            if (i == num_clients - 1)
+                slave_h = monitors[m].wh - at_y + monitors[m].wy;
+            else
+                slave_h = monitors[m].wh / num_clients;
+
+            c->y = at_y + c->m_top;
+            c->h = slave_h - c->m_top - c->m_bottom;
+
+            at_y += slave_h;
+
+            manage_apply_gaps(c);
+            manage_apply_size(c);
+            i++;
+        }
+    }
+}
+
 
 void
 layout_tile(int m)

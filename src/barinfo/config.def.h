@@ -1,6 +1,7 @@
 char *layout_names[LALast] = {
     [LAFloat] = "><>",
     [LAMonocle] = "[M]",
+    [LAStack] = "[=]",
     [LATile] = "[]=",
 };
 

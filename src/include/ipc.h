@@ -62,6 +62,7 @@ enum IPCCommand
 enum LayoutAlgorithm
 {
     LATile = 0,
+    LAStack,
     LAMonocle,
     LAFloat,
 

@@ -1795,7 +1795,7 @@ layout_stack(int m)
 
     i = 0;
     num_clients = 0;
-    at_y = monitors[m].wy;
+    at_y = 0;
 
     for (c = clients; c; c = c->next)
         if (is_vis_on_mon(c, m) && !c->floating && !c->fullscreen)
@@ -1811,18 +1811,13 @@ layout_stack(int m)
             c->w = monitors[c->mon].ww - c->m_left - c->m_right;
 
             /* Clients at the bottom of the stack get the remaining
-             * space to avoid rounding issues.
-             *
-             * Just like layout_tile(), it might be confusing to read
-             * that we add monitors[m].wy here. To understand why this
-             * is needed, consider that at_y does not start at 0 but at
-             * monitors[m].wy. Still confused? Run an example on paper. */
+             * space to avoid rounding issues. */
             if (i == num_clients - 1)
-                slave_h = monitors[m].wh - at_y + monitors[m].wy;
+                slave_h = monitors[m].wh - at_y;
             else
                 slave_h = monitors[m].wh / num_clients;
 
-            c->y = at_y + c->m_top;
+            c->y = monitors[m].wy + at_y + c->m_top;
             c->h = slave_h - c->m_top - c->m_bottom;
 
             at_y += slave_h;
@@ -1846,7 +1841,7 @@ layout_tile(int m)
 
     i = 0;
     num_clients = 0;
-    at_y = monitors[m].wy;
+    at_y = 0;
 
     for (c = clients; c; c = c->next)
         if (is_vis_on_mon(c, m) && !c->floating && !c->fullscreen)
@@ -1871,7 +1866,7 @@ layout_tile(int m)
             {
                 /* Reset at_y on column switch */
                 if (i == master_n)
-                    at_y = monitors[m].wy;
+                    at_y = 0;
 
                 /* Decide which column to place this client into */
                 if (i < master_n)
@@ -1888,17 +1883,14 @@ layout_tile(int m)
                 c->x += c->m_left;
                 c->w -= c->m_left + c->m_right;
 
-                c->y = at_y + c->m_top;
+                c->y = monitors[m].wy + at_y + c->m_top;
 
                 /* Clients in the last row get the remaining space in
-                 * order to avoid rounding issues. Note that we need to
-                 * add monitors[m].wy here because that's where at_y
-                 * started.
-                 *
-                 * Regular clients in the master or slave column get
-                 * their normal share of available space. */
+                 * order to avoid rounding issues. Regular clients in
+                 * the master or slave column get their normal share of
+                 * available space. */
                 if (i == num_clients - 1 || i == master_n - 1)
-                    slave_h = monitors[m].wh - at_y + monitors[m].wy;
+                    slave_h = monitors[m].wh - at_y;
                 else if (i < master_n)
                     slave_h = monitors[m].wh / master_n;
                 else

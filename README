@@ -35,7 +35,7 @@ To build the program and install it to /usr/local, please use GNU make:
 
 To install katriawm on an Arch Linux system, use the AUR package:
 
-    # pacaur -S katriawm
+    https://aur.archlinux.org/packages/katriawm/
 
 Running
 -------

@@ -1,5 +1,9 @@
 Release history for katriawm
 
+v18.05  2018-05-06
+  - Minor maintenance release. No user-visible changes, just some
+    documentation tweaks. I just wanted a clean state. :-)
+
 v17.10  2017-10-28
   [Fixed]
   - We now use XRRGetMonitors(). In contrast to XRRGetScreenResources(),
